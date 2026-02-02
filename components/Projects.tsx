@@ -24,24 +24,24 @@ const projects = [
 
 export default function Projects() {
   return (
-    <section id="projects" className="py-32 px-6 bg-white">
+    <section id="projects" className="py-16 sm:py-24 md:py-32 px-4 sm:px-6 bg-white">
       <div className="max-w-6xl mx-auto">
         {/* Section Header */}
-        <div className="text-center mb-16">
-          <h2 className="text-5xl font-bold text-foreground mb-4">Featured Projects</h2>
+        <div className="text-center mb-10 sm:mb-16">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground mb-4">Featured Projects</h2>
           <div className="w-20 h-1 bg-foreground mx-auto"></div>
-          <p className="text-gray-600 mt-4 text-lg">iOS applications built for wellness and productivity</p>
+          <p className="text-gray-600 mt-4 text-base sm:text-lg">iOS applications built for wellness and productivity</p>
         </div>
 
         {/* Projects Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8">
           {projects.map((project, index) => (
             <div
               key={index}
-              className="group bg-white border-2 border-gray-200 p-8 rounded-2xl hover:shadow-2xl transition-all duration-300 hover:border-foreground hover:-translate-y-2"
+              className="group bg-white border-2 border-gray-200 p-5 sm:p-6 md:p-8 rounded-2xl hover:shadow-2xl transition-all duration-300 hover:border-foreground hover:-translate-y-2"
             >
-              <div className="flex items-center justify-center mb-6">
-                <div className="w-24 h-24 rounded-2xl overflow-hidden shadow-lg ring-4 ring-gray-100 group-hover:ring-foreground/20 transition-all">
+              <div className="flex items-center justify-center mb-4 sm:mb-6">
+                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden shadow-lg ring-4 ring-gray-100 group-hover:ring-foreground/20 transition-all">
                   <img
                     src={project.icon}
                     alt={`${project.title} icon`}
@@ -50,14 +50,14 @@ export default function Projects() {
                 </div>
               </div>
 
-              <h3 className="text-2xl font-bold mb-3 text-foreground text-center">{project.title}</h3>
-              <p className="text-gray-600 mb-6 leading-relaxed text-center">{project.description}</p>
+              <h3 className="text-xl sm:text-2xl font-bold mb-2 sm:mb-3 text-foreground text-center">{project.title}</h3>
+              <p className="text-gray-600 mb-4 sm:mb-6 leading-relaxed text-center text-sm sm:text-base">{project.description}</p>
 
-              <div className="flex flex-wrap gap-2 mb-6 justify-center">
+              <div className="flex flex-wrap gap-1.5 sm:gap-2 mb-4 sm:mb-6 justify-center">
                 {project.tech.map((tech, i) => (
                   <span
                     key={i}
-                    className="px-3 py-1 bg-gray-100 text-gray-700 rounded-lg text-xs font-medium"
+                    className="px-2 sm:px-3 py-1 bg-gray-100 text-gray-700 rounded-lg text-xs font-medium"
                   >
                     {tech}
                   </span>

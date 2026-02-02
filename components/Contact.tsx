@@ -1,27 +1,27 @@
 export default function Contact() {
   return (
-    <section id="contact" className="py-32 px-6 bg-gradient-to-b from-white to-gray-50">
+    <section id="contact" className="py-16 sm:py-24 md:py-32 px-4 sm:px-6 bg-gradient-to-b from-white to-gray-50">
       <div className="max-w-4xl mx-auto">
         {/* Section Header */}
-        <div className="text-center mb-16">
-          <h2 className="text-5xl font-bold text-foreground mb-4">Get In Touch</h2>
-          <div className="w-20 h-1 bg-foreground mx-auto mb-6"></div>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+        <div className="text-center mb-10 sm:mb-16">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground mb-4">Get In Touch</h2>
+          <div className="w-20 h-1 bg-foreground mx-auto mb-4 sm:mb-6"></div>
+          <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto">
             I'm always interested in hearing about new opportunities, collaborations, or just connecting
             with fellow tech enthusiasts. Feel free to reach out!
           </p>
         </div>
 
         {/* Contact Card */}
-        <div className="bg-white rounded-2xl shadow-2xl p-12 border border-gray-100">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 md:p-12 border border-gray-100">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             <a
               href="mailto:andrewsottiaux@gmail.com"
-              className="group flex flex-col items-center p-6 rounded-xl border-2 border-gray-200 hover:border-foreground hover:shadow-lg transition-all"
+              className="group flex flex-col items-center p-5 sm:p-6 rounded-xl border-2 border-gray-200 hover:border-foreground hover:shadow-lg transition-all"
             >
-              <div className="w-16 h-16 bg-foreground/10 rounded-full flex items-center justify-center mb-4 group-hover:bg-foreground transition-all">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 bg-foreground/10 rounded-full flex items-center justify-center mb-3 sm:mb-4 group-hover:bg-foreground transition-all">
                 <svg
-                  className="w-8 h-8 text-foreground group-hover:text-white transition-all"
+                  className="w-7 h-7 sm:w-8 sm:h-8 text-foreground group-hover:text-white transition-all"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -42,11 +42,11 @@ export default function Contact() {
               href="https://www.linkedin.com/in/andy-sottiaux-593700100/"
               target="_blank"
               rel="noopener noreferrer"
-              className="group flex flex-col items-center p-6 rounded-xl border-2 border-gray-200 hover:border-foreground hover:shadow-lg transition-all"
+              className="group flex flex-col items-center p-5 sm:p-6 rounded-xl border-2 border-gray-200 hover:border-foreground hover:shadow-lg transition-all"
             >
-              <div className="w-16 h-16 bg-foreground/10 rounded-full flex items-center justify-center mb-4 group-hover:bg-foreground transition-all">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 bg-foreground/10 rounded-full flex items-center justify-center mb-3 sm:mb-4 group-hover:bg-foreground transition-all">
                 <svg
-                  className="w-8 h-8 text-foreground group-hover:text-white transition-all"
+                  className="w-7 h-7 sm:w-8 sm:h-8 text-foreground group-hover:text-white transition-all"
                   fill="currentColor"
                   viewBox="0 0 24 24"
                 >

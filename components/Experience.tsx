@@ -50,36 +50,36 @@ const experiences = [
 
 export default function Experience() {
   return (
-    <section id="experience" className="py-32 px-6 bg-white">
+    <section id="experience" className="py-16 sm:py-24 md:py-32 px-4 sm:px-6 bg-white">
       <div className="max-w-6xl mx-auto">
         {/* Section Header */}
-        <div className="text-center mb-16">
-          <h2 className="text-5xl font-bold text-foreground mb-4">Experience</h2>
+        <div className="text-center mb-10 sm:mb-16">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground mb-4">Experience</h2>
           <div className="w-20 h-1 bg-foreground mx-auto"></div>
         </div>
 
         {/* Experience Timeline */}
-        <div className="space-y-8">
+        <div className="space-y-6 sm:space-y-8">
           {experiences.map((exp, index) => (
             <div
               key={index}
-              className="bg-white border border-gray-200 rounded-2xl p-8 hover:shadow-xl transition-all duration-300 hover:border-gray-300"
+              className="bg-white border border-gray-200 rounded-2xl p-5 sm:p-6 md:p-8 hover:shadow-xl transition-all duration-300 hover:border-gray-300"
             >
               <div className="flex flex-col md:flex-row md:items-start md:justify-between mb-4">
                 <div className="flex-1">
-                  <h3 className="text-2xl font-bold text-foreground mb-2">{exp.title}</h3>
-                  <p className="text-xl text-gray-600 font-medium">{exp.company}</p>
+                  <h3 className="text-xl sm:text-2xl font-bold text-foreground mb-2">{exp.title}</h3>
+                  <p className="text-lg sm:text-xl text-gray-600 font-medium">{exp.company}</p>
                 </div>
-                <span className="text-sm font-semibold text-gray-500 bg-gray-100 px-4 py-2 rounded-full mt-2 md:mt-0">
+                <span className="text-sm font-semibold text-gray-500 bg-gray-100 px-3 sm:px-4 py-2 rounded-full mt-2 md:mt-0 self-start">
                   {exp.period}
                 </span>
               </div>
-              <p className="text-gray-600 mb-6 text-lg">{exp.description}</p>
-              <ul className="space-y-3">
+              <p className="text-gray-600 mb-4 sm:mb-6 text-base sm:text-lg">{exp.description}</p>
+              <ul className="space-y-2 sm:space-y-3">
                 {exp.achievements.map((achievement, i) => (
-                  <li key={i} className="text-gray-600 flex items-start">
+                  <li key={i} className="text-gray-600 flex items-start text-sm sm:text-base">
                     <svg
-                      className="w-6 h-6 text-foreground mr-3 flex-shrink-0 mt-0.5"
+                      className="w-5 h-5 sm:w-6 sm:h-6 text-foreground mr-2 sm:mr-3 flex-shrink-0 mt-0.5"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
