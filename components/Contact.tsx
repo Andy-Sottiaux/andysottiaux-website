@@ -16,7 +16,7 @@ export default function Contact() {
         <div className="bg-white rounded-2xl shadow-2xl p-12 border border-gray-100">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <a
-              href="mailto:your.email@example.com"
+              href="mailto:andrewsottiaux@gmail.com"
               className="group flex flex-col items-center p-6 rounded-xl border-2 border-gray-200 hover:border-foreground hover:shadow-lg transition-all"
             >
               <div className="w-16 h-16 bg-foreground/10 rounded-full flex items-center justify-center mb-4 group-hover:bg-foreground transition-all">
