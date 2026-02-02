@@ -1,40 +1,51 @@
 const skillCategories = [
   {
-    category: 'Programming Languages',
-    skills: ['JavaScript/TypeScript', 'Python', 'Java', 'Swift', 'Go'],
+    category: 'Aerospace & Robotics',
+    skills: ['UAV Systems', 'ROS2', 'Rotor Design', 'Flight Control Systems', 'Autonomy', 'CubePilot'],
   },
   {
-    category: 'Frontend',
-    skills: ['React', 'Next.js', 'Vue.js', 'Tailwind CSS', 'HTML/CSS'],
+    category: 'Mechanical Engineering',
+    skills: ['SOLIDWORKS', 'CAD', 'GD&T', 'FEA', '3D Printing', 'Manufacturing'],
   },
   {
-    category: 'Backend',
-    skills: ['Node.js', 'Express', 'Django', 'PostgreSQL', 'MongoDB'],
+    category: 'Software Development',
+    skills: ['Swift', 'JavaScript/TypeScript', 'Python', 'React', 'iOS Development'],
   },
   {
-    category: 'Tools & Platforms',
-    skills: ['Git', 'Docker', 'AWS', 'Vercel', 'CI/CD'],
+    category: 'Backend & Data',
+    skills: ['MongoDB', 'Supabase', 'Node.js', 'Data Acquisition', 'Real-time Telemetry'],
   },
   {
-    category: 'Other',
-    skills: ['Product Management', 'Team Leadership', 'Agile/Scrum', 'System Design'],
+    category: 'Leadership & Management',
+    skills: ['Program Management', 'Cross-functional Teams', 'Microsoft Project', 'Product Design'],
   },
 ]
 
 export default function Skills() {
   return (
-    <section id="skills" className="py-24 px-6 bg-white">
-      <div className="max-w-4xl mx-auto">
-        <h2 className="text-4xl font-bold mb-12 text-foreground">Skills & Expertise</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+    <section id="skills" className="py-32 px-6 bg-gradient-to-b from-gray-50 to-white">
+      <div className="max-w-6xl mx-auto">
+        {/* Section Header */}
+        <div className="text-center mb-16">
+          <h2 className="text-5xl font-bold text-foreground mb-4">Skills & Expertise</h2>
+          <div className="w-20 h-1 bg-foreground mx-auto"></div>
+        </div>
+
+        {/* Skills Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {skillCategories.map((category, index) => (
-            <div key={index} className="bg-gray-50 p-6 rounded-lg">
-              <h3 className="text-xl font-bold mb-4 text-foreground">{category.category}</h3>
+            <div
+              key={index}
+              className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100"
+            >
+              <h3 className="text-xl font-bold mb-6 text-foreground border-b border-gray-200 pb-3">
+                {category.category}
+              </h3>
               <div className="flex flex-wrap gap-2">
                 {category.skills.map((skill, i) => (
                   <span
                     key={i}
-                    className="px-3 py-1 bg-white text-gray-700 rounded-full text-sm border border-gray-200"
+                    className="px-4 py-2 bg-gray-50 text-gray-700 rounded-lg text-sm font-medium hover:bg-foreground hover:text-white transition-all duration-200"
                   >
                     {skill}
                   </span>
