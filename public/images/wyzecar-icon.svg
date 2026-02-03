@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <defs>
+    <linearGradient id="carGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a1a"/>
+      <stop offset="100%" style="stop-color:#333333"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="120" height="120" rx="24" fill="url(#carGrad)"/>
+
+  <!-- Car body -->
+  <path d="M25 70 L30 55 L45 50 L75 50 L90 55 L95 70 L95 80 L25 80 Z" fill="#ffffff" opacity="0.95"/>
+
+  <!-- Car roof/cabin -->
+  <path d="M40 50 L45 38 L75 38 L80 50 Z" fill="#ffffff" opacity="0.85"/>
+
+  <!-- Windows -->
+  <path d="M44 48 L47 40 L58 40 L58 48 Z" fill="#1a1a1a" opacity="0.6"/>
+  <path d="M62 48 L62 40 L73 40 L76 48 Z" fill="#1a1a1a" opacity="0.6"/>
+
+  <!-- Wheels -->
+  <circle cx="38" cy="80" r="10" fill="#333333"/>
+  <circle cx="38" cy="80" r="6" fill="#666666"/>
+  <circle cx="82" cy="80" r="10" fill="#333333"/>
+  <circle cx="82" cy="80" r="6" fill="#666666"/>
+
+  <!-- Camera/sensor on top -->
+  <rect x="55" y="28" width="10" height="8" rx="2" fill="#4ade80"/>
+  <circle cx="60" cy="32" r="2" fill="#1a1a1a"/>
+
+  <!-- Vision rays -->
+  <path d="M60 28 L50 18 M60 28 L60 15 M60 28 L70 18" stroke="#4ade80" stroke-width="2" fill="none" opacity="0.8"/>
+
+  <!-- AI indicator dots -->
+  <circle cx="50" cy="15" r="2" fill="#4ade80" opacity="0.6"/>
+  <circle cx="60" cy="12" r="2" fill="#4ade80" opacity="0.8"/>
+  <circle cx="70" cy="15" r="2" fill="#4ade80" opacity="0.6"/>
+</svg>

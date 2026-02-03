@@ -1,5 +1,12 @@
 const projects = [
   {
+    title: 'WYZECAR',
+    description: 'Vision-based autonomous RC car using YOLOv8 for real-time human detection and following. Features web-based WASD remote control, live video streaming, and PID-controlled smooth motion.',
+    tech: ['Python', 'YOLOv8', 'ROS2', 'DART-MX95', 'ESP32', 'Computer Vision'],
+    link: 'https://github.com/Andy-Sottiaux/WYZECAR',
+    icon: '/images/wyzecar-icon.svg',
+  },
+  {
     title: 'LevelUp+',
     description: 'Track your progress. Level up your life. A personal advancement tool enabling you to monitor improvements across various life areas.',
     tech: ['iOS', 'Swift', 'SwiftUI', 'Progress Tracking'],
@@ -30,11 +37,11 @@ export default function Projects() {
         <div className="text-center mb-10 sm:mb-16">
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground mb-4">Featured Projects</h2>
           <div className="w-20 h-1 bg-foreground mx-auto"></div>
-          <p className="text-gray-600 mt-4 text-base sm:text-lg">iOS applications built for wellness and productivity</p>
+          <p className="text-gray-600 mt-4 text-base sm:text-lg">Robotics, computer vision, and mobile applications</p>
         </div>
 
         {/* Projects Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
           {projects.map((project, index) => (
             <div
               key={index}
