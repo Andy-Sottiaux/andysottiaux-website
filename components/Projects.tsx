@@ -4,7 +4,7 @@ const projects = [
     description: 'Vision-based autonomous RC car using YOLOv8 for real-time human detection and following. Features web-based WASD remote control, live video streaming, and PID-controlled smooth motion.',
     tech: ['Python', 'YOLOv8', 'ROS2', 'DART-MX95', 'ESP32', 'Computer Vision'],
     link: 'https://github.com/Andy-Sottiaux/WYZECAR',
-    icon: '/images/wyzecar-icon.svg',
+    icon: '/images/wyzecar.png',
   },
   {
     title: 'LevelUp+',
