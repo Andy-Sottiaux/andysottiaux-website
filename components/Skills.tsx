@@ -4,6 +4,10 @@ const skillCategories = [
     skills: ['UAV Systems', 'ROS2', 'Rotor Design', 'Flight Control Systems', 'Autonomy', 'CubePilot'],
   },
   {
+    category: 'Hardware & Debugging',
+    skills: ['Oscilloscopes', 'Logic Analyzers', 'ESP32', 'I2C/SPI', 'Embedded Systems', 'Circuit Analysis'],
+  },
+  {
     category: 'Mechanical Engineering',
     skills: ['SOLIDWORKS', 'CAD', 'GD&T', 'FEA', '3D Printing', 'Manufacturing'],
   },
