@@ -5,7 +5,7 @@ const skillCategories = [
   },
   {
     category: 'Hardware & Debugging',
-    skills: ['Oscilloscopes', 'Logic Analyzers', 'ESP32', 'I2C/SPI', 'Embedded Systems', 'Circuit Analysis'],
+    skills: ['Oscilloscopes', 'Logic Analyzers', 'ESP32', 'I2C/SPI', 'RS485', 'CAN', 'RS232', 'Embedded Systems'],
   },
   {
     category: 'Mechanical Engineering',
