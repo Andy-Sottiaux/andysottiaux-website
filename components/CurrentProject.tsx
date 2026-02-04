@@ -33,7 +33,7 @@ export default function CurrentProject() {
                 Solar-Powered Smart Camera System
               </h3>
               <p className="text-gray-600 leading-relaxed mb-4 text-sm sm:text-base">
-                Designing a compact, pole-mounted surveillance system capable of true 24/7 recording using
+                Designing a compact, self-contained surveillance system capable of true 24/7 recording using
                 modular off-the-shelf components. By combining edge compute hardware with cellular connectivity
                 and solar power, we can deliver always-on monitoring at a fraction of commercial system costs.
               </p>
