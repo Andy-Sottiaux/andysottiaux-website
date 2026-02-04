@@ -26,7 +26,7 @@ export default function About() {
                   <img
                     src="/images/chinchilla-black.png"
                     alt=""
-                    className="absolute bottom-1 right-1 w-8 sm:w-10 md:w-12 h-8 sm:h-10 md:h-12 opacity-10 hover:opacity-40 transition-opacity duration-300"
+                    className="absolute bottom-0 right-0 w-14 sm:w-18 md:w-20 h-14 sm:h-18 md:h-20 opacity-20 hover:opacity-50 transition-opacity duration-300"
                     title="Hi there! 🐭"
                   />
                 </div>
