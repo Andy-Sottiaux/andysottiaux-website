@@ -29,14 +29,14 @@ const projects = [
   },
   {
     title: 'Record+Transcribe',
-    description: 'Voice recording with live transcription and AI-powered summaries. Turn meetings, lectures, and ideas into organized, actionable knowledge.',
+    description: 'Capture voice recordings with real-time live transcription. Features AI-powered summaries that extract key points, decisions, and action items from meetings, lectures, and conversations.',
     tech: ['iOS', 'Swift', 'SwiftUI', 'Speech Recognition', 'OpenAI'],
     link: 'https://www.hatchingpoint.com/',
     icon: '/images/recordtranscribe-icon.png',
   },
   {
     title: 'Travel Agent AI',
-    description: 'AI-powered travel planning assistant. Get personalized trip recommendations, itineraries, and travel insights powered by artificial intelligence.',
+    description: 'Your personal AI travel planning assistant. Get personalized trip recommendations, detailed itineraries, local insights, and smart booking suggestions tailored to your preferences.',
     tech: ['iOS', 'Swift', 'SwiftUI', 'AI', 'Travel Planning'],
     link: 'https://www.hatchingpoint.com/',
     icon: '/images/travelagentai-icon.png',
