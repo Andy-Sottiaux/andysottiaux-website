@@ -7,6 +7,7 @@ import Projects from '@/components/Projects'
 import Aerospace from '@/components/Aerospace'
 import Contact from '@/components/Contact'
 import Footer from '@/components/Footer'
+import ScrollChinchilla from '@/components/ScrollChinchilla'
 
 export default function Home() {
   return (
@@ -20,6 +21,7 @@ export default function Home() {
       <Aerospace />
       <Contact />
       <Footer />
+      <ScrollChinchilla />
     </main>
   )
 }

@@ -21,12 +21,12 @@ export default function About() {
                     className="w-full h-full object-cover"
                   />
                 </div>
-                {/* Decorative element with hidden chinchilla */}
-                <div className="absolute -bottom-4 -right-4 w-16 sm:w-20 md:w-24 h-16 sm:h-20 md:h-24 bg-foreground/10 rounded-2xl -z-10 group/chinchilla">
+                {/* Decorative element with chinchilla */}
+                <div className="absolute -bottom-4 -right-4 w-16 sm:w-20 md:w-24 h-16 sm:h-20 md:h-24 bg-foreground/10 rounded-2xl -z-10">
                   <img
                     src="/images/chinchilla-black.png"
                     alt=""
-                    className="absolute bottom-0 right-0 w-14 sm:w-18 md:w-20 h-14 sm:h-18 md:h-20 opacity-20 hover:opacity-50 transition-opacity duration-300"
+                    className="absolute -bottom-2 -right-2 w-16 sm:w-20 md:w-24 h-16 sm:h-20 md:h-24 opacity-40 hover:opacity-70 hover:scale-110 transition-all duration-300"
                     title="Hi there! 🐭"
                   />
                 </div>

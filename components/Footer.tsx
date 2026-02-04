@@ -49,7 +49,7 @@ export default function Footer() {
             <img
               src="/images/chinchilla-white.png"
               alt=""
-              className="w-6 h-6 sm:w-8 sm:h-8 opacity-60 hover:opacity-100 transition-opacity"
+              className="w-8 h-8 sm:w-10 sm:h-10 opacity-80 hover:opacity-100 hover:scale-110 transition-all duration-300"
               title="🐭"
             />
           </div>
