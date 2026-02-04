@@ -27,6 +27,20 @@ const projects = [
     link: 'https://www.hatchingpoint.com/',
     icon: '/images/caffeine-icon.jpg',
   },
+  {
+    title: 'Record+Transcribe',
+    description: 'Voice recording with live transcription and AI-powered summaries. Turn meetings, lectures, and ideas into organized, actionable knowledge.',
+    tech: ['iOS', 'Swift', 'SwiftUI', 'Speech Recognition', 'OpenAI'],
+    link: 'https://www.hatchingpoint.com/',
+    icon: '/images/recordtranscribe-icon.png',
+  },
+  {
+    title: 'Travel Agent AI',
+    description: 'AI-powered travel planning assistant. Get personalized trip recommendations, itineraries, and travel insights powered by artificial intelligence.',
+    tech: ['iOS', 'Swift', 'SwiftUI', 'AI', 'Travel Planning'],
+    link: 'https://www.hatchingpoint.com/',
+    icon: '/images/travelagentai-icon.png',
+  },
 ]
 
 export default function Projects() {
