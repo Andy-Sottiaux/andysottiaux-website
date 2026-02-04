@@ -34,29 +34,29 @@ export default function CurrentProject() {
               </h3>
               <p className="text-gray-600 leading-relaxed mb-4 text-sm sm:text-base">
                 Designing a compact, pole-mounted surveillance system using modular off-the-shelf components.
-                By leveraging our existing DART MX95 compute module and 5G modem alongside standard solar,
-                battery, and power hardware, we can deliver commercial-grade capabilities at a fraction of the cost.
+                By combining edge compute hardware with cellular connectivity and standard solar and battery
+                components, we can deliver commercial-grade capabilities at a fraction of the cost.
               </p>
               <p className="text-gray-600 leading-relaxed mb-6 text-sm sm:text-base">
-                This DIY approach eliminates vendor lock-in, reduces size and complexity compared to bulky
-                trailer-based solutions, and provides full flexibility for AI analytics and cloud integration down the road.
+                This approach eliminates vendor lock-in, reduces size and complexity compared to bulky
+                trailer-based solutions, and provides full flexibility for AI analytics and cloud integration.
               </p>
 
               {/* Stats */}
               <div className="grid grid-cols-2 gap-4 sm:gap-6 pt-4 border-t border-gray-200">
                 <div>
-                  <div className="text-2xl sm:text-3xl font-bold text-green-600">~$400</div>
-                  <div className="text-xs sm:text-sm text-gray-500">Per unit cost</div>
+                  <div className="text-2xl sm:text-3xl font-bold text-green-600">~10%</div>
+                  <div className="text-xs sm:text-sm text-gray-500">Cost of commercial systems</div>
                 </div>
                 <div>
-                  <div className="text-2xl sm:text-3xl font-bold text-foreground">90%</div>
-                  <div className="text-xs sm:text-sm text-gray-500">Cost savings vs commercial</div>
+                  <div className="text-2xl sm:text-3xl font-bold text-foreground">No</div>
+                  <div className="text-xs sm:text-sm text-gray-500">Vendor lock-in</div>
                 </div>
               </div>
 
               {/* Tech Tags */}
               <div className="flex flex-wrap gap-2 mt-6">
-                {['DART MX95', '5G', 'Solar Power', 'Edge AI', 'Computer Vision'].map((tech, i) => (
+                {['Solar Power', 'Edge Computing', 'Cellular', 'Computer Vision', 'Cloud Integration'].map((tech, i) => (
                   <span
                     key={i}
                     className="px-3 py-1 bg-gray-100 text-gray-700 rounded-lg text-xs font-medium"
