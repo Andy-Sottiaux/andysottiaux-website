@@ -124,6 +124,20 @@ const websiteJsonLd = {
   }
 }
 
+// Breadcrumb structured data for better search result display
+const breadcrumbJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    {
+      '@type': 'ListItem',
+      position: 1,
+      name: 'Andy Sottiaux',
+      item: siteUrl
+    }
+  ]
+}
+
 export default function RootLayout({
   children,
 }: {
@@ -141,6 +155,10 @@ export default function RootLayout({
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
         />
       </head>
       <body>{children}</body>
