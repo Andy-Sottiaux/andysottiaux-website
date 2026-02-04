@@ -42,9 +42,17 @@ export default function Footer() {
         </div>
 
         <div className="mt-6 sm:mt-8 pt-6 sm:pt-8 border-t border-white/20 text-center">
-          <p className="text-xs sm:text-sm text-gray-300">
-            © {new Date().getFullYear()} Andy Sottiaux. All rights reserved.
-          </p>
+          <div className="flex items-center justify-center gap-2">
+            <p className="text-xs sm:text-sm text-gray-300">
+              © {new Date().getFullYear()} Andy Sottiaux. All rights reserved.
+            </p>
+            <img
+              src="/images/chinchilla-white.png"
+              alt=""
+              className="w-4 h-4 opacity-50 hover:opacity-100 transition-opacity"
+              title="🐭"
+            />
+          </div>
           <p className="text-xs text-gray-400 mt-1 sm:mt-2">
             Built with Next.js, TypeScript & Tailwind CSS
           </p>
