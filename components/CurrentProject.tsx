@@ -33,9 +33,9 @@ export default function CurrentProject() {
                 Solar-Powered Smart Camera System
               </h3>
               <p className="text-gray-600 leading-relaxed mb-4 text-sm sm:text-base">
-                Designing a compact, pole-mounted surveillance system using modular off-the-shelf components.
-                By combining edge compute hardware with cellular connectivity and standard solar and battery
-                components, we can deliver commercial-grade capabilities at a fraction of the cost.
+                Designing a compact, pole-mounted surveillance system capable of true 24/7 recording using
+                modular off-the-shelf components. By combining edge compute hardware with cellular connectivity
+                and solar power, we can deliver always-on monitoring at a fraction of commercial system costs.
               </p>
               <p className="text-gray-600 leading-relaxed mb-6 text-sm sm:text-base">
                 This approach eliminates vendor lock-in, reduces size and complexity compared to bulky
@@ -43,20 +43,24 @@ export default function CurrentProject() {
               </p>
 
               {/* Stats */}
-              <div className="grid grid-cols-2 gap-4 sm:gap-6 pt-4 border-t border-gray-200">
+              <div className="grid grid-cols-3 gap-4 sm:gap-6 pt-4 border-t border-gray-200">
                 <div>
-                  <div className="text-2xl sm:text-3xl font-bold text-green-600">~10%</div>
-                  <div className="text-xs sm:text-sm text-gray-500">Cost of commercial systems</div>
+                  <div className="text-2xl sm:text-3xl font-bold text-foreground">24/7</div>
+                  <div className="text-xs sm:text-sm text-gray-500">Recording</div>
                 </div>
                 <div>
-                  <div className="text-2xl sm:text-3xl font-bold text-foreground">No</div>
+                  <div className="text-2xl sm:text-3xl font-bold text-green-600">~10%</div>
+                  <div className="text-xs sm:text-sm text-gray-500">Cost of commercial</div>
+                </div>
+                <div>
+                  <div className="text-2xl sm:text-3xl font-bold text-foreground">Zero</div>
                   <div className="text-xs sm:text-sm text-gray-500">Vendor lock-in</div>
                 </div>
               </div>
 
               {/* Tech Tags */}
               <div className="flex flex-wrap gap-2 mt-6">
-                {['Solar Power', 'Edge Computing', 'Cellular', 'Computer Vision', 'Cloud Integration'].map((tech, i) => (
+                {['24/7 Recording', 'Solar Power', 'Edge Computing', 'Cellular', 'Computer Vision'].map((tech, i) => (
                   <span
                     key={i}
                     className="px-3 py-1 bg-gray-100 text-gray-700 rounded-lg text-xs font-medium"
