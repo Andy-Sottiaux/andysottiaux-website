@@ -1,19 +1,24 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 
 export default function ScrollChinchilla() {
   const [isVisible, setIsVisible] = useState(false)
-  const [hasAnimated, setHasAnimated] = useState(false)
+  const canTrigger = useRef(true)
 
   useEffect(() => {
     const handleScroll = () => {
-      // Show chinchilla when scrolled past 60% of the page
       const scrollPercent = (window.scrollY / (document.documentElement.scrollHeight - window.innerHeight)) * 100
 
-      if (scrollPercent > 60 && !hasAnimated) {
+      // Reset trigger when scrolled back above 50%
+      if (scrollPercent < 50) {
+        canTrigger.current = true
+      }
+
+      // Show chinchilla when scrolled past 70%
+      if (scrollPercent > 70 && canTrigger.current) {
         setIsVisible(true)
-        setHasAnimated(true)
+        canTrigger.current = false
 
         // Hide after 3 seconds
         setTimeout(() => {
@@ -24,7 +29,7 @@ export default function ScrollChinchilla() {
 
     window.addEventListener('scroll', handleScroll)
     return () => window.removeEventListener('scroll', handleScroll)
-  }, [hasAnimated])
+  }, [])
 
   return (
     <div
