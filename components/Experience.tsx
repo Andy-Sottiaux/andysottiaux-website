@@ -1,4 +1,4 @@
-const experiences = [
+const experiences: { title: string; company: string; companyUrl?: string; period: string; description: string; achievements: string[] }[] = [
   {
     title: 'Senior Engineer-Program Manager I',
     company: 'AVX AIRCRAFT COMPANY',
@@ -15,6 +15,7 @@ const experiences = [
   {
     title: 'Founder / Engineer',
     company: 'HatchingPoint',
+    companyUrl: 'https://www.hatchingpoint.com',
     period: 'Jan 2021 - Present',
     description: 'Founded and built a portfolio of mobile applications and web services focused on wellness and productivity.',
     achievements: [
@@ -68,7 +69,15 @@ export default function Experience() {
               <div className="flex flex-col md:flex-row md:items-start md:justify-between mb-4">
                 <div className="flex-1">
                   <h3 className="text-xl sm:text-2xl font-bold text-foreground mb-2">{exp.title}</h3>
-                  <p className="text-lg sm:text-xl text-gray-600 font-medium">{exp.company}</p>
+                  <p className="text-lg sm:text-xl text-gray-600 font-medium">
+                    {exp.companyUrl ? (
+                      <a href={exp.companyUrl} target="_blank" rel="noopener noreferrer" className="hover:text-foreground hover:underline transition-colors">
+                        {exp.company}
+                      </a>
+                    ) : (
+                      exp.company
+                    )}
+                  </p>
                 </div>
                 <span className="text-sm font-semibold text-gray-500 bg-gray-100 px-3 sm:px-4 py-2 rounded-full mt-2 md:mt-0 self-start">
                   {exp.period}
