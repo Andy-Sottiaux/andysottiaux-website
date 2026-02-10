@@ -24,8 +24,8 @@ export default function Hero() {
           UAV Systems | Rotorcraft Design | Autonomy
         </p>
         <p className="text-base sm:text-lg text-white/80 max-w-2xl mx-auto mb-8 sm:mb-12 drop-shadow-md px-2">
-          Senior Engineer building complete UAV systems—from rotor blades and hardware to software and autonomy.
-          Bridging mechanical design, embedded systems, and hands-on testing with a practical, let's-get-it-flying approach.
+          Senior Engineer building complete UAV systems, from rotor blades and hardware to software and autonomy.
+          Bridging mechanical design, embedded systems, and hands-on testing with a practical, fail fast mentality.
         </p>
         <div className="flex gap-3 sm:gap-4 justify-center flex-wrap">
           <a
