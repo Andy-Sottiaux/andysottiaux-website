@@ -36,7 +36,7 @@ export default function About() {
             {/* About Text */}
             <div className="flex-1 space-y-4 sm:space-y-6">
               <p className="text-base sm:text-lg text-gray-700 leading-relaxed">
-                I'm a <span className="font-semibold text-foreground">senior engineer</span> who likes to build complete UAV systems—from the rotor blades and hardware
+                I'm a <span className="font-semibold text-foreground">senior engineer</span> who likes to build complete UAV systems, from the rotor blades and hardware
                 to the software and autonomy that fly them. At AVX, I've designed and manufactured full rotor
                 systems and led our subscale UAV and early autonomy work, including CubePilot/CubeNode integration
                 and ROS2-based test and control software.
@@ -46,7 +46,7 @@ export default function About() {
                 practical, <span className="font-semibold text-foreground">let's-get-it-flying approach</span> to moving ideas into real, working aerospace capabilities.
               </p>
               <p className="text-base sm:text-lg text-gray-700 leading-relaxed">
-                Beyond aerospace, I founded <span className="font-semibold text-foreground">HatchingPoint</span> where I've designed and developed 7+ production iPhone
+                Beyond aerospace, I founded <span className="font-semibold text-foreground">HatchingPoint</span> where I've designed and developed 10+ production iPhone
                 apps, built modern web applications, and architected robust back-end systems. I thrive at the
                 intersection of hardware and software, always driven by making things that work.
               </p>
