@@ -1,5 +1,12 @@
 const projects = [
   {
+    title: 'Rot Dot',
+    description: 'Block distracting apps with a physical tap. Place NFC stickers around your space and scan to instantly lock or unlock apps. Uses Apple Screen Time API for real-world friction against phone addiction.',
+    tech: ['iOS', 'Swift', 'SwiftUI', 'NFC', 'FamilyControls', 'Screen Time'],
+    link: 'https://www.hatchingpoint.com/',
+    icon: '/images/rotdot-icon.png',
+  },
+  {
     title: 'WYZECAR',
     description: 'Vision-based autonomous RC car using YOLOv8 for real-time human detection and following. Features web-based WASD remote control, live video streaming, and PID-controlled smooth motion.',
     tech: ['Python', 'YOLOv8', 'ROS2', 'DART-MX95', 'ESP32', 'Computer Vision'],
