@@ -45,7 +45,7 @@ const projects = [
     title: 'Travel Agent AI',
     description: 'Your personal AI travel planning assistant. Get personalized trip recommendations, detailed itineraries, local insights, and smart booking suggestions tailored to your preferences.',
     tech: ['iOS', 'Swift', 'SwiftUI', 'AI', 'Travel Planning'],
-    link: 'https://www.hatchingpoint.com/',
+    link: 'https://apps.apple.com/us/app/travel-agent-ai/id6758284691',
     icon: '/images/travelagentai-icon.png',
   },
 ]
