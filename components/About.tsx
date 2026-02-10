@@ -43,7 +43,7 @@ export default function About() {
               </p>
               <p className="text-base sm:text-lg text-gray-700 leading-relaxed">
                 I enjoy bridging mechanical design, embedded systems, and hands-on testing, and I bring a
-                practical, <span className="font-semibold text-foreground">let's-get-it-flying approach</span> to moving ideas into real, working aerospace capabilities.
+                practical, <span className="font-semibold text-foreground">fail fast mentality</span> to moving ideas into real, working aerospace capabilities.
               </p>
               <p className="text-base sm:text-lg text-gray-700 leading-relaxed">
                 Beyond aerospace, I founded <span className="font-semibold text-foreground">HatchingPoint</span> where I've designed and developed 10+ production iPhone
