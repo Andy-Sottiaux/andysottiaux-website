@@ -2,6 +2,7 @@ const experiences: { title: string; company: string; companyUrl?: string; period
   {
     title: 'Senior Engineer-Program Manager I',
     company: 'AVX AIRCRAFT COMPANY',
+    companyUrl: 'https://www.avxaircraft.com/',
     period: 'Sep 2023 - Present',
     description: 'Leading UAV and autonomy development efforts, coordinating mechanical, electrical, and software integration.',
     achievements: [
@@ -27,6 +28,7 @@ const experiences: { title: string; company: string; companyUrl?: string; period
   {
     title: 'Rotor Systems Design Engineer',
     company: 'Bell Flight',
+    companyUrl: 'https://www.bellflight.com',
     period: 'Feb 2020 - Sep 2023',
     description: 'Designed and developed rotor systems for helicopter platforms, supporting manufacturing and fleet operations.',
     achievements: [
@@ -39,6 +41,7 @@ const experiences: { title: string; company: string; companyUrl?: string; period
   {
     title: 'Project Manager',
     company: 'Texas Air Systems',
+    companyUrl: 'https://www.texasairsystems.com/',
     period: 'Aug 2016 - Feb 2020',
     description: 'Managed HVAC system design, installation, and maintenance projects for commercial clients.',
     achievements: [
