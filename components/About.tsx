@@ -36,24 +36,23 @@ export default function About() {
             {/* About Text */}
             <div className="flex-1 space-y-4 sm:space-y-6">
               <p className="text-base sm:text-lg text-gray-700 leading-relaxed">
-                I build things. <span className="font-semibold text-foreground">Drones, apps, robots, rotor systems</span> — if it
-                needs to go from idea to something real, that's where I live. I don't really draw a line between
-                hardware and software. It's all just building.
+                I build things. <span className="font-semibold text-foreground">Drones, apps, robots, rotor systems.</span> I
+                don't really draw a line between hardware and software. It's all just building.
               </p>
               <p className="text-base sm:text-lg text-gray-700 leading-relaxed">
-                By day, I'm a senior engineer at <span className="font-semibold text-foreground">AVX Aircraft</span> — designing
-                rotor systems, wiring up flight controllers, writing test stand software, and getting UAVs off
-                the ground. Before that, I was at <span className="font-semibold text-foreground">Bell Flight</span> working
+                I'm a senior engineer at <span className="font-semibold text-foreground">AVX Aircraft</span> where I
+                design rotor systems, wire up flight controllers, write test stand software, and get UAVs off
+                the ground. Before that I was at <span className="font-semibold text-foreground">Bell Flight</span> working
                 on helicopter rotor design.
               </p>
               <p className="text-base sm:text-lg text-gray-700 leading-relaxed">
-                On the side, I run <span className="font-semibold text-foreground">HatchingPoint</span> — a portfolio
+                I also run <span className="font-semibold text-foreground">HatchingPoint</span>, a portfolio
                 of iOS apps I've designed, built, and shipped to the App Store. NFC-powered focus tools,
-                AI travel planners, voice transcription, caffeine trackers — whatever scratches the itch.
-                I handle everything: design, code, backend, deployment.
+                AI travel planners, voice transcription, caffeine trackers.
+                I handle everything from design and code to backend and deployment.
               </p>
               <p className="text-base sm:text-lg text-gray-700 leading-relaxed">
-                I'm most useful when something needs to actually work — not just look good in a slide deck.
+                I'm most useful when something needs to actually work, not just look good in a slide deck.
               </p>
 
               {/* Key Stats */}
