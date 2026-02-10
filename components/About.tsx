@@ -36,34 +36,39 @@ export default function About() {
             {/* About Text */}
             <div className="flex-1 space-y-4 sm:space-y-6">
               <p className="text-base sm:text-lg text-gray-700 leading-relaxed">
-                I'm a <span className="font-semibold text-foreground">senior engineer</span> who likes to build complete UAV systems—from the rotor blades and hardware
-                to the software and autonomy that fly them. At AVX, I've designed and manufactured full rotor
-                systems and led our subscale UAV and early autonomy work, including CubePilot/CubeNode integration
-                and ROS2-based test and control software.
+                I build things. <span className="font-semibold text-foreground">Drones, apps, robots, rotor systems</span> — if it
+                needs to go from idea to something real, that's where I live. I don't really draw a line between
+                hardware and software. It's all just building.
               </p>
               <p className="text-base sm:text-lg text-gray-700 leading-relaxed">
-                I enjoy bridging mechanical design, embedded systems, and hands-on testing, and I bring a
-                practical, <span className="font-semibold text-foreground">let's-get-it-flying approach</span> to moving ideas into real, working aerospace capabilities.
+                By day, I'm a senior engineer at <span className="font-semibold text-foreground">AVX Aircraft</span> — designing
+                rotor systems, wiring up flight controllers, writing test stand software, and getting UAVs off
+                the ground. Before that, I was at <span className="font-semibold text-foreground">Bell Flight</span> working
+                on helicopter rotor design.
               </p>
               <p className="text-base sm:text-lg text-gray-700 leading-relaxed">
-                Beyond aerospace, I founded <span className="font-semibold text-foreground">HatchingPoint</span> where I've designed and developed 7+ production iPhone
-                apps, built modern web applications, and architected robust back-end systems. I thrive at the
-                intersection of hardware and software, always driven by making things that work.
+                On the side, I run <span className="font-semibold text-foreground">HatchingPoint</span> — a portfolio
+                of iOS apps I've designed, built, and shipped to the App Store. NFC-powered focus tools,
+                AI travel planners, voice transcription, caffeine trackers — whatever scratches the itch.
+                I handle everything: design, code, backend, deployment.
+              </p>
+              <p className="text-base sm:text-lg text-gray-700 leading-relaxed">
+                I'm most useful when something needs to actually work — not just look good in a slide deck.
               </p>
 
               {/* Key Stats */}
               <div className="grid grid-cols-3 gap-3 sm:gap-6 pt-4 sm:pt-6 mt-4 sm:mt-6 border-t border-gray-200">
                 <div className="text-center">
-                  <div className="text-2xl sm:text-3xl font-bold text-foreground">7+</div>
-                  <div className="text-xs sm:text-sm text-gray-500 mt-1">Apps Published</div>
+                  <div className="text-2xl sm:text-3xl font-bold text-foreground">10+</div>
+                  <div className="text-xs sm:text-sm text-gray-500 mt-1">Apps Shipped</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl sm:text-3xl font-bold text-foreground">8+</div>
-                  <div className="text-xs sm:text-sm text-gray-500 mt-1">Years Experience</div>
+                  <div className="text-2xl sm:text-3xl font-bold text-foreground">9+</div>
+                  <div className="text-xs sm:text-sm text-gray-500 mt-1">Years Building</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl sm:text-3xl font-bold text-foreground">2</div>
-                  <div className="text-xs sm:text-sm text-gray-500 mt-1">Industries</div>
+                  <div className="text-2xl sm:text-3xl font-bold text-foreground">Full Stack</div>
+                  <div className="text-xs sm:text-sm text-gray-500 mt-1">Hardware to App Store</div>
                 </div>
               </div>
             </div>
