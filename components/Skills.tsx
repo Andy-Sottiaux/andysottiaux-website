@@ -1,7 +1,7 @@
 const skillCategories = [
   {
     category: 'Aerospace & Robotics',
-    skills: ['UAV Systems', 'ROS2', 'Rotor Design', 'Flight Control Systems', 'Autonomy', 'CubePilot'],
+    skills: ['UAV Systems', 'ROS2', 'Rotor Design', 'Flight Control Systems', 'Autonomy', 'CubePilot', 'Computer Vision', 'YOLOv8'],
   },
   {
     category: 'Hardware & Debugging',
@@ -13,11 +13,11 @@ const skillCategories = [
   },
   {
     category: 'Software Development',
-    skills: ['Swift', 'JavaScript/TypeScript', 'Python', 'React', 'iOS Development'],
+    skills: ['Swift', 'SwiftUI', 'JavaScript/TypeScript', 'Python', 'React', 'iOS Development', 'NFC', 'StoreKit', 'FamilyControls'],
   },
   {
     category: 'Backend & Data',
-    skills: ['MongoDB', 'Supabase', 'Node.js', 'Data Acquisition', 'Real-time Telemetry'],
+    skills: ['MongoDB', 'Supabase', 'Node.js', 'OpenAI', 'Speech Recognition', 'Data Acquisition', 'Real-time Telemetry'],
   },
   {
     category: 'Leadership & Management',
