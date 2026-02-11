@@ -83,6 +83,7 @@ const jsonLd = {
   email: 'andrewsottiaux@gmail.com',
   sameAs: [
     'https://www.linkedin.com/in/andysottiaux',
+    'https://github.com/Andy-Sottiaux',
   ],
   worksFor: {
     '@type': 'Organization',
@@ -90,6 +91,11 @@ const jsonLd = {
     url: 'https://avxaircraft.com'
   },
   alumniOf: [
+    {
+      '@type': 'CollegeOrUniversity',
+      name: 'Texas Tech University',
+      url: 'https://www.ttu.edu'
+    },
     {
       '@type': 'Organization',
       name: 'Bell Flight'
@@ -166,7 +172,15 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
         />
       </head>
-      <body>{children}</body>
+      <body>
+        <a
+          href="#about"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-white focus:text-foreground focus:rounded-lg focus:shadow-lg focus:font-medium"
+        >
+          Skip to main content
+        </a>
+        {children}
+      </body>
     </html>
   )
 }

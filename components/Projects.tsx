@@ -39,8 +39,8 @@ const projects: Project[] = [
   },
   {
     title: 'AirMD+',
-    description: 'Monitor your HVAC system with real-time temperature tracking. iOS + hardware solution providing comprehensive climate control oversight.',
-    tech: ['iOS', 'Swift', 'Hardware Integration', 'IoT'],
+    description: 'Monitor your HVAC system with real-time temperature tracking. Full-stack iOS + custom hardware solution providing comprehensive climate control oversight.',
+    tech: ['iOS', 'Swift', 'Hardware Design', 'IoT', 'Embedded Systems'],
     link: 'https://www.hatchingpoint.com/airmd',
     icon: '/images/airmd-icon.jpg',
   },
@@ -95,6 +95,9 @@ export default function Projects() {
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground mb-4">Featured Projects</h2>
           <div className="w-20 h-1 bg-foreground mx-auto"></div>
           <p className="text-gray-600 mt-4 text-base sm:text-lg">Robotics, computer vision, mobile applications, 3D printing, and CAD</p>
+          <p className="text-gray-400 mt-3 text-xs sm:text-sm italic max-w-2xl mx-auto">
+            Due to the proprietary nature of aerospace programs, specific project details cannot be publicly disclosed. Happy to discuss my experience in appropriate contexts.
+          </p>
         </div>
 
         {/* Projects Grid */}

@@ -21,6 +21,7 @@ export default function About() {
                     src="/images/profile.jpg"
                     alt="Andy Sottiaux"
                     className="w-full h-full object-cover"
+                    loading="lazy"
                   />
                 </div>
                 {/* Decorative element with chinchilla */}

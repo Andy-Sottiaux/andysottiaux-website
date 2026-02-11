@@ -20,6 +20,7 @@ export default function Header() {
     { href: '#experience', label: 'Experience' },
     { href: '#skills', label: 'Skills' },
     { href: '#projects', label: 'Projects' },
+    { href: '#education', label: 'Education' },
     { href: '#contact', label: 'Contact' },
   ]
 
@@ -64,6 +65,7 @@ export default function Header() {
             className="md:hidden p-2 -mr-2"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             aria-label="Toggle menu"
+            aria-expanded={isMobileMenuOpen}
           >
             <svg
               className={`w-6 h-6 transition-all ${
