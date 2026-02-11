@@ -1,4 +1,13 @@
-const projects = [
+type Project = {
+  title: string
+  description: string
+  tech: string[]
+  link: string
+  icon: string
+  downloads?: { label: string; href: string }[]
+}
+
+const projects: Project[] = [
   {
     title: 'Rot Dot',
     description: 'Block distracting apps with a physical tap. Place NFC stickers around your space and scan to instantly lock or unlock apps. Uses Apple Screen Time API for real-world friction against phone addiction.',
@@ -48,6 +57,17 @@ const projects = [
     link: 'https://apps.apple.com/us/app/travel-agent-ai/id6758284691',
     icon: '/images/travelagentai-icon.png',
   },
+  {
+    title: 'AirPods Pro 3 Tesla Charger Mount',
+    description: 'Custom-designed holder that positions AirPods Pro 3 at the correct height for Tesla wireless chargers. Free to download, print, and modify.',
+    tech: ['SOLIDWORKS', '3D Printing', 'CAD'],
+    link: '#',
+    icon: '/images/airpods-tesla-mount.png',
+    downloads: [
+      { label: 'STL', href: '/files/AirPods Pro 3_Teslav2.STL' },
+      { label: 'SLDPRT', href: '/files/AirPods Pro 3_Teslav2.SLDPRT' },
+    ],
+  },
 ]
 
 export default function Projects() {
@@ -92,7 +112,20 @@ export default function Projects() {
                 ))}
               </div>
 
-              {project.link !== '#' && (
+              {project.downloads ? (
+                <div className="flex gap-2 justify-center">
+                  {project.downloads.map((dl, i) => (
+                    <a
+                      key={i}
+                      href={dl.href}
+                      download
+                      className="px-3 sm:px-4 py-1.5 bg-foreground text-white rounded-lg text-xs sm:text-sm font-medium hover:bg-foreground/80 transition-all"
+                    >
+                      {dl.label}
+                    </a>
+                  ))}
+                </div>
+              ) : project.link !== '#' && (
                 <div className="text-center">
                   <a
                     href={project.link}
