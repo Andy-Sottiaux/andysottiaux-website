@@ -82,7 +82,7 @@ const jsonLd = {
   description: 'Engineer and founder bridging aerospace hardware and production software. Building UAV systems at AVX Aircraft and shipping 10+ iOS apps at HatchingPoint.',
   email: 'andrewsottiaux@gmail.com',
   sameAs: [
-    'https://www.linkedin.com/in/andysottiaux',
+    'https://www.linkedin.com/in/andy-sottiaux-593700100/',
     'https://github.com/Andy-Sottiaux',
   ],
   worksFor: {
