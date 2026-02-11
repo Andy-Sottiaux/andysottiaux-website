@@ -1,11 +1,28 @@
 'use client'
 
-// Update these values manually as donations come in
-const RAISED = 1776
-const GOAL = 3000
+import { useEffect, useState } from 'react'
+
+// Fallback values if API is unavailable
+const FALLBACK_RAISED = 1776
+const FALLBACK_GOAL = 3000
 
 export default function Marathon() {
-  const percentage = Math.round((RAISED / GOAL) * 100)
+  const [raised, setRaised] = useState(FALLBACK_RAISED)
+  const [goal, setGoal] = useState(FALLBACK_GOAL)
+
+  useEffect(() => {
+    fetch('/api/fundraising')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.raised !== null) {
+          setRaised(data.raised)
+          setGoal(data.goal)
+        }
+      })
+      .catch(() => {})
+  }, [])
+
+  const percentage = Math.round((raised / goal) * 100)
 
   return (
     <section className="py-16 sm:py-24 md:py-32 px-4 sm:px-6 bg-gradient-to-b from-white to-gray-50">
@@ -39,10 +56,10 @@ export default function Marathon() {
               <div className="mb-6">
                 <div className="flex justify-between text-sm mb-2">
                   <span className="font-semibold text-foreground">
-                    ${RAISED.toLocaleString()} raised
+                    ${raised.toLocaleString()} raised
                   </span>
                   <span className="text-gray-500">
-                    ${GOAL.toLocaleString()} goal
+                    ${goal.toLocaleString()} goal
                   </span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
