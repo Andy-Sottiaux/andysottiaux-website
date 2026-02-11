@@ -9,7 +9,7 @@ export default function Hero() {
         alt=""
         fill
         priority
-        className="object-cover z-0"
+        className="object-cover z-0 animate-ken-burns"
         sizes="100vw"
       />
       {/* Gradient Overlay for better text readability */}
