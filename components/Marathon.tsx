@@ -47,14 +47,25 @@ export default function Marathon() {
     <>
       <div className="mt-8 sm:mt-12 bg-[#E8642C] rounded-2xl p-6 sm:p-8">
         <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-10">
-          {/* Left: Text + Progress */}
+          {/* Left: Logo + Text + Progress */}
           <div className="flex-1 text-center sm:text-left">
-            <p className="text-white/70 text-xs font-semibold tracking-wider uppercase mb-1">
-              2026 NYC Marathon
-            </p>
-            <h3 className="text-white font-bold text-xl sm:text-2xl mb-3">
-              Running for Team For Kids
-            </h3>
+            <div className="flex items-center gap-4 mb-3 justify-center sm:justify-start">
+              <div className="bg-white rounded-xl p-2 flex-shrink-0">
+                <img
+                  src="/images/tcs-marathon-logo.png"
+                  alt="2026 TCS New York City Marathon"
+                  className="h-12 sm:h-14 object-contain"
+                />
+              </div>
+              <div>
+                <p className="text-white/70 text-xs font-semibold tracking-wider uppercase">
+                  2026 NYC Marathon
+                </p>
+                <h3 className="text-white font-bold text-xl sm:text-2xl">
+                  Running for Team For Kids
+                </h3>
+              </div>
+            </div>
 
             {/* Progress Bar */}
             <div className="max-w-md">

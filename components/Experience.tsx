@@ -26,6 +26,7 @@ const experiences: { title: string; company: string; companyUrl?: string; period
       'Built modern web applications using React, JavaScript/TypeScript, focusing on component-driven architectures',
       'Architected back-end systems with MongoDB and Supabase, ensuring robust data modeling and real-time data flows',
     ],
+    logo: '/images/hatchingpoint-logo.jpeg',
   },
   {
     title: 'Rotor Systems Design Engineer',
@@ -53,6 +54,7 @@ const experiences: { title: string; company: string; companyUrl?: string; period
       'Determined project requirements, constraints, and sales team responsibilities to meet customer expectations',
       'Investigated concerns, implemented corrective action and communicated with customers to maximize satisfaction',
     ],
+    logo: '/images/texasairsystems-logo.jpeg',
   },
 ]
 
