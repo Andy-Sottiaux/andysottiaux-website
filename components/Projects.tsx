@@ -64,19 +64,18 @@ const projects: Project[] = [
     link: 'https://apps.apple.com/us/app/travel-agent-ai/id6758284691',
     icon: '/images/travelagentai-icon.png',
   },
-  {
-    title: 'AirPods Pro 3 Tesla Charger Mount',
-    description: 'Custom-designed holder that positions AirPods Pro 3 at the correct height for Tesla wireless chargers. Free to download, print, and modify.',
-    tech: ['SOLIDWORKS', '3D Printing', 'CAD'],
-    link: '#',
-    icon: '/images/airpods-tesla-mount.png',
-    stlUrls: ['/files/assembly-mount.STL', '/files/assembly-airpods.STL'],
-    downloads: [
-      { label: 'STL', href: '/files/AirPods Pro 3_Teslav2.STL' },
-      { label: 'SLDPRT', href: '/files/AirPods Pro 3_Teslav2.SLDPRT' },
-    ],
-  },
 ]
+
+const featuredDesign = {
+  title: 'AirPods Pro 3 Tesla Charger Mount',
+  description: 'Custom-designed holder that positions AirPods Pro 3 at the correct height for Tesla wireless chargers. Free to download, print, and modify.',
+  tech: ['SOLIDWORKS', '3D Printing', 'CAD'],
+  stlUrls: ['/files/assembly-mount.STL', '/files/assembly-airpods.STL'],
+  downloads: [
+    { label: 'STL', href: '/files/AirPods Pro 3_Teslav2.STL' },
+    { label: 'SLDPRT', href: '/files/AirPods Pro 3_Teslav2.SLDPRT' },
+  ],
+}
 
 export default function Projects() {
   return (
@@ -97,19 +96,13 @@ export default function Projects() {
               className="group bg-white border-2 border-gray-200 p-5 sm:p-6 md:p-8 rounded-2xl hover:shadow-2xl transition-all duration-300 hover:border-foreground hover:-translate-y-2"
             >
               <div className="flex items-center justify-center mb-4 sm:mb-6">
-                {project.stlUrls ? (
-                  <div className="w-full h-48 sm:h-56 rounded-2xl overflow-hidden shadow-lg ring-4 ring-gray-100 group-hover:ring-foreground/20 transition-all bg-white">
-                    <STLViewer urls={project.stlUrls} />
-                  </div>
-                ) : (
-                  <div className={`rounded-2xl overflow-hidden shadow-lg ring-4 ring-gray-100 group-hover:ring-foreground/20 transition-all bg-white ${project.downloads ? 'w-full h-40 sm:h-48' : 'w-20 h-20 sm:w-24 sm:h-24'}`}>
-                    <img
-                      src={project.icon}
-                      alt={`${project.title} icon`}
-                      className={`w-full h-full ${project.downloads || project.title === 'WYZECAR' ? 'object-contain p-2' : 'object-cover'}`}
-                    />
-                  </div>
-                )}
+                <div className={`rounded-2xl overflow-hidden shadow-lg ring-4 ring-gray-100 group-hover:ring-foreground/20 transition-all bg-white w-20 h-20 sm:w-24 sm:h-24`}>
+                  <img
+                    src={project.icon}
+                    alt={`${project.title} icon`}
+                    className={`w-full h-full ${project.title === 'WYZECAR' ? 'object-contain p-1' : 'object-cover'}`}
+                  />
+                </div>
               </div>
 
               <h3 className="text-xl sm:text-2xl font-bold mb-2 sm:mb-3 text-foreground text-center">{project.title}</h3>
@@ -126,30 +119,7 @@ export default function Projects() {
                 ))}
               </div>
 
-              {project.downloads ? (
-                <div className="flex flex-col gap-2 items-center">
-                  <div className="flex gap-2 justify-center">
-                    {project.downloads.map((dl, i) => (
-                      <a
-                        key={i}
-                        href={dl.href}
-                        download
-                        className="px-3 sm:px-4 py-1.5 bg-foreground text-white rounded-lg text-xs sm:text-sm font-medium hover:bg-foreground/80 transition-all"
-                      >
-                        {dl.label}
-                      </a>
-                    ))}
-                  </div>
-                  <a
-                    href="https://venmo.com/u/andysottiaux"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-3 sm:px-4 py-1.5 border border-gray-300 text-gray-600 rounded-lg text-xs sm:text-sm font-medium hover:border-foreground hover:text-foreground transition-all"
-                  >
-                    Tip Designer
-                  </a>
-                </div>
-              ) : project.link !== '#' && (
+              {project.link !== '#' && (
                 <div className="text-center">
                   <a
                     href={project.link}
@@ -176,6 +146,51 @@ export default function Projects() {
               )}
             </div>
           ))}
+        </div>
+
+        {/* Featured Design */}
+        <div className="mt-8 sm:mt-12 bg-white border-2 border-gray-200 rounded-2xl p-6 sm:p-8 md:p-10 hover:shadow-2xl transition-all duration-300 hover:border-foreground">
+          <div className="flex flex-col md:flex-row gap-6 md:gap-10 items-center">
+            <div className="w-full md:w-1/2 h-64 sm:h-80 rounded-2xl overflow-hidden shadow-lg ring-4 ring-gray-100 bg-white">
+              <STLViewer urls={featuredDesign.stlUrls} />
+            </div>
+            <div className="flex-1 text-center md:text-left">
+              <h3 className="text-2xl sm:text-3xl font-bold mb-3 text-foreground">{featuredDesign.title}</h3>
+              <p className="text-gray-600 mb-6 leading-relaxed text-sm sm:text-base">{featuredDesign.description}</p>
+
+              <div className="flex flex-wrap gap-1.5 sm:gap-2 mb-6 justify-center md:justify-start">
+                {featuredDesign.tech.map((tech, i) => (
+                  <span
+                    key={i}
+                    className="px-2 sm:px-3 py-1 bg-gray-100 text-gray-700 rounded-lg text-xs font-medium"
+                  >
+                    {tech}
+                  </span>
+                ))}
+              </div>
+
+              <div className="flex gap-2 justify-center md:justify-start flex-wrap">
+                {featuredDesign.downloads.map((dl, i) => (
+                  <a
+                    key={i}
+                    href={dl.href}
+                    download
+                    className="px-4 py-2 bg-foreground text-white rounded-lg text-sm font-medium hover:bg-foreground/80 transition-all"
+                  >
+                    {dl.label}
+                  </a>
+                ))}
+                <a
+                  href="https://venmo.com/u/andysottiaux"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 border border-gray-300 text-gray-600 rounded-lg text-sm font-medium hover:border-foreground hover:text-foreground transition-all"
+                >
+                  Tip Designer
+                </a>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
