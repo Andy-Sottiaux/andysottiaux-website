@@ -47,6 +47,8 @@ export default function STLViewer({ urls, colors }: { urls: string[]; colors?: n
     controls.enableZoom = true
     controls.autoRotate = true
     controls.autoRotateSpeed = 2
+    controls.minPolarAngle = 0
+    controls.maxPolarAngle = Math.PI
 
     // Load all STL parts
     const loader = new STLLoader()
