@@ -67,6 +67,8 @@ export default function STLViewer({ urls, colors }: { urls: string[]; colors?: n
 
     urls.forEach((url, i) => {
       loader.load(url, (geometry) => {
+        // Center each geometry on its own origin
+        geometry.computeBoundingBox()
         const color = colors?.[i] ?? defaultColors[i % defaultColors.length]
         const material = new THREE.MeshPhongMaterial({
           color,
@@ -78,18 +80,24 @@ export default function STLViewer({ urls, colors }: { urls: string[]; colors?: n
 
         loaded++
         if (loaded === urls.length) {
-          // Center the entire group
+          // Compute the world bounding box of the full assembly
           const box = new THREE.Box3().setFromObject(group)
           const center = new THREE.Vector3()
           box.getCenter(center)
-          group.position.sub(center)
+
+          // Shift every mesh so the assembly center lands at the origin
+          group.children.forEach((child) => {
+            child.position.sub(center)
+          })
+
+          // Orbit target = origin (now the true center of the model)
+          controls.target.set(0, 0, 0)
 
           // Position camera to fit
           const size = new THREE.Vector3()
           box.getSize(size)
           const maxDim = Math.max(size.x, size.y, size.z)
           camera.position.set(maxDim, maxDim, maxDim)
-          controls.target.set(0, 0, 0)
           controls.update()
         }
       })
