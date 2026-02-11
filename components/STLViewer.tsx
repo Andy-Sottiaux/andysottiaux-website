@@ -5,7 +5,7 @@ import * as THREE from 'three'
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 
-export default function STLViewer({ url }: { url: string }) {
+export default function STLViewer({ urls, colors }: { urls: string[]; colors?: number[] }) {
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -48,32 +48,42 @@ export default function STLViewer({ url }: { url: string }) {
     controls.autoRotate = true
     controls.autoRotateSpeed = 2
 
-    // Load STL
+    // Load all STL parts
     const loader = new STLLoader()
-    loader.load(url, (geometry) => {
-      const material = new THREE.MeshPhongMaterial({
-        color: 0x888888,
-        specular: 0x444444,
-        shininess: 60,
+    const group = new THREE.Group()
+    scene.add(group)
+
+    const defaultColors = [0x888888, 0xcccccc]
+    let loaded = 0
+
+    urls.forEach((url, i) => {
+      loader.load(url, (geometry) => {
+        const color = colors?.[i] ?? defaultColors[i % defaultColors.length]
+        const material = new THREE.MeshPhongMaterial({
+          color,
+          specular: 0x444444,
+          shininess: 60,
+        })
+        const mesh = new THREE.Mesh(geometry, material)
+        group.add(mesh)
+
+        loaded++
+        if (loaded === urls.length) {
+          // Center the entire group
+          const box = new THREE.Box3().setFromObject(group)
+          const center = new THREE.Vector3()
+          box.getCenter(center)
+          group.position.sub(center)
+
+          // Position camera to fit
+          const size = new THREE.Vector3()
+          box.getSize(size)
+          const maxDim = Math.max(size.x, size.y, size.z)
+          camera.position.set(maxDim, maxDim, maxDim)
+          controls.target.set(0, 0, 0)
+          controls.update()
+        }
       })
-      const mesh = new THREE.Mesh(geometry, material)
-
-      // Center the model
-      geometry.computeBoundingBox()
-      const box = geometry.boundingBox!
-      const center = new THREE.Vector3()
-      box.getCenter(center)
-      mesh.position.sub(center)
-
-      scene.add(mesh)
-
-      // Position camera to fit model
-      const size = new THREE.Vector3()
-      box.getSize(size)
-      const maxDim = Math.max(size.x, size.y, size.z)
-      camera.position.set(maxDim, maxDim, maxDim)
-      controls.target.set(0, 0, 0)
-      controls.update()
     })
 
     // Animation loop
@@ -102,7 +112,7 @@ export default function STLViewer({ url }: { url: string }) {
       renderer.dispose()
       container.removeChild(renderer.domElement)
     }
-  }, [url])
+  }, [urls, colors])
 
   return (
     <div

@@ -9,7 +9,7 @@ type Project = {
   description: string
   tech: string[]
   link: string
-  stlUrl?: string
+  stlUrls?: string[]
   icon: string
   downloads?: { label: string; href: string }[]
 }
@@ -70,7 +70,7 @@ const projects: Project[] = [
     tech: ['SOLIDWORKS', '3D Printing', 'CAD'],
     link: '#',
     icon: '/images/airpods-tesla-mount.png',
-    stlUrl: '/files/AirPods Pro 3_Teslav2.STL',
+    stlUrls: ['/files/assembly-mount.STL', '/files/assembly-airpods.STL'],
     downloads: [
       { label: 'STL', href: '/files/AirPods Pro 3_Teslav2.STL' },
       { label: 'SLDPRT', href: '/files/AirPods Pro 3_Teslav2.SLDPRT' },
@@ -97,9 +97,9 @@ export default function Projects() {
               className="group bg-white border-2 border-gray-200 p-5 sm:p-6 md:p-8 rounded-2xl hover:shadow-2xl transition-all duration-300 hover:border-foreground hover:-translate-y-2"
             >
               <div className="flex items-center justify-center mb-4 sm:mb-6">
-                {project.stlUrl ? (
+                {project.stlUrls ? (
                   <div className="w-full h-48 sm:h-56 rounded-2xl overflow-hidden shadow-lg ring-4 ring-gray-100 group-hover:ring-foreground/20 transition-all bg-white">
-                    <STLViewer url={project.stlUrl} />
+                    <STLViewer urls={project.stlUrls} />
                   </div>
                 ) : (
                   <div className={`rounded-2xl overflow-hidden shadow-lg ring-4 ring-gray-100 group-hover:ring-foreground/20 transition-all bg-white ${project.downloads ? 'w-full h-40 sm:h-48' : 'w-20 h-20 sm:w-24 sm:h-24'}`}>
