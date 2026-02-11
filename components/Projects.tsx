@@ -93,7 +93,7 @@ export default function Projects() {
                   <img
                     src={project.icon}
                     alt={`${project.title} icon`}
-                    className={`w-full h-full ${project.title === 'WYZECAR' ? 'object-contain p-1' : 'object-cover'}`}
+                    className={`w-full h-full ${project.title === 'WYZECAR' || project.title === 'AirPods Pro 3 Tesla Charger Mount' ? 'object-contain p-1' : 'object-cover'}`}
                   />
                 </div>
               </div>
