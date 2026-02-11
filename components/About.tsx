@@ -1,3 +1,5 @@
+import Marathon from './Marathon'
+
 export default function About() {
   return (
     <section id="about" className="py-16 sm:py-24 md:py-32 px-4 sm:px-6 bg-gradient-to-b from-white to-gray-50">
@@ -69,6 +71,9 @@ export default function About() {
             </div>
           </div>
         </div>
+
+        {/* Marathon Banner */}
+        <Marathon />
       </div>
     </section>
   )
