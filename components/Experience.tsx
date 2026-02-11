@@ -1,4 +1,4 @@
-const experiences: { title: string; company: string; companyUrl?: string; period: string; description: string; achievements: string[] }[] = [
+const experiences: { title: string; company: string; companyUrl?: string; period: string; description: string; achievements: string[]; logo?: string; focus?: string[] }[] = [
   {
     title: 'Senior Engineer-Program Manager I',
     company: 'AVX AIRCRAFT COMPANY',
@@ -12,6 +12,8 @@ const experiences: { title: string; company: string; companyUrl?: string; period
       'Implemented ROS2-based autonomy scaffolding to support navigation, perception, and health-monitoring prototypes across multiple platforms',
       'Drove cross-functional execution - design, fabrication, integration, troubleshooting, and test, maintaining program schedule, risks, and deliverables',
     ],
+    logo: '/images/avx.png',
+    focus: ['UAV Systems', 'Autonomy', 'Rotor Design'],
   },
   {
     title: 'Founder / Engineer',
@@ -37,6 +39,8 @@ const experiences: { title: string; company: string; companyUrl?: string; period
       'Enhanced product and process quality by supporting both upstream and downstream engineering activities, including manufacturing and testing',
       'Pioneered advancements in helicopter systems using CAD, GD&T, and 3D printing techniques, leading supplier meetings to define project specifications',
     ],
+    logo: '/images/bell.svg',
+    focus: ['Rotorcraft Engineering', 'Manufacturing', 'Design'],
   },
   {
     title: 'Project Manager',
@@ -70,17 +74,29 @@ export default function Experience() {
               className="bg-white border border-gray-200 rounded-2xl p-5 sm:p-6 md:p-8 hover:shadow-xl transition-all duration-300 hover:border-gray-300"
             >
               <div className="flex flex-col md:flex-row md:items-start md:justify-between mb-4">
-                <div className="flex-1">
-                  <h3 className="text-xl sm:text-2xl font-bold text-foreground mb-2">{exp.title}</h3>
-                  <p className="text-lg sm:text-xl text-gray-600 font-medium">
-                    {exp.companyUrl ? (
-                      <a href={exp.companyUrl} target="_blank" rel="noopener noreferrer" className="hover:text-foreground hover:underline transition-colors">
-                        {exp.company}
-                      </a>
-                    ) : (
-                      exp.company
-                    )}
-                  </p>
+                <div className="flex items-start gap-4 flex-1">
+                  {exp.logo && (
+                    <div className="hidden sm:flex items-center justify-center bg-gray-50 rounded-xl p-3 h-16 w-24 flex-shrink-0">
+                      <img
+                        src={exp.logo}
+                        alt={`${exp.company} logo`}
+                        className="max-h-full max-w-full object-contain"
+                        loading="lazy"
+                      />
+                    </div>
+                  )}
+                  <div>
+                    <h3 className="text-xl sm:text-2xl font-bold text-foreground mb-2">{exp.title}</h3>
+                    <p className="text-lg sm:text-xl text-gray-600 font-medium">
+                      {exp.companyUrl ? (
+                        <a href={exp.companyUrl} target="_blank" rel="noopener noreferrer" className="hover:text-foreground hover:underline transition-colors">
+                          {exp.company}
+                        </a>
+                      ) : (
+                        exp.company
+                      )}
+                    </p>
+                  </div>
                 </div>
                 <span className="text-sm font-semibold text-gray-500 bg-gray-100 px-3 sm:px-4 py-2 rounded-full mt-2 md:mt-0 self-start">
                   {exp.period}
@@ -107,9 +123,26 @@ export default function Experience() {
                   </li>
                 ))}
               </ul>
+              {exp.focus && (
+                <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-4 pt-4 border-t border-gray-100">
+                  {exp.focus.map((item, i) => (
+                    <span
+                      key={i}
+                      className="px-2 sm:px-3 py-1 bg-foreground/5 text-foreground text-xs sm:text-sm rounded-lg font-medium"
+                    >
+                      {item}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>
+
+        {/* Proprietary Disclaimer */}
+        <p className="text-center text-xs sm:text-sm text-gray-400 mt-6 sm:mt-8 italic">
+          Due to the proprietary nature of aerospace programs, specific project details cannot be publicly disclosed. Happy to discuss my experience in appropriate contexts.
+        </p>
       </div>
     </section>
   )

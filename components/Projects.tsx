@@ -12,6 +12,7 @@ type Project = {
   stlUrls?: string[]
   icon: string
   downloads?: { label: string; href: string }[]
+  inProgress?: boolean
 }
 
 const projects: Project[] = [
@@ -64,6 +65,14 @@ const projects: Project[] = [
     link: 'https://apps.apple.com/us/app/travel-agent-ai/id6758284691',
     icon: '/images/travelagentai-icon.png',
   },
+  {
+    title: 'DoorDot',
+    description: 'NFC-powered privacy doorbell for iPhone. Visitors tap a sticker at your door to ring, and you get a push notification. No cameras, no cloud video, just simple, private alerts via iCloud.',
+    tech: ['iOS', 'Swift', 'SwiftUI', 'CloudKit', 'NFC', 'StoreKit'],
+    link: '#',
+    icon: '',
+    inProgress: true,
+  },
 ]
 
 const featuredDesign = {
@@ -96,16 +105,31 @@ export default function Projects() {
               className="group bg-white border-2 border-gray-200 p-5 sm:p-6 md:p-8 rounded-2xl hover:shadow-2xl transition-all duration-300 hover:border-foreground hover:-translate-y-2"
             >
               <div className="flex items-center justify-center mb-4 sm:mb-6">
-                <div className={`rounded-2xl overflow-hidden shadow-lg ring-4 ring-gray-100 group-hover:ring-foreground/20 transition-all bg-white w-20 h-20 sm:w-24 sm:h-24`}>
-                  <img
-                    src={project.icon}
-                    alt={`${project.title} icon`}
-                    className={`w-full h-full ${project.title === 'WYZECAR' ? 'object-contain p-1' : 'object-cover'}`}
-                  />
+                <div className={`rounded-2xl overflow-hidden shadow-lg ring-4 ring-gray-100 group-hover:ring-foreground/20 transition-all bg-white w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center`}>
+                  {project.icon ? (
+                    <img
+                      src={project.icon}
+                      alt={`${project.title} icon`}
+                      className={`w-full h-full ${project.title === 'WYZECAR' ? 'object-contain p-1' : 'object-cover'}`}
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                      <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 10-7.517 0c.85.493 1.509 1.333 1.509 2.316V18" />
+                      </svg>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              <h3 className="text-xl sm:text-2xl font-bold mb-2 sm:mb-3 text-foreground text-center">{project.title}</h3>
+              <h3 className="text-xl sm:text-2xl font-bold mb-2 sm:mb-3 text-foreground text-center">
+                {project.title}
+                {project.inProgress && (
+                  <span className="ml-2 inline-block px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-medium rounded-full align-middle">
+                    In Progress
+                  </span>
+                )}
+              </h3>
               <p className="text-gray-600 mb-4 sm:mb-6 leading-relaxed text-center text-sm sm:text-base">{project.description}</p>
 
               <div className="flex flex-wrap gap-1.5 sm:gap-2 mb-4 sm:mb-6 justify-center">

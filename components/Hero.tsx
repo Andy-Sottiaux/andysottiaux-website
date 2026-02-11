@@ -1,19 +1,19 @@
+import Image from 'next/image'
+
 export default function Hero() {
   return (
     <section className="relative min-h-screen flex items-center justify-center px-4 sm:px-6 pt-16 sm:pt-20 overflow-hidden">
       {/* Background Image */}
-      <div
-        className="absolute inset-0 z-0"
-        style={{
-          backgroundImage: 'url(/images/hero-bg.jpg)',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-        }}
-      >
-        {/* Gradient Overlay for better text readability */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-black/50"></div>
-      </div>
+      <Image
+        src="/images/hero-bg.jpg"
+        alt=""
+        fill
+        priority
+        className="object-cover z-0"
+        sizes="100vw"
+      />
+      {/* Gradient Overlay for better text readability */}
+      <div className="absolute inset-0 z-0 bg-gradient-to-b from-black/40 via-black/30 to-black/50"></div>
 
       {/* Content */}
       <div className="relative z-10 max-w-4xl text-center">

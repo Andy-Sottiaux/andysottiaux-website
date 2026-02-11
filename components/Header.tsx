@@ -20,7 +20,6 @@ export default function Header() {
     { href: '#experience', label: 'Experience' },
     { href: '#skills', label: 'Skills' },
     { href: '#projects', label: 'Projects' },
-    { href: '#aerospace', label: 'Aerospace' },
     { href: '#contact', label: 'Contact' },
   ]
 
