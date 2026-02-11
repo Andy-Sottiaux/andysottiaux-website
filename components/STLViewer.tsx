@@ -79,7 +79,7 @@ export default function STLViewer({ urls, colors }: { urls: string[]; colors?: n
           const size = new THREE.Vector3()
           box.getSize(size)
           const maxDim = Math.max(size.x, size.y, size.z)
-          camera.position.set(maxDim, maxDim, maxDim)
+          camera.position.set(maxDim * 0.3, maxDim * 0.5, maxDim * 1.2)
           controls.target.set(0, 0, 0)
           controls.update()
         }
