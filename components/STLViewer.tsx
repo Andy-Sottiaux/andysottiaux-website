@@ -49,14 +49,13 @@ export default function STLViewer({ urls, colors }: { urls: string[]; colors?: n
     controls.dampingFactor = 0.1
     controls.enableZoom = true
     controls.enablePan = true
+    controls.autoRotate = true
+    controls.autoRotateSpeed = 2
     controls.mouseButtons = {
       LEFT: THREE.MOUSE.ROTATE,
       MIDDLE: THREE.MOUSE.ROTATE,
       RIGHT: THREE.MOUSE.PAN,
     }
-    // Remove polar angle limits for full vertical rotation
-    controls.minPolarAngle = 0
-    controls.maxPolarAngle = Math.PI
 
     // Load all STL parts
     const loader = new STLLoader()
@@ -85,37 +84,21 @@ export default function STLViewer({ urls, colors }: { urls: string[]; colors?: n
           box.getCenter(center)
           group.position.sub(center)
 
-          // Position camera to fit - front/side view
+          // Position camera to fit
           const size = new THREE.Vector3()
           box.getSize(size)
           const maxDim = Math.max(size.x, size.y, size.z)
-          camera.position.set(maxDim * 0.3, maxDim * 0.5, maxDim * 1.2)
+          camera.position.set(maxDim, maxDim, maxDim)
           controls.target.set(0, 0, 0)
           controls.update()
         }
       })
     })
 
-    // Auto-rotate the group, pause on interaction
-    let autoRotating = true
-    let resumeTimer: ReturnType<typeof setTimeout>
-    const onPointerDown = () => {
-      autoRotating = false
-      clearTimeout(resumeTimer)
-    }
-    const onPointerUp = () => {
-      resumeTimer = setTimeout(() => { autoRotating = true }, 3000)
-    }
-    container.addEventListener('pointerdown', onPointerDown)
-    container.addEventListener('pointerup', onPointerUp)
-
     // Animation loop
     let animationId: number
     const animate = () => {
       animationId = requestAnimationFrame(animate)
-      if (autoRotating) {
-        group.rotation.y += 0.005
-      }
       controls.update()
       renderer.render(scene, camera)
     }
@@ -133,9 +116,6 @@ export default function STLViewer({ urls, colors }: { urls: string[]; colors?: n
 
     return () => {
       window.removeEventListener('resize', handleResize)
-      container.removeEventListener('pointerdown', onPointerDown)
-      container.removeEventListener('pointerup', onPointerUp)
-      clearTimeout(resumeTimer)
       cancelAnimationFrame(animationId)
       controls.dispose()
       renderer.dispose()
