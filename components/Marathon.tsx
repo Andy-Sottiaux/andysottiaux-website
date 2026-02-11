@@ -1,4 +1,25 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+
 export default function Marathon() {
+  const [raised, setRaised] = useState<number | null>(null)
+  const [goal, setGoal] = useState(3000)
+  const [percentage, setPercentage] = useState<number | null>(null)
+
+  useEffect(() => {
+    fetch('/api/fundraising')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.raised !== null) {
+          setRaised(data.raised)
+          setGoal(data.goal)
+          setPercentage(data.percentage)
+        }
+      })
+      .catch(() => {})
+  }, [])
+
   return (
     <section className="py-16 sm:py-24 md:py-32 px-4 sm:px-6 bg-gradient-to-b from-white to-gray-50">
       <div className="max-w-4xl mx-auto">
@@ -26,6 +47,27 @@ export default function Marathon() {
               <p className="text-gray-600 leading-relaxed mb-6">
                 If you'd like to support, any donation goes directly to keeping these programs running for kids across all five boroughs.
               </p>
+
+              {/* Progress Bar */}
+              {raised !== null && percentage !== null && (
+                <div className="mb-6">
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="font-semibold text-foreground">
+                      ${raised.toLocaleString()} raised
+                    </span>
+                    <span className="text-gray-500">
+                      ${goal.toLocaleString()} goal
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-[#E8642C] transition-all duration-1000 ease-out"
+                      style={{ width: `${Math.min(percentage, 100)}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">{percentage}% of goal</p>
+                </div>
+              )}
 
               <div className="flex flex-col sm:flex-row gap-4 items-center justify-center md:justify-start">
                 <a
