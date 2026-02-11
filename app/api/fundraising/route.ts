@@ -1,6 +1,4 @@
 import { NextResponse } from 'next/server'
-import chromium from '@sparticuz/chromium'
-import puppeteer from 'puppeteer-core'
 
 const FUNDRAISER_URL = 'https://donations.nyrr.org/donations/new?fundraiser=624830c3c37aaaa441f8'
 const GOAL = 3000
@@ -16,32 +14,16 @@ export async function GET() {
   }
 
   try {
-    const browser = await puppeteer.launch({
-      args: chromium.args,
-      defaultViewport: chromium.defaultViewport,
-      executablePath: await chromium.executablePath(),
-      headless: chromium.headless,
-    })
+    const res = await fetch(FUNDRAISER_URL)
+    const html = await res.text()
 
-    const page = await browser.newPage()
-    await page.goto(FUNDRAISER_URL, { waitUntil: 'networkidle2', timeout: 15000 })
-
-    // Wait for the fundraising text to render
-    await page.waitForFunction(
-      () => document.body.innerText.includes('fundraising minimum commitment'),
-      { timeout: 10000 }
-    ).catch(() => {})
-
-    const text = await page.evaluate(() => document.body.innerText)
-    await browser.close()
-
-    // Parse "Andrew needs $X,XXX.XX to meet the fundraising minimum commitment of $X,XXX.XX"
-    const match = text.match(/needs\s+\$([0-9,]+(?:\.\d{2})?)\s+to meet the fundraising minimum commitment of\s+\$([0-9,]+(?:\.\d{2})?)/)
+    // HTML contains: needs <span class="amount">$1,219.00</span> to meet the fundraising minimum commitment of <span class="total">$3,000.00</span>
+    const match = html.match(/needs\s+(?:<[^>]*>)*\s*\$([0-9,]+(?:\.\d{2})?)\s*(?:<[^>]*>)*\s+to meet the fundraising minimum commitment of\s+(?:<[^>]*>)*\s*\$([0-9,]+(?:\.\d{2})?)/)
 
     if (match) {
       const remaining = parseFloat(match[1].replace(/,/g, ''))
       const goal = parseFloat(match[2].replace(/,/g, ''))
-      const raised = goal - remaining
+      const raised = Math.round((goal - remaining) * 100) / 100
 
       cachedData = {
         raised,
@@ -54,15 +36,14 @@ export async function GET() {
     }
 
     // Fallback if pattern changed but goal was met
-    if (text.includes('met') || text.includes('exceeded')) {
+    if (html.includes('met') || html.includes('exceeded')) {
       cachedData = { raised: GOAL, goal: GOAL, percentage: 100, timestamp: Date.now() }
       return NextResponse.json(cachedData)
     }
 
     return NextResponse.json({ raised: null, goal: GOAL, percentage: null })
   } catch (err) {
-    console.error('Fundraising scrape error:', err)
-    // Return cached data even if stale, or null
+    console.error('Fundraising fetch error:', err)
     if (cachedData) {
       return NextResponse.json(cachedData)
     }
