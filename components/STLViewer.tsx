@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js'
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js'
 
 export default function STLViewer({ urls, colors }: { urls: string[]; colors?: number[] }) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -40,15 +40,15 @@ export default function STLViewer({ urls, colors }: { urls: string[]; colors?: n
     backLight.position.set(-1, -1, -1)
     scene.add(backLight)
 
-    // Controls
-    const controls = new OrbitControls(camera, renderer.domElement)
-    controls.enableDamping = true
-    controls.dampingFactor = 0.1
-    controls.enableZoom = true
-    controls.autoRotate = true
-    controls.autoRotateSpeed = 2
-    controls.minPolarAngle = 0
-    controls.maxPolarAngle = Math.PI
+    // Controls - TrackballControls allows full free rotation
+    const controls = new TrackballControls(camera, renderer.domElement)
+    controls.rotateSpeed = 3.0
+    controls.zoomSpeed = 1.2
+    controls.panSpeed = 0.8
+    controls.dynamicDampingFactor = 0.15
+    controls.noPan = false
+    controls.noZoom = false
+    controls.noRotate = false
 
     // Load all STL parts
     const loader = new STLLoader()
@@ -77,21 +77,34 @@ export default function STLViewer({ urls, colors }: { urls: string[]; colors?: n
           box.getCenter(center)
           group.position.sub(center)
 
-          // Position camera to fit
+          // Position camera to fit - front/side view
           const size = new THREE.Vector3()
           box.getSize(size)
           const maxDim = Math.max(size.x, size.y, size.z)
           camera.position.set(maxDim * 0.3, maxDim * 0.5, maxDim * 1.2)
+          camera.lookAt(0, 0, 0)
           controls.target.set(0, 0, 0)
           controls.update()
         }
       })
     })
 
+    // Auto-rotate the group
+    let autoRotating = true
+    const onPointerDown = () => { autoRotating = false }
+    const onPointerUp = () => {
+      setTimeout(() => { autoRotating = true }, 3000)
+    }
+    container.addEventListener('pointerdown', onPointerDown)
+    container.addEventListener('pointerup', onPointerUp)
+
     // Animation loop
     let animationId: number
     const animate = () => {
       animationId = requestAnimationFrame(animate)
+      if (autoRotating) {
+        group.rotation.y += 0.005
+      }
       controls.update()
       renderer.render(scene, camera)
     }
@@ -104,11 +117,14 @@ export default function STLViewer({ urls, colors }: { urls: string[]; colors?: n
       camera.aspect = w / h
       camera.updateProjectionMatrix()
       renderer.setSize(w, h)
+      controls.handleResize()
     }
     window.addEventListener('resize', handleResize)
 
     return () => {
       window.removeEventListener('resize', handleResize)
+      container.removeEventListener('pointerdown', onPointerDown)
+      container.removeEventListener('pointerup', onPointerUp)
       cancelAnimationFrame(animationId)
       controls.dispose()
       renderer.dispose()
