@@ -6,9 +6,29 @@ import { useEffect, useState } from 'react'
 const FALLBACK_RAISED = 1776
 const FALLBACK_GOAL = 3000
 
+const MARATHON_DATE = new Date('2026-11-01T00:00:00')
+
+function useCountdown() {
+  const [now, setNow] = useState(new Date())
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 1000)
+    return () => clearInterval(timer)
+  }, [])
+
+  const diff = Math.max(0, MARATHON_DATE.getTime() - now.getTime())
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+  const hours = Math.floor((diff / (1000 * 60 * 60)) % 24)
+  const minutes = Math.floor((diff / (1000 * 60)) % 60)
+  const seconds = Math.floor((diff / 1000) % 60)
+
+  return { days, hours, minutes, seconds }
+}
+
 export default function Marathon() {
   const [raised, setRaised] = useState(FALLBACK_RAISED)
   const [goal, setGoal] = useState(FALLBACK_GOAL)
+  const countdown = useCountdown()
 
   useEffect(() => {
     fetch('/api/fundraising')
@@ -87,6 +107,27 @@ export default function Marathon() {
                 />
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Countdown */}
+        <div className="mt-6 bg-[#E8642C] rounded-2xl px-6 sm:px-10 py-5 sm:py-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div>
+            <p className="text-[#1a1a5e] font-bold text-lg sm:text-xl leading-tight">Marathon Day</p>
+            <p className="text-[#1a1a5e] font-bold text-lg sm:text-xl leading-tight">November 1st, 2026</p>
+          </div>
+          <div className="flex gap-6 sm:gap-8">
+            {[
+              { value: countdown.days, label: 'DAYS' },
+              { value: countdown.hours, label: 'HOURS' },
+              { value: countdown.minutes, label: 'MINUTES' },
+              { value: countdown.seconds, label: 'SECONDS' },
+            ].map((item) => (
+              <div key={item.label} className="text-center">
+                <p className="text-[#1a1a5e] text-3xl sm:text-5xl font-bold leading-none">{item.value}</p>
+                <p className="text-[#1a1a5e] text-[10px] sm:text-xs font-semibold tracking-wider mt-1">{item.label}</p>
+              </div>
+            ))}
           </div>
         </div>
       </div>
