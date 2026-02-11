@@ -127,17 +127,27 @@ export default function Projects() {
               </div>
 
               {project.downloads ? (
-                <div className="flex gap-2 justify-center">
-                  {project.downloads.map((dl, i) => (
-                    <a
-                      key={i}
-                      href={dl.href}
-                      download
-                      className="px-3 sm:px-4 py-1.5 bg-foreground text-white rounded-lg text-xs sm:text-sm font-medium hover:bg-foreground/80 transition-all"
-                    >
-                      {dl.label}
-                    </a>
-                  ))}
+                <div className="flex flex-col gap-2 items-center">
+                  <div className="flex gap-2 justify-center">
+                    {project.downloads.map((dl, i) => (
+                      <a
+                        key={i}
+                        href={dl.href}
+                        download
+                        className="px-3 sm:px-4 py-1.5 bg-foreground text-white rounded-lg text-xs sm:text-sm font-medium hover:bg-foreground/80 transition-all"
+                      >
+                        {dl.label}
+                      </a>
+                    ))}
+                  </div>
+                  <a
+                    href="https://venmo.com/u/andysottiaux"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 sm:px-4 py-1.5 border border-gray-300 text-gray-600 rounded-lg text-xs sm:text-sm font-medium hover:border-foreground hover:text-foreground transition-all"
+                  >
+                    Tip Designer
+                  </a>
                 </div>
               ) : project.link !== '#' && (
                 <div className="text-center">
