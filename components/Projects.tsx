@@ -78,7 +78,7 @@ export default function Projects() {
         <div className="text-center mb-10 sm:mb-16">
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground mb-4">Featured Projects</h2>
           <div className="w-20 h-1 bg-foreground mx-auto"></div>
-          <p className="text-gray-600 mt-4 text-base sm:text-lg">Robotics, computer vision, and mobile applications</p>
+          <p className="text-gray-600 mt-4 text-base sm:text-lg">Robotics, computer vision, mobile applications, 3D printing, and CAD</p>
         </div>
 
         {/* Projects Grid */}
