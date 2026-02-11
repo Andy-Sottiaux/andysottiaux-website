@@ -43,65 +43,39 @@ export default function Marathon() {
   const percentage = Math.round((raised / goal) * 100)
 
   return (
-    <div className="mt-8 sm:mt-12 bg-[#E8642C] rounded-2xl p-5 sm:p-6 md:p-8 overflow-hidden">
-      <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-center">
-        {/* Left: Logo + Info */}
-        <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 flex-1 min-w-0">
-          <img
-            src="/images/tcs-marathon-logo.png"
-            alt="2026 TCS New York City Marathon"
-            className="w-36 sm:w-44 object-contain flex-shrink-0"
-          />
-          <div className="text-center sm:text-left min-w-0">
-            <h3 className="text-white font-bold text-lg sm:text-xl mb-1">
-              Running for Team For Kids
-            </h3>
-            <p className="text-white/80 text-sm leading-snug mb-3">
-              Fundraising for free youth running programs across NYC.
-            </p>
+    <a
+      href="https://donations.nyrr.org/donations/new?fundraiser=624830c3c37aaaa441f8"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="block mt-8 sm:mt-12 bg-[#E8642C] rounded-2xl p-6 sm:p-8 hover:bg-[#d15725] transition-colors group"
+    >
+      <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-10">
+        {/* Left: Text + Progress */}
+        <div className="flex-1 text-center sm:text-left">
+          <p className="text-white/70 text-xs font-semibold tracking-wider uppercase mb-1">
+            2026 NYC Marathon
+          </p>
+          <h3 className="text-white font-bold text-xl sm:text-2xl mb-3">
+            Running for Team For Kids
+          </h3>
 
-            {/* Progress Bar */}
-            <div className="mb-3">
-              <div className="flex justify-between text-xs mb-1">
-                <span className="font-semibold text-white">
-                  ${raised.toLocaleString()} raised
-                </span>
-                <span className="text-white/70">
-                  ${goal.toLocaleString()} goal
-                </span>
-              </div>
-              <div className="w-full bg-white/30 rounded-full h-2 overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-white transition-all duration-1000 ease-out"
-                  style={{ width: `${Math.min(percentage, 100)}%` }}
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 justify-center sm:justify-start">
-              <a
-                href="https://donations.nyrr.org/donations/new?fundraiser=624830c3c37aaaa441f8"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-4 py-2 bg-white text-[#E8642C] rounded-lg text-sm font-semibold hover:bg-white/90 transition-all shadow-md"
-              >
-                Donate
-              </a>
-              <img
-                src="/images/nyrr-qr.png"
-                alt="Scan to donate"
-                className="w-16 h-16 rounded-lg shadow-md"
+          {/* Progress Bar */}
+          <div className="max-w-md">
+            <div className="w-full bg-white/25 rounded-full h-2.5 overflow-hidden mb-2">
+              <div
+                className="h-full rounded-full bg-white transition-all duration-1000 ease-out"
+                style={{ width: `${Math.min(percentage, 100)}%` }}
               />
             </div>
+            <p className="text-white/80 text-sm font-medium">
+              ${raised.toLocaleString()} raised of ${goal.toLocaleString()} goal
+            </p>
           </div>
         </div>
 
-        {/* Right: Countdown */}
-        <div className="flex-shrink-0">
-          <p className="text-white/70 text-xs font-semibold tracking-wider text-center mb-2 uppercase">
-            November 1st, 2026
-          </p>
-          <div className="flex gap-4 sm:gap-5">
+        {/* Right: Countdown + CTA */}
+        <div className="flex-shrink-0 text-center">
+          <div className="flex gap-5 mb-3">
             {[
               { value: countdown.days, label: 'DAYS' },
               { value: countdown.hours, label: 'HRS' },
@@ -109,13 +83,16 @@ export default function Marathon() {
               { value: countdown.seconds, label: 'SEC' },
             ].map((item) => (
               <div key={item.label} className="text-center">
-                <p className="text-white text-2xl sm:text-3xl font-bold leading-none">{item.value}</p>
-                <p className="text-white/60 text-[10px] font-semibold tracking-wider mt-1">{item.label}</p>
+                <p className="text-white text-3xl sm:text-4xl font-bold leading-none">{item.value}</p>
+                <p className="text-white/50 text-[10px] font-semibold tracking-wider mt-1">{item.label}</p>
               </div>
             ))}
           </div>
+          <span className="inline-block px-5 py-2 bg-white text-[#E8642C] rounded-lg text-sm font-semibold group-hover:shadow-lg transition-all">
+            Donate to Team For Kids
+          </span>
         </div>
       </div>
-    </div>
+    </a>
   )
 }
