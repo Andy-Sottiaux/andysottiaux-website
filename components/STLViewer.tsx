@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js'
-import { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js'
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 
 export default function STLViewer({ urls, colors }: { urls: string[]; colors?: number[] }) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -40,15 +40,23 @@ export default function STLViewer({ urls, colors }: { urls: string[]; colors?: n
     backLight.position.set(-1, -1, -1)
     scene.add(backLight)
 
-    // Controls - TrackballControls allows full free rotation
-    const controls = new TrackballControls(camera, renderer.domElement)
-    controls.rotateSpeed = 3.0
-    controls.zoomSpeed = 1.2
-    controls.panSpeed = 0.8
-    controls.dynamicDampingFactor = 0.15
-    controls.noPan = false
-    controls.noZoom = false
-    controls.noRotate = false
+    // Controls - Solidworks-style:
+    // Middle mouse (or left click) = rotate
+    // Scroll = zoom
+    // Right click = pan
+    const controls = new OrbitControls(camera, renderer.domElement)
+    controls.enableDamping = true
+    controls.dampingFactor = 0.1
+    controls.enableZoom = true
+    controls.enablePan = true
+    controls.mouseButtons = {
+      LEFT: THREE.MOUSE.ROTATE,
+      MIDDLE: THREE.MOUSE.ROTATE,
+      RIGHT: THREE.MOUSE.PAN,
+    }
+    // Remove polar angle limits for full vertical rotation
+    controls.minPolarAngle = 0
+    controls.maxPolarAngle = Math.PI
 
     // Load all STL parts
     const loader = new STLLoader()
@@ -82,18 +90,21 @@ export default function STLViewer({ urls, colors }: { urls: string[]; colors?: n
           box.getSize(size)
           const maxDim = Math.max(size.x, size.y, size.z)
           camera.position.set(maxDim * 0.3, maxDim * 0.5, maxDim * 1.2)
-          camera.lookAt(0, 0, 0)
           controls.target.set(0, 0, 0)
           controls.update()
         }
       })
     })
 
-    // Auto-rotate the group
+    // Auto-rotate the group, pause on interaction
     let autoRotating = true
-    const onPointerDown = () => { autoRotating = false }
+    let resumeTimer: ReturnType<typeof setTimeout>
+    const onPointerDown = () => {
+      autoRotating = false
+      clearTimeout(resumeTimer)
+    }
     const onPointerUp = () => {
-      setTimeout(() => { autoRotating = true }, 3000)
+      resumeTimer = setTimeout(() => { autoRotating = true }, 3000)
     }
     container.addEventListener('pointerdown', onPointerDown)
     container.addEventListener('pointerup', onPointerUp)
@@ -117,7 +128,6 @@ export default function STLViewer({ urls, colors }: { urls: string[]; colors?: n
       camera.aspect = w / h
       camera.updateProjectionMatrix()
       renderer.setSize(w, h)
-      controls.handleResize()
     }
     window.addEventListener('resize', handleResize)
 
@@ -125,6 +135,7 @@ export default function STLViewer({ urls, colors }: { urls: string[]; colors?: n
       window.removeEventListener('resize', handleResize)
       container.removeEventListener('pointerdown', onPointerDown)
       container.removeEventListener('pointerup', onPointerUp)
+      clearTimeout(resumeTimer)
       cancelAnimationFrame(animationId)
       controls.dispose()
       renderer.dispose()
