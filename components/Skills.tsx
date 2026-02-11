@@ -35,28 +35,27 @@ export default function Skills() {
           <div className="w-20 h-1 bg-foreground mx-auto"></div>
         </div>
 
-        {/* Skills Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-          {skillCategories.map((category, index) => (
-            <div
-              key={index}
-              className="bg-white p-5 sm:p-6 md:p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100"
-            >
-              <h3 className="text-lg sm:text-xl font-bold mb-4 sm:mb-6 text-foreground border-b border-gray-200 pb-3">
-                {category.category}
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                {category.skills.map((skill, i) => (
-                  <span
-                    key={i}
-                    className="px-3 sm:px-4 py-1.5 sm:py-2 bg-gray-50 text-gray-700 rounded-lg text-xs sm:text-sm font-medium hover:bg-foreground hover:text-white transition-all duration-200"
-                  >
-                    {skill}
-                  </span>
-                ))}
+        {/* Compact Skills */}
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 sm:p-8 md:p-10">
+          <div className="space-y-5">
+            {skillCategories.map((category, index) => (
+              <div key={index} className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-4">
+                <span className="text-sm font-bold text-foreground whitespace-nowrap sm:w-48 sm:flex-shrink-0 sm:pt-1.5">
+                  {category.category}
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {category.skills.map((skill, i) => (
+                    <span
+                      key={i}
+                      className="px-3 py-1 bg-gray-50 text-gray-700 rounded-lg text-xs font-medium hover:bg-foreground hover:text-white transition-all duration-200"
+                    >
+                      {skill}
+                    </span>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
     </section>
