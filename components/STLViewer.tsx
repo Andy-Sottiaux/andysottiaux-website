@@ -49,8 +49,7 @@ export default function STLViewer({ urls, colors }: { urls: string[]; colors?: n
     controls.dampingFactor = 0.1
     controls.enableZoom = true
     controls.enablePan = true
-    controls.autoRotate = true
-    controls.autoRotateSpeed = 2
+    controls.autoRotateSpeed = 0.8
     controls.mouseButtons = {
       LEFT: THREE.MOUSE.ROTATE,
       MIDDLE: THREE.MOUSE.ROTATE,
@@ -103,10 +102,26 @@ export default function STLViewer({ urls, colors }: { urls: string[]; colors?: n
       })
     })
 
+    // Auto-rotate the model around its center, pause while user interacts
+    let autoRotating = true
+    let resumeTimer: ReturnType<typeof setTimeout>
+    const onPointerDown = () => {
+      autoRotating = false
+      clearTimeout(resumeTimer)
+    }
+    const onPointerUp = () => {
+      resumeTimer = setTimeout(() => { autoRotating = true }, 3000)
+    }
+    container.addEventListener('pointerdown', onPointerDown)
+    container.addEventListener('pointerup', onPointerUp)
+
     // Animation loop
     let animationId: number
     const animate = () => {
       animationId = requestAnimationFrame(animate)
+      if (autoRotating) {
+        group.rotation.y += 0.003
+      }
       controls.update()
       renderer.render(scene, camera)
     }
@@ -124,6 +139,9 @@ export default function STLViewer({ urls, colors }: { urls: string[]; colors?: n
 
     return () => {
       window.removeEventListener('resize', handleResize)
+      container.removeEventListener('pointerdown', onPointerDown)
+      container.removeEventListener('pointerup', onPointerUp)
+      clearTimeout(resumeTimer)
       cancelAnimationFrame(animationId)
       controls.dispose()
       renderer.dispose()
