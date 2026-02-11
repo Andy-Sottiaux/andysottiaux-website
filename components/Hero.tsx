@@ -21,11 +21,11 @@ export default function Hero() {
           Andy Sottiaux
         </h1>
         <p className="text-lg sm:text-xl md:text-2xl text-white/90 mb-6 sm:mb-8 drop-shadow-md">
-          UAV Systems | Rotorcraft Design | Autonomy
+          Aerospace Hardware | Production Software | Hardware to Code
         </p>
         <p className="text-base sm:text-lg text-white/80 max-w-2xl mx-auto mb-8 sm:mb-12 drop-shadow-md px-2">
-          Senior Engineer building complete UAV systems, from rotor blades and hardware to software and autonomy.
-          Bridging mechanical design, embedded systems, and hands-on testing with a practical, fail fast mentality.
+          Engineer & Founder building UAV systems at AVX Aircraft and shipping production apps at HatchingPoint.
+          Bridging aerospace hardware, embedded systems, and full-stack software with a practical, fail fast mentality.
         </p>
         <div className="flex gap-3 sm:gap-4 justify-center flex-wrap">
           <a

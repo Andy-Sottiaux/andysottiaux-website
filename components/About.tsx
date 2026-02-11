@@ -38,10 +38,9 @@ export default function About() {
             {/* About Text */}
             <div className="flex-1 space-y-4 sm:space-y-6">
               <p className="text-base sm:text-lg text-gray-700 leading-relaxed">
-                I'm a <span className="font-semibold text-foreground">senior engineer</span> who likes to build complete UAV systems, from the rotor blades and hardware
-                to the software and autonomy that fly them. At AVX, I've designed and manufactured full rotor
-                systems and led our subscale UAV and early autonomy work, including CubePilot/CubeNode integration
-                and ROS2-based test and control software.
+                I'm an <span className="font-semibold text-foreground">engineer and founder</span> who builds across hardware and software. At AVX Aircraft,
+                I've designed and manufactured full rotor systems and led our subscale UAV and early autonomy work,
+                including CubePilot/CubeNode integration and ROS2-based test and control software.
               </p>
               <p className="text-base sm:text-lg text-gray-700 leading-relaxed">
                 I enjoy bridging mechanical design, embedded systems, and hands-on testing, and I bring a
