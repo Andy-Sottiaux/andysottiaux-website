@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     'Full Stack Developer',
     'React',
     'Next.js',
-    'Fort Worth',
+    'Dallas',
     'Texas',
   ],
   authors: [{ name: 'Andy Sottiaux', url: siteUrl }],

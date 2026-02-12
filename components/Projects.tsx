@@ -20,7 +20,7 @@ const projects: Project[] = [
     title: 'Rot Dot',
     description: 'Block distracting apps with a physical tap. Place NFC stickers around your space and scan to instantly lock or unlock apps. Uses Apple Screen Time API for real-world friction against phone addiction.',
     tech: ['iOS', 'Swift', 'SwiftUI', 'NFC', 'FamilyControls', 'Screen Time'],
-    link: 'https://www.hatchingpoint.com/',
+    link: 'https://apps.apple.com/us/app/rot-dot/id6758902103',
     icon: '/images/rotdot-icon.png',
   },
   {
