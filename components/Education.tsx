@@ -29,7 +29,8 @@ export default function Education() {
               </p>
               <p className="text-base sm:text-lg text-gray-700 leading-relaxed">
                 <span className="font-semibold text-foreground">B.S., Mechanical Engineering</span>
-                <span className="text-gray-400 mx-2">|</span>
+                <span className="hidden sm:inline text-gray-400 mx-2">|</span>
+                <br className="sm:hidden" />
                 <span className="italic">Minor in Mathematics</span>
               </p>
               <p className="text-sm sm:text-base text-gray-600 mt-2">

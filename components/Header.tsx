@@ -46,7 +46,7 @@ export default function Header() {
           </a>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex gap-8">
+          <div className="hidden md:flex gap-4 lg:gap-8">
             {navLinks.map((link) => (
               <a
                 key={link.href}
@@ -96,7 +96,7 @@ export default function Header() {
 
         {/* Mobile Navigation */}
         {isMobileMenuOpen && (
-          <div className="md:hidden mt-4 pb-4 border-t border-white/20 pt-4">
+          <div className={`md:hidden mt-4 pb-4 border-t pt-4 ${isScrolled ? 'border-gray-200' : 'border-white/20'}`}>
             <div className="flex flex-col gap-4">
               {navLinks.map((link) => (
                 <a

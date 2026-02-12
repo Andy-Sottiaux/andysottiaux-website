@@ -43,7 +43,7 @@ export default function ScrollChinchilla() {
           alt=""
           className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 drop-shadow-lg"
         />
-        <div className={`absolute -top-8 -left-16 bg-white rounded-lg px-3 py-1 shadow-lg text-sm whitespace-nowrap transition-opacity duration-300 ${
+        <div className={`absolute -top-8 right-0 sm:-left-16 bg-white rounded-lg px-3 py-1 shadow-lg text-sm whitespace-nowrap transition-opacity duration-300 ${
           isVisible ? 'opacity-100 delay-300' : 'opacity-0'
         }`}>
           <span>Hey there! 👋</span>
