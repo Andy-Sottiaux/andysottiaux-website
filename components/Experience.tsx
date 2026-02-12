@@ -22,7 +22,7 @@ const experiences: { title: string; company: string; companyUrl?: string; period
     period: 'Jan 2021 - Present',
     description: 'Founded and built a portfolio of mobile applications and web services focused on wellness and productivity.',
     achievements: [
-      'Designed and developed 7+ production iPhone apps in Swift, managing full UI/UX and App Store deployment',
+      'Designed and developed 10+ production iPhone apps in Swift, managing full UI/UX and App Store deployment',
       'Built modern web applications using React, JavaScript/TypeScript, focusing on component-driven architectures',
       'Architected back-end systems with MongoDB and Supabase, ensuring robust data modeling and real-time data flows',
     ],
