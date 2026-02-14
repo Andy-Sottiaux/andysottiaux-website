@@ -135,11 +135,11 @@ export default function Marathon() {
           onClick={() => setShowQR(false)}
         >
           <div
-            className="bg-white rounded-2xl p-6 sm:p-8 shadow-2xl text-center max-w-xs mx-4"
+            className="bg-white dark:bg-gray-800 rounded-2xl p-6 sm:p-8 shadow-2xl text-center max-w-xs mx-4"
             onClick={(e) => e.stopPropagation()}
           >
-            <p className="text-gray-900 font-bold text-lg mb-1">Scan to Donate</p>
-            <p className="text-gray-500 text-sm mb-4">Team For Kids</p>
+            <p className="text-gray-900 dark:text-gray-100 font-bold text-lg mb-1">Scan to Donate</p>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mb-4">Team For Kids</p>
             <img
               src="/images/nyrr-qr.png"
               alt="Scan to donate to Team For Kids"
@@ -147,7 +147,7 @@ export default function Marathon() {
             />
             <button
               onClick={() => setShowQR(false)}
-              className="mt-4 px-4 py-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+              className="mt-4 px-4 py-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
             >
               Close
             </button>

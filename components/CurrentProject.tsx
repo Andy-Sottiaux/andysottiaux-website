@@ -1,10 +1,10 @@
 export default function CurrentProject() {
   return (
-    <section id="now" className="py-16 sm:py-24 md:py-32 px-4 sm:px-6 bg-gradient-to-b from-gray-50 to-white">
+    <section id="now" className="py-16 sm:py-24 md:py-32 px-4 sm:px-6 bg-gradient-to-b from-gray-50 to-white dark:from-gray-800 dark:to-gray-900">
       <div className="max-w-4xl mx-auto">
         {/* Section Header */}
         <div className="text-center mb-10 sm:mb-12">
-          <div className="inline-flex items-center gap-2 bg-green-100 text-green-700 px-4 py-1.5 rounded-full text-sm font-medium mb-4">
+          <div className="inline-flex items-center gap-2 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-4 py-1.5 rounded-full text-sm font-medium mb-4">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
@@ -16,7 +16,7 @@ export default function CurrentProject() {
         </div>
 
         {/* Project Card */}
-        <div className="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 md:p-10 border-2 border-gray-100">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl dark:shadow-gray-900/50 p-6 sm:p-8 md:p-10 border-2 border-gray-100 dark:border-gray-700">
           <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-start">
             {/* Icon/Visual */}
             <div className="flex-shrink-0 mx-auto md:mx-0">
@@ -32,29 +32,29 @@ export default function CurrentProject() {
               <h3 className="text-xl sm:text-2xl font-bold text-foreground mb-3 text-center md:text-left">
                 Solar-Powered Smart Camera System
               </h3>
-              <p className="text-gray-600 leading-relaxed mb-4 text-sm sm:text-base">
+              <p className="text-gray-600 dark:text-gray-300 leading-relaxed mb-4 text-sm sm:text-base">
                 Designing a compact, self-contained surveillance system capable of true 24/7 recording using
                 modular off-the-shelf components. By combining edge compute hardware with cellular connectivity
                 and solar power, we can deliver always-on monitoring at a fraction of commercial system costs.
               </p>
-              <p className="text-gray-600 leading-relaxed mb-6 text-sm sm:text-base">
+              <p className="text-gray-600 dark:text-gray-300 leading-relaxed mb-6 text-sm sm:text-base">
                 This approach eliminates vendor lock-in, reduces size and complexity compared to bulky
                 trailer-based solutions, and provides full flexibility for AI analytics and cloud integration.
               </p>
 
               {/* Stats */}
-              <div className="grid grid-cols-3 gap-4 sm:gap-6 pt-4 border-t border-gray-200">
+              <div className="grid grid-cols-3 gap-4 sm:gap-6 pt-4 border-t border-gray-200 dark:border-gray-700">
                 <div>
                   <div className="text-2xl sm:text-3xl font-bold text-foreground">24/7</div>
-                  <div className="text-xs sm:text-sm text-gray-500">Recording</div>
+                  <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Recording</div>
                 </div>
                 <div>
-                  <div className="text-2xl sm:text-3xl font-bold text-green-600">~10%</div>
-                  <div className="text-xs sm:text-sm text-gray-500">Cost of commercial</div>
+                  <div className="text-2xl sm:text-3xl font-bold text-green-600 dark:text-green-400">~10%</div>
+                  <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Cost of commercial</div>
                 </div>
                 <div>
                   <div className="text-2xl sm:text-3xl font-bold text-foreground">Zero</div>
-                  <div className="text-xs sm:text-sm text-gray-500">Vendor lock-in</div>
+                  <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Vendor lock-in</div>
                 </div>
               </div>
 
@@ -63,7 +63,7 @@ export default function CurrentProject() {
                 {['24/7 Recording', 'Solar Power', 'Edge Computing', 'Cellular', 'Computer Vision'].map((tech, i) => (
                   <span
                     key={i}
-                    className="px-3 py-1 bg-gray-100 text-gray-700 rounded-lg text-xs font-medium"
+                    className="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-medium"
                   >
                     {tech}
                   </span>

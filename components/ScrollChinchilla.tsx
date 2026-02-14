@@ -41,13 +41,13 @@ export default function ScrollChinchilla() {
         <img
           src="/images/chinchilla-black.png"
           alt=""
-          className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 drop-shadow-lg"
+          className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 drop-shadow-lg dark:invert"
         />
-        <div className={`absolute -top-8 right-0 sm:-left-16 bg-white rounded-lg px-3 py-1 shadow-lg text-sm whitespace-nowrap transition-opacity duration-300 ${
+        <div className={`absolute -top-8 right-0 sm:-left-16 bg-white dark:bg-gray-800 rounded-lg px-3 py-1 shadow-lg text-sm whitespace-nowrap transition-opacity duration-300 ${
           isVisible ? 'opacity-100 delay-300' : 'opacity-0'
         }`}>
-          <span>Hey there! 👋</span>
-          <div className="absolute bottom-0 right-4 translate-y-1/2 rotate-45 w-2 h-2 bg-white"></div>
+          <span className="text-gray-900 dark:text-gray-100">Hey there! 👋</span>
+          <div className="absolute bottom-0 right-4 translate-y-1/2 rotate-45 w-2 h-2 bg-white dark:bg-gray-800"></div>
         </div>
       </div>
     </div>

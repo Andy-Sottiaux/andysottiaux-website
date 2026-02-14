@@ -1,12 +1,12 @@
 export default function Footer() {
   return (
-    <footer id="contact" className="py-12 sm:py-16 px-4 sm:px-6 bg-foreground text-white">
+    <footer id="contact" className="py-12 sm:py-16 px-4 sm:px-6 bg-[#1C1A1C] dark:bg-gray-800 text-white">
       <div className="max-w-6xl mx-auto">
         {/* Contact + Info */}
         <div className="flex flex-col md:flex-row justify-between items-center gap-8 mb-8 sm:mb-10">
           <div className="text-center md:text-left">
             <h3 className="text-2xl sm:text-3xl font-bold mb-2">Get In Touch</h3>
-            <p className="text-gray-300 text-sm sm:text-base max-w-md">
+            <p className="text-gray-300 dark:text-gray-400 text-sm sm:text-base max-w-md">
               Interested in collaborating or just want to connect? Feel free to reach out.
             </p>
           </div>
@@ -60,7 +60,7 @@ export default function Footer() {
         {/* Divider + Bottom */}
         <div className="pt-6 sm:pt-8 border-t border-white/20 text-center">
           <div className="flex items-center justify-center gap-2">
-            <p className="text-xs sm:text-sm text-gray-300">
+            <p className="text-xs sm:text-sm text-gray-300 dark:text-gray-400">
               © {new Date().getFullYear()} Andy Sottiaux. All rights reserved.
             </p>
             <img
@@ -70,7 +70,7 @@ export default function Footer() {
               title="🐭"
             />
           </div>
-          <p className="text-xs text-gray-400 mt-1 sm:mt-2">
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 sm:mt-2">
             Built with Next.js, TypeScript & Tailwind CSS
           </p>
         </div>

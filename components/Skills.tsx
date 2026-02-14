@@ -27,7 +27,7 @@ const skillCategories = [
 
 export default function Skills() {
   return (
-    <section id="skills" className="py-16 sm:py-24 md:py-32 px-4 sm:px-6 bg-gradient-to-b from-gray-50 to-white">
+    <section id="skills" className="py-16 sm:py-24 md:py-32 px-4 sm:px-6 bg-gradient-to-b from-gray-50 to-white dark:from-gray-800 dark:to-gray-900">
       <div className="max-w-6xl mx-auto">
         {/* Section Header */}
         <div className="text-center mb-10 sm:mb-16">
@@ -36,7 +36,7 @@ export default function Skills() {
         </div>
 
         {/* Compact Skills */}
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 sm:p-8 md:p-10">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg dark:shadow-gray-900/50 border border-gray-100 dark:border-gray-700 p-6 sm:p-8 md:p-10">
           <div className="space-y-5">
             {skillCategories.map((category, index) => (
               <div key={index} className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-4">
@@ -47,7 +47,7 @@ export default function Skills() {
                   {category.skills.map((skill, i) => (
                     <span
                       key={i}
-                      className="px-3 py-1 bg-gray-50 text-gray-700 rounded-lg text-xs font-medium hover:bg-foreground hover:text-white transition-all duration-200"
+                      className="px-3 py-1 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-medium hover:bg-foreground hover:text-background transition-all duration-200"
                     >
                       {skill}
                     </span>
