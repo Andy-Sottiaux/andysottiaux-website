@@ -69,9 +69,8 @@ const projects: Project[] = [
     title: 'DoorDot',
     description: 'NFC-powered privacy doorbell for iPhone. Visitors tap a sticker at your door to ring, and you get a push notification. No cameras, no cloud video, just simple, private alerts via iCloud.',
     tech: ['iOS', 'Swift', 'SwiftUI', 'CloudKit', 'NFC', 'StoreKit'],
-    link: '#',
-    icon: '',
-    inProgress: true,
+    link: 'https://www.hatchingpoint.com/',
+    icon: '/images/doordot-icon.png',
   },
 ]
 
