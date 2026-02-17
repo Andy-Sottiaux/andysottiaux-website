@@ -55,7 +55,7 @@ const projects: Project[] = [
     title: 'Record+Transcribe',
     description: 'Capture voice recordings with real-time live transcription. Features AI-powered summaries that extract key points, decisions, and action items from meetings, lectures, and conversations.',
     tech: ['iOS', 'Swift', 'SwiftUI', 'Speech Recognition', 'OpenAI'],
-    link: 'https://www.hatchingpoint.com/',
+    link: 'https://apps.apple.com/app/record-transcribe/id6758643630',
     icon: '/images/recordtranscribe-icon.png',
   },
   {
@@ -69,7 +69,7 @@ const projects: Project[] = [
     title: 'DoorDot',
     description: 'NFC-powered privacy doorbell for iPhone. Visitors tap a sticker at your door to ring, and you get a push notification. No cameras, no cloud video, just simple, private alerts via iCloud.',
     tech: ['iOS', 'Swift', 'SwiftUI', 'CloudKit', 'NFC', 'StoreKit'],
-    link: 'https://www.hatchingpoint.com/',
+    link: 'https://apps.apple.com/app/doordot/id6758969043',
     icon: '/images/doordot-icon.png',
   },
 ]
