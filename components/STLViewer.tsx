@@ -22,8 +22,13 @@ export default function STLViewer({ urls, colors }: { urls: string[]; colors?: n
     // Camera
     const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000)
 
-    // Renderer
-    const renderer = new THREE.WebGLRenderer({ antialias: true })
+    // Renderer — bail out gracefully if WebGL is unavailable
+    let renderer: THREE.WebGLRenderer
+    try {
+      renderer = new THREE.WebGLRenderer({ antialias: true })
+    } catch {
+      return
+    }
     renderer.setSize(width, height)
     renderer.setPixelRatio(window.devicePixelRatio)
     container.appendChild(renderer.domElement)

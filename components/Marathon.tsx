@@ -7,9 +7,12 @@ const FALLBACK_GOAL = 3000
 const MARATHON_DATE = new Date('2026-11-01T00:00:00')
 
 function useCountdown() {
-  const [now, setNow] = useState(new Date())
+  const [mounted, setMounted] = useState(false)
+  const [now, setNow] = useState(MARATHON_DATE)
 
   useEffect(() => {
+    setMounted(true)
+    setNow(new Date())
     const timer = setInterval(() => setNow(new Date()), 1000)
     return () => clearInterval(timer)
   }, [])
@@ -20,7 +23,7 @@ function useCountdown() {
   const minutes = Math.floor((diff / (1000 * 60)) % 60)
   const seconds = Math.floor((diff / 1000) % 60)
 
-  return { days, hours, minutes, seconds }
+  return { days, hours, minutes, seconds, mounted }
 }
 
 export default function Marathon() {
@@ -41,6 +44,8 @@ export default function Marathon() {
       .catch(() => {})
   }, [])
 
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
   const percentage = Math.round((raised / goal) * 100)
 
   return (
@@ -80,10 +85,10 @@ export default function Marathon() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-white font-semibold">
-                    ${raised.toLocaleString()} raised
+                    ${mounted ? raised.toLocaleString() : raised} raised
                   </span>
                   <span className="text-white/60">
-                    ${goal.toLocaleString()} goal
+                    ${mounted ? goal.toLocaleString() : goal} goal
                   </span>
                 </div>
               </div>
@@ -99,7 +104,7 @@ export default function Marathon() {
                   { value: countdown.seconds, label: 'SEC' },
                 ].map((item) => (
                   <div key={item.label} className="text-center min-w-[3rem]">
-                    <p className="text-white text-3xl sm:text-4xl font-bold leading-none tabular-nums">{item.value}</p>
+                    <p className="text-white text-3xl sm:text-4xl font-bold leading-none tabular-nums">{countdown.mounted ? item.value : '-'}</p>
                     <p className="text-white/50 text-[10px] font-semibold tracking-wider mt-1">{item.label}</p>
                   </div>
                 ))}
