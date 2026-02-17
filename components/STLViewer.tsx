@@ -1,158 +1,189 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
-import * as THREE from 'three'
-import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js'
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import { useEffect, useRef, useState } from 'react'
+
+function isWebGLAvailable(): boolean {
+  try {
+    const canvas = document.createElement('canvas')
+    return !!(canvas.getContext('webgl2') || canvas.getContext('webgl'))
+  } catch {
+    return false
+  }
+}
 
 export default function STLViewer({ urls, colors }: { urls: string[]; colors?: number[] }) {
   const containerRef = useRef<HTMLDivElement>(null)
+  const [supported, setSupported] = useState(true)
 
   useEffect(() => {
+    if (!isWebGLAvailable()) {
+      setSupported(false)
+      return
+    }
+
     const container = containerRef.current
     if (!container) return
 
-    const width = container.clientWidth
-    const height = container.clientHeight
+    let renderer: import('three').WebGLRenderer
+    let animationId: number
+    let resumeTimer: ReturnType<typeof setTimeout>
 
-    // Scene
-    const scene = new THREE.Scene()
-    scene.background = new THREE.Color(0xffffff)
+    import('three').then(async (THREE) => {
+      const { STLLoader } = await import('three/examples/jsm/loaders/STLLoader.js')
+      const { OrbitControls } = await import('three/examples/jsm/controls/OrbitControls.js')
 
-    // Camera
-    const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000)
+      const width = container.clientWidth
+      const height = container.clientHeight
 
-    // Renderer — bail out gracefully if WebGL is unavailable
-    let renderer: THREE.WebGLRenderer
-    try {
-      renderer = new THREE.WebGLRenderer({ antialias: true })
-    } catch {
-      return
-    }
-    renderer.setSize(width, height)
-    renderer.setPixelRatio(window.devicePixelRatio)
-    container.appendChild(renderer.domElement)
+      // Scene
+      const scene = new THREE.Scene()
+      scene.background = new THREE.Color(0xffffff)
 
-    // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6)
-    scene.add(ambientLight)
+      // Camera
+      const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000)
 
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8)
-    directionalLight.position.set(1, 1, 1)
-    scene.add(directionalLight)
+      // Renderer
+      try {
+        renderer = new THREE.WebGLRenderer({ antialias: true })
+      } catch {
+        setSupported(false)
+        return
+      }
+      renderer.setSize(width, height)
+      renderer.setPixelRatio(window.devicePixelRatio)
+      container.appendChild(renderer.domElement)
 
-    const backLight = new THREE.DirectionalLight(0xffffff, 0.4)
-    backLight.position.set(-1, -1, -1)
-    scene.add(backLight)
+      // Lighting
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.6)
+      scene.add(ambientLight)
 
-    // Controls - Solidworks-style:
-    // Middle mouse (or left click) = rotate
-    // Scroll = zoom
-    // Right click = pan
-    const controls = new OrbitControls(camera, renderer.domElement)
-    controls.enableDamping = true
-    controls.dampingFactor = 0.1
-    controls.enableZoom = true
-    controls.enablePan = true
-    controls.autoRotateSpeed = 0.8
-    controls.mouseButtons = {
-      LEFT: THREE.MOUSE.ROTATE,
-      MIDDLE: THREE.MOUSE.ROTATE,
-      RIGHT: THREE.MOUSE.PAN,
-    }
+      const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8)
+      directionalLight.position.set(1, 1, 1)
+      scene.add(directionalLight)
 
-    // Load all STL parts
-    const loader = new STLLoader()
-    const group = new THREE.Group()
-    scene.add(group)
+      const backLight = new THREE.DirectionalLight(0xffffff, 0.4)
+      backLight.position.set(-1, -1, -1)
+      scene.add(backLight)
 
-    const defaultColors = [0x888888, 0xcccccc]
-    let loaded = 0
+      // Controls - Solidworks-style:
+      // Middle mouse (or left click) = rotate
+      // Scroll = zoom
+      // Right click = pan
+      const controls = new OrbitControls(camera, renderer.domElement)
+      controls.enableDamping = true
+      controls.dampingFactor = 0.1
+      controls.enableZoom = true
+      controls.enablePan = true
+      controls.autoRotateSpeed = 0.8
+      controls.mouseButtons = {
+        LEFT: THREE.MOUSE.ROTATE,
+        MIDDLE: THREE.MOUSE.ROTATE,
+        RIGHT: THREE.MOUSE.PAN,
+      }
 
-    urls.forEach((url, i) => {
-      loader.load(url, (geometry) => {
-        // Center each geometry on its own origin
-        geometry.computeBoundingBox()
-        const color = colors?.[i] ?? defaultColors[i % defaultColors.length]
-        const material = new THREE.MeshPhongMaterial({
-          color,
-          specular: 0x444444,
-          shininess: 60,
-        })
-        const mesh = new THREE.Mesh(geometry, material)
-        group.add(mesh)
+      // Load all STL parts
+      const loader = new STLLoader()
+      const group = new THREE.Group()
+      scene.add(group)
 
-        loaded++
-        if (loaded === urls.length) {
-          // Compute the world bounding box of the full assembly
-          const box = new THREE.Box3().setFromObject(group)
-          const center = new THREE.Vector3()
-          box.getCenter(center)
+      const defaultColors = [0x888888, 0xcccccc]
+      let loaded = 0
 
-          // Shift every mesh so the assembly center lands at the origin
-          group.children.forEach((child) => {
-            child.position.sub(center)
+      urls.forEach((url, i) => {
+        loader.load(url, (geometry) => {
+          // Center each geometry on its own origin
+          geometry.computeBoundingBox()
+          const color = colors?.[i] ?? defaultColors[i % defaultColors.length]
+          const material = new THREE.MeshPhongMaterial({
+            color,
+            specular: 0x444444,
+            shininess: 60,
           })
+          const mesh = new THREE.Mesh(geometry, material)
+          group.add(mesh)
 
-          // Orbit target = origin (now the true center of the model)
-          controls.target.set(0, 0, 0)
+          loaded++
+          if (loaded === urls.length) {
+            // Compute the world bounding box of the full assembly
+            const box = new THREE.Box3().setFromObject(group)
+            const center = new THREE.Vector3()
+            box.getCenter(center)
 
-          // Position camera to fit
-          const size = new THREE.Vector3()
-          box.getSize(size)
-          const maxDim = Math.max(size.x, size.y, size.z)
-          camera.position.set(maxDim, maxDim, maxDim)
-          controls.update()
-        }
+            // Shift every mesh so the assembly center lands at the origin
+            group.children.forEach((child) => {
+              child.position.sub(center)
+            })
+
+            // Orbit target = origin (now the true center of the model)
+            controls.target.set(0, 0, 0)
+
+            // Position camera to fit
+            const size = new THREE.Vector3()
+            box.getSize(size)
+            const maxDim = Math.max(size.x, size.y, size.z)
+            camera.position.set(maxDim, maxDim, maxDim)
+            controls.update()
+          }
+        })
       })
+
+      // Auto-rotate the model around its center, pause while user interacts
+      let autoRotating = true
+      const onPointerDown = () => {
+        autoRotating = false
+        clearTimeout(resumeTimer)
+      }
+      const onPointerUp = () => {
+        resumeTimer = setTimeout(() => { autoRotating = true }, 3000)
+      }
+      container.addEventListener('pointerdown', onPointerDown)
+      container.addEventListener('pointerup', onPointerUp)
+
+      // Animation loop
+      const animate = () => {
+        animationId = requestAnimationFrame(animate)
+        if (autoRotating) {
+          group.rotation.y += 0.003
+        }
+        controls.update()
+        renderer.render(scene, camera)
+      }
+      animate()
+
+      // Handle resize
+      const handleResize = () => {
+        const w = container.clientWidth
+        const h = container.clientHeight
+        camera.aspect = w / h
+        camera.updateProjectionMatrix()
+        renderer.setSize(w, h)
+      }
+      window.addEventListener('resize', handleResize)
     })
 
-    // Auto-rotate the model around its center, pause while user interacts
-    let autoRotating = true
-    let resumeTimer: ReturnType<typeof setTimeout>
-    const onPointerDown = () => {
-      autoRotating = false
-      clearTimeout(resumeTimer)
-    }
-    const onPointerUp = () => {
-      resumeTimer = setTimeout(() => { autoRotating = true }, 3000)
-    }
-    container.addEventListener('pointerdown', onPointerDown)
-    container.addEventListener('pointerup', onPointerUp)
-
-    // Animation loop
-    let animationId: number
-    const animate = () => {
-      animationId = requestAnimationFrame(animate)
-      if (autoRotating) {
-        group.rotation.y += 0.003
-      }
-      controls.update()
-      renderer.render(scene, camera)
-    }
-    animate()
-
-    // Handle resize
-    const handleResize = () => {
-      const w = container.clientWidth
-      const h = container.clientHeight
-      camera.aspect = w / h
-      camera.updateProjectionMatrix()
-      renderer.setSize(w, h)
-    }
-    window.addEventListener('resize', handleResize)
-
     return () => {
-      window.removeEventListener('resize', handleResize)
-      container.removeEventListener('pointerdown', onPointerDown)
-      container.removeEventListener('pointerup', onPointerUp)
       clearTimeout(resumeTimer)
-      cancelAnimationFrame(animationId)
-      controls.dispose()
-      renderer.dispose()
-      container.removeChild(renderer.domElement)
+      if (animationId) cancelAnimationFrame(animationId)
+      if (renderer) {
+        renderer.dispose()
+        if (container.contains(renderer.domElement)) {
+          container.removeChild(renderer.domElement)
+        }
+      }
     }
   }, [urls, colors])
+
+  if (!supported) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-2xl">
+        <img
+          src="/images/airpods-tesla-mount.png"
+          alt="AirPods Pro 3 Tesla Charger Mount"
+          className="w-full h-full object-contain p-4"
+        />
+      </div>
+    )
+  }
 
   return (
     <div
