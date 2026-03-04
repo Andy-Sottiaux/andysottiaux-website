@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 
-const FALLBACK_RAISED = 1776
+const FALLBACK_RAISED = 1806
 const FALLBACK_GOAL = 3000
 const MARATHON_DATE = new Date('2026-11-01T00:00:00')
 
