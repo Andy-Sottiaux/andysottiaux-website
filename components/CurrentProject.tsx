@@ -69,7 +69,7 @@ export default function CurrentProject() {
     }
     const fetchWeather = async () => {
       try {
-        const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=30.2672&longitude=-97.7431&current=temperature_2m,weather_code,is_day&temperature_unit=fahrenheit')
+        const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=32.7767&longitude=-96.7970&current=temperature_2m,weather_code,is_day&temperature_unit=fahrenheit')
         if (res.ok) {
           const data = await res.json()
           const c = data.current
