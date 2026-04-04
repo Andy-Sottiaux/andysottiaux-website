@@ -34,16 +34,24 @@ function StatusDot({ online }: { online: boolean }) {
   )
 }
 
-function calcSOC(bv: number) {
-  if (bv >= 14.4) return 100
-  if (bv >= 13.6) return 99
-  if (bv >= 13.4) return 95
-  if (bv >= 13.3) return 80
-  if (bv >= 13.2) return 50
-  if (bv >= 13.1) return 30
-  if (bv >= 13.0) return 20
-  if (bv >= 12.8) return 14
-  if (bv >= 12.0) return 9
+function calcSOC(bv: number, loadA = 0, chargeA = 0) {
+  // Compensate for internal resistance (25mOhm) to estimate open-circuit voltage
+  const ocv = bv + (loadA * 0.025) - (Math.max(0, chargeA) * 0.025)
+  if (ocv >= 14.4) return 100
+  if (ocv >= 13.6) return 100
+  if (ocv >= 13.4) return 99
+  if (ocv >= 13.35) return 95
+  if (ocv >= 13.30) return 90
+  if (ocv >= 13.28) return 80
+  if (ocv >= 13.26) return 70
+  if (ocv >= 13.24) return 60
+  if (ocv >= 13.22) return 50
+  if (ocv >= 13.20) return 40
+  if (ocv >= 13.15) return 30
+  if (ocv >= 13.10) return 20
+  if (ocv >= 13.00) return 14
+  if (ocv >= 12.80) return 9
+  if (ocv >= 12.00) return 5
   return 0
 }
 
@@ -91,7 +99,7 @@ export default function CurrentProject() {
   }, [])
 
   const loadW = solar ? (solar.load_current * solar.battery_voltage).toFixed(1) : '--'
-  const soc = solar ? calcSOC(solar.battery_voltage) : null
+  const soc = solar ? calcSOC(solar.battery_voltage, solar.load_current, solar.charging_current) : null
   const netW = solar ? (solar.solar_power - parseFloat(loadW as string)).toFixed(1) : '--'
 
   return (
