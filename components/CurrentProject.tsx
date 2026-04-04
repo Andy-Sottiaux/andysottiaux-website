@@ -40,8 +40,10 @@ function calcSOC(bv: number, loadA = 0, chargeA = 0) {
   // 4S LiFePO4 OCV-to-SOC with linear interpolation
   // 11.0V = 0% (Victron cutoff), 14.4V = 100% (charge complete)
   const table: [number, number][] = [
-    [14.4, 100], [13.6, 99], [13.4, 95], [13.3, 80],
-    [13.2, 50], [13.1, 20], [12.8, 10], [12.0, 5], [11.0, 0]
+    [14.4, 100], [13.6, 99], [13.4, 95], [13.35, 90],
+    [13.3, 80], [13.25, 70], [13.2, 60], [13.15, 50],
+    [13.1, 40], [13.05, 30], [13.0, 25], [12.9, 20],
+    [12.8, 15], [12.5, 10], [12.0, 7], [11.5, 4], [11.0, 0]
   ]
   if (ocv >= table[0][0]) return 100
   if (ocv <= table[table.length - 1][0]) return 0
