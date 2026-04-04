@@ -14,6 +14,17 @@ interface SolarData {
   timestamp: string
 }
 
+interface WeatherData {
+  temp: number
+  description: string
+  emoji: string
+  isDay: boolean
+}
+
+const wxCodes: Record<number, string> = {0:'Clear sky',1:'Mainly clear',2:'Partly cloudy',3:'Overcast',45:'Fog',48:'Fog',51:'Light drizzle',53:'Drizzle',55:'Heavy drizzle',61:'Light rain',63:'Rain',65:'Heavy rain',71:'Light snow',73:'Snow',75:'Heavy snow',80:'Rain showers',81:'Rain showers',82:'Storms',95:'Thunderstorm',96:'Thunderstorm',99:'Thunderstorm'}
+const wxDayEmoji: Record<number, string> = {0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',61:'🌦️',63:'🌧️',65:'🌧️',71:'🌨️',73:'🌨️',75:'❄️',80:'🌦️',81:'🌧️',82:'⛈️',95:'⛈️',96:'⛈️',99:'⛈️'}
+const wxNightEmoji: Record<number, string> = {0:'🌙',1:'🌙',2:'☁️',3:'☁️',45:'🌫️',48:'🌫️',51:'🌧️',53:'🌧️',55:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',71:'🌨️',73:'🌨️',75:'❄️',80:'🌧️',81:'🌧️',82:'⛈️',95:'⛈️',96:'⛈️',99:'⛈️'}
+
 function StatusDot({ online }: { online: boolean }) {
   return (
     <span className="relative flex h-2.5 w-2.5">
@@ -39,6 +50,7 @@ function calcSOC(bv: number) {
 export default function CurrentProject() {
   const [solar, setSolar] = useState<SolarData | null>(null)
   const [online, setOnline] = useState(false)
+  const [weather, setWeather] = useState<WeatherData | null>(null)
 
   useEffect(() => {
     const fetchSolar = async () => {
@@ -55,9 +67,27 @@ export default function CurrentProject() {
         setOnline(false)
       }
     }
+    const fetchWeather = async () => {
+      try {
+        const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=30.2672&longitude=-97.7431&current=temperature_2m,weather_code,is_day&temperature_unit=fahrenheit')
+        if (res.ok) {
+          const data = await res.json()
+          const c = data.current
+          const isDay = c.is_day === 1
+          setWeather({
+            temp: Math.round(c.temperature_2m),
+            description: wxCodes[c.weather_code] || 'Unknown',
+            emoji: isDay ? (wxDayEmoji[c.weather_code] || '❓') : (wxNightEmoji[c.weather_code] || '❓'),
+            isDay,
+          })
+        }
+      } catch {}
+    }
     fetchSolar()
-    const interval = setInterval(fetchSolar, 15000)
-    return () => clearInterval(interval)
+    fetchWeather()
+    const solarInterval = setInterval(fetchSolar, 15000)
+    const wxInterval = setInterval(fetchWeather, 300000)
+    return () => { clearInterval(solarInterval); clearInterval(wxInterval) }
   }, [])
 
   const loadW = solar ? (solar.load_current * solar.battery_voltage).toFixed(1) : '--'
@@ -133,10 +163,15 @@ export default function CurrentProject() {
                         <div className="text-xs text-gray-500 dark:text-gray-400">Net Power</div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
                       <span className="text-xs text-gray-500 dark:text-gray-400">
                         {solar.charge_state} &bull; {solar.charging_current.toFixed(1)}A charging &bull; Yield: {(solar.yield_today / 100).toFixed(2)} kWh
                       </span>
+                      {weather && (
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          {weather.emoji} {weather.temp}&deg;F {weather.description}
+                        </span>
+                      )}
                     </div>
                   </div>
 
