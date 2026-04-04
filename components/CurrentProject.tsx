@@ -35,23 +35,23 @@ function StatusDot({ online }: { online: boolean }) {
 }
 
 function calcSOC(bv: number, loadA = 0, chargeA = 0) {
-  // Compensate for internal resistance (25mOhm) to estimate open-circuit voltage
+  // Compensate for 25mOhm internal resistance, then interpolate OCV curve
   const ocv = bv + (loadA * 0.025) - (Math.max(0, chargeA) * 0.025)
-  if (ocv >= 14.4) return 100
-  if (ocv >= 13.6) return 100
-  if (ocv >= 13.4) return 99
-  if (ocv >= 13.35) return 95
-  if (ocv >= 13.30) return 90
-  if (ocv >= 13.28) return 80
-  if (ocv >= 13.26) return 70
-  if (ocv >= 13.24) return 60
-  if (ocv >= 13.22) return 50
-  if (ocv >= 13.20) return 40
-  if (ocv >= 13.15) return 30
-  if (ocv >= 13.10) return 20
-  if (ocv >= 13.00) return 14
-  if (ocv >= 12.80) return 9
-  if (ocv >= 12.00) return 5
+  // 4S LiFePO4 OCV-to-SOC with linear interpolation
+  // 11.0V = 0% (Victron cutoff), 14.4V = 100% (charge complete)
+  const table: [number, number][] = [
+    [14.4, 100], [13.6, 99], [13.4, 95], [13.3, 80],
+    [13.2, 50], [13.1, 20], [12.8, 10], [12.0, 5], [11.0, 0]
+  ]
+  if (ocv >= table[0][0]) return 100
+  if (ocv <= table[table.length - 1][0]) return 0
+  for (let i = 0; i < table.length - 1; i++) {
+    if (ocv >= table[i + 1][0]) {
+      const range = table[i][0] - table[i + 1][0]
+      const frac = (ocv - table[i + 1][0]) / range
+      return Math.round(table[i + 1][1] + frac * (table[i][1] - table[i + 1][1]))
+    }
+  }
   return 0
 }
 
