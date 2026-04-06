@@ -145,101 +145,99 @@ export default function CurrentProject() {
                 10 cameras for the cost of one commercial unit.
               </p>
 
-              {/* Live Telemetry - only shown when system is online */}
-              {online && solar ? (
-                <>
-                  <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4 sm:p-5 mb-6 border border-gray-200 dark:border-gray-700">
-                    <div className="flex items-center gap-2 mb-3">
+              {/* V1 Completed */}
+              <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4 sm:p-5 mb-4 border border-gray-200 dark:border-gray-700">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                    V1 Complete
+                  </span>
+                  <span className="text-xs text-gray-400">DART-MX95 Prototype</span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                  <div>
+                    <div className="text-xl sm:text-2xl font-bold text-foreground">11W</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">Measured Power</div>
+                  </div>
+                  <div>
+                    <div className="text-xl sm:text-2xl font-bold text-yellow-500">84W</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">Peak Solar</div>
+                  </div>
+                  <div>
+                    <div className="text-xl sm:text-2xl font-bold text-green-500">203Mbps</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">5G Speed</div>
+                  </div>
+                  <div>
+                    <div className="text-xl sm:text-2xl font-bold text-foreground">24h</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">Battery Backup</div>
+                  </div>
+                </div>
+                {online && solar && (
+                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center gap-2">
                       <StatusDot online={true} />
-                      <span className="text-xs font-medium text-green-600 dark:text-green-400 uppercase tracking-wider">Live Telemetry</span>
-                      <span className="text-xs text-gray-400 ml-auto">{solar.timestamp}</span>
-                    </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-                      <div>
-                        <div className="text-xl sm:text-2xl font-bold text-yellow-500">{solar.solar_power}W</div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">Solar Input</div>
-                      </div>
-                      <div>
-                        <div className="text-xl sm:text-2xl font-bold text-green-500">{solar.battery_voltage.toFixed(1)}V</div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">Battery ({soc}%)</div>
-                      </div>
-                      <div>
-                        <div className="text-xl sm:text-2xl font-bold text-red-400">{loadW}W</div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">System Load</div>
-                      </div>
-                      <div>
-                        <div className={`text-xl sm:text-2xl font-bold ${parseFloat(netW as string) >= 0 ? 'text-green-500' : 'text-red-400'}`}>
-                          {parseFloat(netW as string) > 0 ? '+' : ''}{netW}W
-                        </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">Net Power</div>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
                       <span className="text-xs text-gray-500 dark:text-gray-400">
-                        {solar.charge_state} &bull; {solar.charging_current.toFixed(1)}A charging &bull; Yield: {(solar.yield_today / 100).toFixed(2)} kWh
+                        Live: {solar.battery_voltage.toFixed(1)}V ({soc}%) &bull; {solar.solar_power}W solar &bull; {loadW}W load
                       </span>
-                      {weather && (
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                          {weather.emoji} {weather.temp}&deg;F {weather.description}
-                        </span>
-                      )}
                     </div>
+                    {weather && (
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {weather.emoji} {weather.temp}&deg;F
+                      </span>
+                    )}
                   </div>
+                )}
+              </div>
 
-                  {/* Links - only shown when online */}
-                  <div className="flex flex-wrap gap-3 mb-6">
-                    <a
-                      href={`${SOLAR_CAMERA_URL}/analytics`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-400 rounded-lg text-sm font-medium hover:bg-cyan-100 dark:hover:bg-cyan-900/40 transition-colors border border-cyan-200 dark:border-cyan-800"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                      </svg>
-                      Live Analytics Dashboard
-                    </a>
-                    <a
-                      href={`${SOLAR_CAMERA_URL}/cam`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors border border-gray-200 dark:border-gray-600"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                      </svg>
-                      Live Camera Feed
-                      <span className="text-xs opacity-60">(password protected)</span>
-                    </a>
+              {/* V2 In Development */}
+              <div className="bg-cyan-50/50 dark:bg-cyan-900/10 rounded-xl p-4 sm:p-5 mb-6 border border-cyan-200 dark:border-cyan-800/30">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400">
+                    <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse" />
+                    V2 In Development
+                  </span>
+                  <span className="text-xs text-gray-400">$40 Camera Hack</span>
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                  Deploying V1 software on a $40 off-the-shelf solar LTE camera (Rockchip RV1106).
+                  Hardware teardown complete — rooting in progress.
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div>
+                    <div className="text-lg font-bold text-cyan-600 dark:text-cyan-400">~2W</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">Target Power</div>
                   </div>
-                </>
-              ) : (
-                <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4 sm:p-5 mb-6 border border-gray-200 dark:border-gray-700">
-                  <div className="flex items-center gap-2 mb-2">
-                    <StatusDot online={false} />
-                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">System Status</span>
+                  <div>
+                    <div className="text-lg font-bold text-cyan-600 dark:text-cyan-400">$40</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">Per Node</div>
                   </div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    The prototype is currently offline for development. Live telemetry and analytics will appear here when the system is running.
-                  </p>
-                </div>
-              )}
-
-              {/* Stats */}
-              <div className="grid grid-cols-3 gap-4 sm:gap-6 pt-4 border-t border-gray-200 dark:border-gray-700">
-                <div>
-                  <div className="text-2xl sm:text-3xl font-bold text-foreground">~2W</div>
-                  <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">System Power</div>
-                </div>
-                <div>
-                  <div className="text-2xl sm:text-3xl font-bold text-green-600 dark:text-green-400">$40</div>
-                  <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Hardware Node</div>
-                </div>
-                <div>
-                  <div className="text-2xl sm:text-3xl font-bold text-foreground">LTE</div>
-                  <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Cellular</div>
+                  <div>
+                    <div className="text-lg font-bold text-cyan-600 dark:text-cyan-400">4MP</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">H.265 + PTZ</div>
+                  </div>
+                  <div>
+                    <div className="text-lg font-bold text-cyan-600 dark:text-cyan-400">LTE</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">Cat-1 Cellular</div>
+                  </div>
                 </div>
               </div>
+
+              {/* Links - only when V1 is online */}
+              {online && (
+                <div className="flex flex-wrap gap-3 mb-6">
+                  <a
+                    href={`${SOLAR_CAMERA_URL}/analytics`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-400 rounded-lg text-sm font-medium hover:bg-cyan-100 dark:hover:bg-cyan-900/40 transition-colors border border-cyan-200 dark:border-cyan-800"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    V1 Live Dashboard
+                  </a>
+                </div>
+              )}
 
               {/* Tech Tags */}
               <div className="flex flex-wrap gap-2 mt-6">
