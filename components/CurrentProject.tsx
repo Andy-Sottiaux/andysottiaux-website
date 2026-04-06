@@ -135,13 +135,14 @@ export default function CurrentProject() {
                 Solar-Powered Smart Camera System
               </h3>
               <p className="text-gray-600 dark:text-gray-300 leading-relaxed mb-4 text-sm sm:text-base">
-                Designing a compact, self-contained surveillance system capable of true 24/7 recording using
-                modular off-the-shelf components. By combining edge compute hardware with cellular connectivity
-                and solar power, we can deliver always-on monitoring at a fraction of commercial system costs.
+                Building a fleet-deployable solar surveillance platform by hacking $40 commodity cameras
+                with custom firmware. Each node runs a Rockchip RV1106 SoC with hardware H.265 encoding,
+                LTE cellular, PTZ control, and IR night vision — all on ~2W of solar power.
               </p>
               <p className="text-gray-600 dark:text-gray-300 leading-relaxed mb-6 text-sm sm:text-base">
-                This approach eliminates vendor lock-in, reduces size and complexity compared to bulky
-                trailer-based solutions, and provides full flexibility for AI analytics and cloud integration.
+                V1 prototype (DART-MX95) validated the architecture and software stack. V2 deploys the same
+                software on $40 hardware instead of $500 — commodity nodes, proprietary platform.
+                10 cameras for the cost of one commercial unit.
               </p>
 
               {/* Live Telemetry - only shown when system is online */}
@@ -227,22 +228,22 @@ export default function CurrentProject() {
               {/* Stats */}
               <div className="grid grid-cols-3 gap-4 sm:gap-6 pt-4 border-t border-gray-200 dark:border-gray-700">
                 <div>
-                  <div className="text-2xl sm:text-3xl font-bold text-foreground">24/7</div>
-                  <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Recording</div>
+                  <div className="text-2xl sm:text-3xl font-bold text-foreground">~2W</div>
+                  <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">System Power</div>
                 </div>
                 <div>
-                  <div className="text-2xl sm:text-3xl font-bold text-green-600 dark:text-green-400">~10%</div>
-                  <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Cost of commercial</div>
+                  <div className="text-2xl sm:text-3xl font-bold text-green-600 dark:text-green-400">$40</div>
+                  <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Hardware Node</div>
                 </div>
                 <div>
-                  <div className="text-2xl sm:text-3xl font-bold text-foreground">5G</div>
-                  <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Connected</div>
+                  <div className="text-2xl sm:text-3xl font-bold text-foreground">LTE</div>
+                  <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Cellular</div>
                 </div>
               </div>
 
               {/* Tech Tags */}
               <div className="flex flex-wrap gap-2 mt-6">
-                {['24/7 Recording', 'Solar Power', 'Edge Computing', '5G Cellular', 'T-Mobile NR', 'LiFePO4', 'MPPT', 'Computer Vision', 'Docker', 'H.264'].map((tech, i) => (
+                {['24/7 Recording', 'Solar Power', 'Rockchip RV1106', 'LTE Cat-1', 'H.265 HW Encode', 'PTZ 360°', 'IR Night Vision', 'OpenIPC', 'Custom Firmware', '4MP Camera'].map((tech, i) => (
                   <span
                     key={i}
                     className="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-medium"
