@@ -2,7 +2,11 @@
 
 import { useEffect, useState } from 'react'
 
-const SOLAR_CAMERA_URL = 'https://imx95-var-dart.tailc7d6b6.ts.net'
+// V3 telemetry: served on the device at http://cayley-v3-cam:8089/api/solar
+// (Tailscale-only, no public endpoint yet — live block is hidden by default).
+// Set NEXT_PUBLIC_V3_SOLAR_URL to a publicly-reachable URL (e.g. Tailscale
+// Funnel, Cloudflare Tunnel) to enable the live readout in the browser.
+const V3_SOLAR_URL = process.env.NEXT_PUBLIC_V3_SOLAR_URL || ''
 
 interface SolarData {
   battery_voltage: number
@@ -64,8 +68,12 @@ export default function CurrentProject() {
 
   useEffect(() => {
     const fetchSolar = async () => {
+      if (!V3_SOLAR_URL) {
+        setOnline(false)
+        return
+      }
       try {
-        const res = await fetch(`${SOLAR_CAMERA_URL}/api/solar`, { signal: AbortSignal.timeout(5000) })
+        const res = await fetch(V3_SOLAR_URL, { signal: AbortSignal.timeout(5000) })
         if (res.ok) {
           const data = await res.json()
           setSolar(data)
@@ -95,14 +103,13 @@ export default function CurrentProject() {
     }
     fetchSolar()
     fetchWeather()
-    const solarInterval = setInterval(fetchSolar, 15000)
+    const solarInterval = V3_SOLAR_URL ? setInterval(fetchSolar, 15000) : null
     const wxInterval = setInterval(fetchWeather, 300000)
-    return () => { clearInterval(solarInterval); clearInterval(wxInterval) }
+    return () => { if (solarInterval) clearInterval(solarInterval); clearInterval(wxInterval) }
   }, [])
 
   const loadW = solar ? (solar.load_current * solar.battery_voltage).toFixed(1) : '--'
   const soc = solar ? calcSOC(solar.battery_voltage, solar.load_current, solar.charging_current) : null
-  const netW = solar ? (solar.solar_power - parseFloat(loadW as string)).toFixed(1) : '--'
 
   return (
     <section id="now" className="py-16 sm:py-24 md:py-32 px-4 sm:px-6 bg-gradient-to-b from-gray-50 to-white dark:from-gray-800 dark:to-gray-900">
@@ -135,25 +142,31 @@ export default function CurrentProject() {
                 Solar-Powered Smart Camera System
               </h3>
               <p className="text-gray-600 dark:text-gray-300 leading-relaxed mb-4 text-sm sm:text-base">
-                Building a fleet-deployable solar surveillance platform by hacking $40 commodity cameras
-                with custom firmware. Each node runs a Rockchip RV1106 SoC with hardware H.265 encoding,
-                LTE cellular, PTZ control, and IR night vision — all on ~2W of solar power.
+                Building a fleet-deployable solar camera platform: a Rockchip RV1106 SoC running custom
+                firmware, hardware H.265 encoding, LTE failover, on-device AI detection, and
+                Bluetooth-decoded solar telemetry — all on ~3.5W, viewable from any browser via Tailscale.
               </p>
               <p className="text-gray-600 dark:text-gray-300 leading-relaxed mb-6 text-sm sm:text-base">
-                V1 prototype (DART-MX95) validated the architecture and software stack. V2 deploys the same
-                software on $40 hardware instead of $500 — commodity nodes, proprietary platform.
-                10 cameras for the cost of one commercial unit.
+                V1 prototype validated the architecture on big iron. V2 (commodity-camera hack) hit a wall:
+                vendor-locked kernel had no <code className="text-xs px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">CONFIG_TUN</code>,
+                so Tailscale could not establish a tunnel and the camera was unreachable. V3 — the
+                current build — uses a Luckfox Pico Pi dev board with a kernel I compile myself.
               </p>
 
-              {/* V1 Completed */}
-              <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4 sm:p-5 mb-4 border border-gray-200 dark:border-gray-700">
+              {/* V1 Retired */}
+              <div className="bg-gray-50/50 dark:bg-gray-900/30 rounded-xl p-4 sm:p-5 mb-4 border border-gray-200 dark:border-gray-700 opacity-90">
                 <div className="flex items-center gap-2 mb-3">
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                    V1 Complete
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                    <span className="w-1.5 h-1.5 rounded-full bg-gray-500" />
+                    V1 Retired
                   </span>
-                  <span className="text-xs text-gray-400">DART-MX95 Prototype</span>
+                  <span className="text-xs text-gray-400">DART-MX95 Prototype · Decommissioned</span>
                 </div>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                  Reference design that proved the architecture: i.MX95 SBC + USB camera + 5G modem +
+                  Victron MPPT. Measured 11W draw, 24-hour LiFePO4 backup, 203 Mbps 5G uplink — overkill
+                  by an order of magnitude. Hardware shelved; software stack ported to V3.
+                </p>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                   <div>
                     <div className="text-xl sm:text-2xl font-bold text-foreground">11W</div>
@@ -172,76 +185,96 @@ export default function CurrentProject() {
                     <div className="text-xs text-gray-500 dark:text-gray-400">Battery Backup</div>
                   </div>
                 </div>
-                {online && solar && (
-                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-                    <div className="flex items-center gap-2">
-                      <StatusDot online={true} />
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
-                        Live: {solar.battery_voltage.toFixed(1)}V ({soc}%) &bull; {solar.solar_power}W solar &bull; {loadW}W load
-                      </span>
-                    </div>
-                    {weather && (
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
-                        {weather.emoji} {weather.temp}&deg;F
-                      </span>
-                    )}
-                  </div>
-                )}
               </div>
 
-              {/* V2 In Development */}
+              {/* V2 Abandoned */}
+              <div className="bg-gray-50/50 dark:bg-gray-900/30 rounded-xl p-4 sm:p-5 mb-4 border border-gray-200 dark:border-gray-700 opacity-90">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400">
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                    V2 Abandoned
+                  </span>
+                  <span className="text-xs text-gray-400">$31 Camera Hack · LongPlus CQ-G1</span>
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Bought a $31 off-the-shelf Chinese solar LTE camera, rooted it, replaced the streaming
+                  app with our own. Hardware was excellent. Killer: the vendor compiled the kernel
+                  without TUN or netfilter, and the 16MB flash had no room to add them. ~20 hours in,
+                  hit a wall I could not get past on someone else&apos;s firmware. Pivoted.
+                </p>
+              </div>
+
+              {/* V3 Active */}
               <div className="bg-cyan-50/50 dark:bg-cyan-900/10 rounded-xl p-4 sm:p-5 mb-6 border border-cyan-200 dark:border-cyan-800/30">
                 <div className="flex items-center gap-2 mb-3">
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400">
                     <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse" />
-                    V2 In Development
+                    V3 Active Build
                   </span>
-                  <span className="text-xs text-gray-400">$40 Camera Hack</span>
+                  <span className="text-xs text-gray-400">Luckfox Pico Pi A W · RV1106G3</span>
                 </div>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                  Deploying V1 software on a $40 off-the-shelf solar LTE camera (Rockchip RV1106).
-                  Hardware teardown complete — rooting in progress.
+                  Same RV1106 silicon as V2, but on hardware I own end-to-end: custom kernel with
+                  <code className="text-xs px-1 mx-0.5 bg-gray-100 dark:bg-gray-700 rounded">CONFIG_TUN=y</code>
+                  +
+                  <code className="text-xs px-1 mx-0.5 bg-gray-100 dark:bg-gray-700 rounded">WIREGUARD=y</code>,
+                  CMA pool bumped 66M→128M so the 1 TOPS NPU can run YOLOv5 alongside the camera, ECM-mode
+                  4G LTE on T-Mobile, WiFi&nbsp;6 with cellular failover, 5MP H.265 recording to SD with
+                  rolling deletion, AES-128-CTR-decrypted Victron BLE solar telemetry. All services
+                  cold-boot in &lt;60s.
                 </p>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <div>
-                    <div className="text-lg font-bold text-cyan-600 dark:text-cyan-400">~2W</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">Target Power</div>
+                    <div className="text-lg font-bold text-cyan-600 dark:text-cyan-400">~3.5W</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">Total Power</div>
                   </div>
                   <div>
-                    <div className="text-lg font-bold text-cyan-600 dark:text-cyan-400">$40</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">Per Node</div>
+                    <div className="text-lg font-bold text-cyan-600 dark:text-cyan-400">8 fps</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">NPU YOLOv5</div>
                   </div>
                   <div>
-                    <div className="text-lg font-bold text-cyan-600 dark:text-cyan-400">4MP</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">H.265 + PTZ</div>
+                    <div className="text-lg font-bold text-cyan-600 dark:text-cyan-400">5MP</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">H.265 + D1 Sub</div>
                   </div>
                   <div>
-                    <div className="text-lg font-bold text-cyan-600 dark:text-cyan-400">LTE</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">Cat-1 Cellular</div>
+                    <div className="text-lg font-bold text-cyan-600 dark:text-cyan-400">20 Mbps</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">LTE Cat-4 Cellular</div>
                   </div>
+                </div>
+                <div className="mt-3 pt-3 border-t border-cyan-200/50 dark:border-cyan-800/30 text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                  <div>✓ Custom kernel + Buildroot rootfs cross-compiled in Docker (linux/amd64 via Rosetta on Apple Silicon)</div>
+                  <div>✓ MIS5001 5MP H.265 mainstream + 704×576 H.264 substream via go2rtc WebRTC; ~250 ms glass-to-glass</div>
+                  <div>✓ YOLOv5s INT8 on the 1 TOPS NPU with COCO-class allowlist filtering &rarr; <code className="text-xs px-1 bg-gray-100 dark:bg-gray-700 rounded">/var/log/detections.jsonl</code></div>
+                  <div>✓ Tailscale on tailnet, WiFi&harr;cellular failover proven (camera stream survives wlan0 down)</div>
+                  <div>✓ Victron SmartSolar BLE Instant Readout decoded with pure-Python AES-128 (no native crypto deps)</div>
                 </div>
               </div>
 
-              {/* Links - only when V1 is online */}
-              {online && (
-                <div className="flex flex-wrap gap-3 mb-6">
-                  <a
-                    href={`${SOLAR_CAMERA_URL}/analytics`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-400 rounded-lg text-sm font-medium hover:bg-cyan-100 dark:hover:bg-cyan-900/40 transition-colors border border-cyan-200 dark:border-cyan-800"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                    </svg>
-                    V1 Live Dashboard
-                  </a>
+              {/* V3 live readout — only when a public endpoint is configured */}
+              {online && solar && (
+                <div className="bg-cyan-50/30 dark:bg-cyan-900/10 rounded-xl px-4 py-3 mb-6 border border-cyan-200 dark:border-cyan-800/30 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <StatusDot online={true} />
+                    <span className="text-xs text-gray-600 dark:text-gray-300">
+                      V3 live: {solar.battery_voltage?.toFixed(2)}V ({soc}%) &bull; {solar.solar_power}W solar &bull; {loadW}W load &bull; {solar.charge_state}
+                    </span>
+                  </div>
+                  {weather && (
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      {weather.emoji} {weather.temp}&deg;F
+                    </span>
+                  )}
                 </div>
               )}
 
               {/* Tech Tags */}
               <div className="flex flex-wrap gap-2 mt-6">
-                {['24/7 Recording', 'Solar Power', 'Rockchip RV1106', 'LTE Cat-1', 'H.265 HW Encode', 'PTZ 360°', 'IR Night Vision', 'OpenIPC', 'Custom Firmware', '4MP Camera'].map((tech, i) => (
+                {[
+                  'Rockchip RV1106', 'Custom Kernel (Buildroot)', 'TUN + WireGuard', '1 TOPS NPU',
+                  'YOLOv5s INT8', 'H.265 HW Encode', '5MP MIS5001', 'go2rtc WebRTC',
+                  'LTE Cat-4 (SIM7600G-H)', 'WiFi 6 Failover', 'Tailscale', 'Victron BLE (AES-128-CTR)',
+                  '24/7 Recording', 'Solar Power',
+                ].map((tech, i) => (
                   <span
                     key={i}
                     className="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-medium"
