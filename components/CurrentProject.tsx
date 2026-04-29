@@ -187,10 +187,10 @@ export default function CurrentProject() {
             ))}
           </div>
 
-          {/* CTA — live system on cayley.ai */}
+          {/* CTA — V3 live dashboard (go2rtc + solar) via Tailscale Funnel */}
           <div className="mb-6">
             <a
-              href="https://cayley.ai/solar"
+              href="https://cayley-v3-cam.tailc7d6b6.ts.net/"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"
@@ -198,7 +198,7 @@ export default function CurrentProject() {
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
               </svg>
-              View live system on cayley.ai
+              Open V3 live dashboard
             </a>
           </div>
 
