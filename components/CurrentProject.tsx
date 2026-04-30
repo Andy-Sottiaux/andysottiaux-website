@@ -14,8 +14,12 @@ interface SolarData {
   yield_today: number
   charge_state: string
   load_current: number
-  timestamp: string
+  timestamp: number
+  load_on?: boolean
+  error?: string
 }
+
+type FetchState = 'idle' | 'loading' | 'live' | 'no-telemetry' | 'offline'
 
 interface WeatherData {
   temp: number
@@ -55,9 +59,23 @@ function calcSOC(bv: number, loadA = 0, chargeA = 0) {
   return 0
 }
 
+function formatRelative(ts: number | null): string {
+  if (!ts) return ''
+  const seconds = Math.max(0, Math.floor((Date.now() - ts) / 1000))
+  if (seconds < 5) return 'just now'
+  if (seconds < 60) return `${seconds}s ago`
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  return `${Math.floor(hours / 24)}d ago`
+}
+
 export default function CurrentProject() {
   const [solar, setSolar] = useState<SolarData | null>(null)
-  const [online, setOnline] = useState(false)
+  const [state, setState] = useState<FetchState>(V3_SOLAR_URL ? 'loading' : 'idle')
+  const [lastFetched, setLastFetched] = useState<number | null>(null)
+  const [now, setNow] = useState<number>(Date.now())
   const [weather, setWeather] = useState<WeatherData | null>(null)
 
   useEffect(() => {
@@ -65,11 +83,18 @@ export default function CurrentProject() {
       if (!V3_SOLAR_URL) return
       try {
         const res = await fetch(V3_SOLAR_URL, { signal: AbortSignal.timeout(8000) })
-        if (res.ok) {
-          setSolar(await res.json())
-          setOnline(true)
-        } else setOnline(false)
-      } catch { setOnline(false) }
+        if (!res.ok) { setState('offline'); return }
+        const data = await res.json()
+        if (data && typeof data === 'object' && 'error' in data) {
+          setState('no-telemetry')
+        } else if (data && typeof data.battery_voltage === 'number') {
+          setSolar(data as SolarData)
+          setState('live')
+        } else {
+          setState('no-telemetry')
+        }
+        setLastFetched(Date.now())
+      } catch { setState('offline') }
     }
     const fetchWeather = async () => {
       try {
@@ -86,13 +111,20 @@ export default function CurrentProject() {
     }
     fetchSolar()
     fetchWeather()
-    const solarInterval = V3_SOLAR_URL ? setInterval(fetchSolar, 15000) : null
+    const solarInterval = V3_SOLAR_URL ? setInterval(fetchSolar, 30000) : null
     const wxInterval = setInterval(fetchWeather, 300000)
-    return () => { if (solarInterval) clearInterval(solarInterval); clearInterval(wxInterval) }
+    const tickInterval = setInterval(() => setNow(Date.now()), 5000)
+    return () => {
+      if (solarInterval) clearInterval(solarInterval)
+      clearInterval(wxInterval)
+      clearInterval(tickInterval)
+    }
   }, [])
 
   const loadW = solar ? (solar.load_current * solar.battery_voltage).toFixed(1) : '--'
   const soc = solar ? calcSOC(solar.battery_voltage, solar.load_current, solar.charging_current) : null
+  // referenced so eslint doesn't flag, and so the relative timestamp re-renders
+  void now
 
   return (
     <section id="now" className="py-16 sm:py-24 md:py-32 px-4 sm:px-6 bg-gradient-to-b from-gray-50 to-white dark:from-gray-800 dark:to-gray-900">
@@ -100,10 +132,22 @@ export default function CurrentProject() {
 
         {/* Header */}
         <div className="text-center mb-10">
-          <div className="inline-flex items-center gap-2 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-4 py-1.5 rounded-full text-sm font-medium mb-4">
-            <StatusDot online={online} />
-            {online ? 'Live · Solar Powered' : 'Currently Building'}
-          </div>
+          {(() => {
+            const pill =
+              state === 'live'
+                ? { cls: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400', label: 'Live · Solar Powered' }
+                : state === 'no-telemetry'
+                ? { cls: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400', label: 'Camera online · awaiting telemetry' }
+                : state === 'loading'
+                ? { cls: 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400', label: 'Connecting…' }
+                : { cls: 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400', label: 'Currently Building' }
+            return (
+              <div className={`inline-flex items-center gap-2 ${pill.cls} px-4 py-1.5 rounded-full text-sm font-medium mb-4`}>
+                <StatusDot online={state === 'live'} />
+                {pill.label}
+              </div>
+            )
+          })()}
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground mb-4">What I&apos;m Working On</h2>
           <div className="w-20 h-1 bg-foreground mx-auto"></div>
         </div>
@@ -132,26 +176,81 @@ export default function CurrentProject() {
             also charges the battery powering it.
           </p>
 
-          {/* Live strip — only shown when public endpoint is configured + reachable */}
-          {online && solar && (
-            <div className="bg-gradient-to-r from-cyan-50 to-blue-50 dark:from-cyan-900/20 dark:to-blue-900/20 rounded-xl px-4 py-3 mb-6 border border-cyan-200 dark:border-cyan-800/40">
-              <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
-                <div className="flex items-center gap-2">
-                  <StatusDot online={true} />
-                  <span className="font-medium text-foreground">{solar.battery_voltage?.toFixed(2)}V · {soc}%</span>
-                  <span className="text-gray-400">|</span>
-                  <span className="text-gray-600 dark:text-gray-300">{solar.solar_power}W in</span>
-                  <span className="text-gray-400">|</span>
-                  <span className="text-gray-600 dark:text-gray-300">{loadW}W out</span>
-                  <span className="text-gray-400">|</span>
-                  <span className="text-cyan-600 dark:text-cyan-400 capitalize">{solar.charge_state}</span>
+          {/* Live telemetry panel — visible whenever the public endpoint is configured */}
+          {V3_SOLAR_URL && (
+            <div className="bg-gradient-to-br from-cyan-50 to-blue-50 dark:from-cyan-900/20 dark:to-blue-900/20 rounded-xl p-4 sm:p-5 mb-6 border border-cyan-200 dark:border-cyan-800/40">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2 text-xs uppercase tracking-wide font-semibold text-cyan-700 dark:text-cyan-300">
+                  <StatusDot online={state === 'live'} />
+                  Live telemetry
                 </div>
-                {weather && (
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
-                    {weather.emoji} {weather.temp}&deg;F
-                  </span>
-                )}
+                <div className="flex items-center gap-3 text-[11px] text-gray-500 dark:text-gray-400">
+                  {weather && (
+                    <span>{weather.emoji} {weather.temp}&deg;F</span>
+                  )}
+                  {lastFetched && (
+                    <span title={new Date(lastFetched).toLocaleString()}>
+                      updated {formatRelative(lastFetched)}
+                    </span>
+                  )}
+                </div>
               </div>
+
+              {state === 'live' && solar ? (
+                <>
+                  {/* Hero numbers */}
+                  <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-3">
+                    <div>
+                      <div className="text-2xl sm:text-3xl font-bold text-foreground tabular-nums">
+                        {solar.battery_voltage.toFixed(2)}<span className="text-base sm:text-lg font-medium text-gray-500 dark:text-gray-400 ml-0.5">V</span>
+                      </div>
+                      <div className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Battery · {soc}%</div>
+                    </div>
+                    <div>
+                      <div className="text-2xl sm:text-3xl font-bold text-amber-600 dark:text-amber-400 tabular-nums">
+                        {Math.round(solar.solar_power)}<span className="text-base sm:text-lg font-medium text-gray-500 dark:text-gray-400 ml-0.5">W</span>
+                      </div>
+                      <div className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Solar in</div>
+                    </div>
+                    <div>
+                      <div className="text-2xl sm:text-3xl font-bold text-cyan-600 dark:text-cyan-400 tabular-nums">
+                        {loadW}<span className="text-base sm:text-lg font-medium text-gray-500 dark:text-gray-400 ml-0.5">W</span>
+                      </div>
+                      <div className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Load</div>
+                    </div>
+                  </div>
+                  {/* Battery SOC bar */}
+                  <div className="h-1.5 w-full bg-cyan-100 dark:bg-cyan-900/40 rounded-full overflow-hidden mb-2">
+                    <div
+                      className="h-full bg-gradient-to-r from-green-400 to-cyan-500 transition-all duration-700"
+                      style={{ width: `${Math.max(0, Math.min(100, soc ?? 0))}%` }}
+                    />
+                  </div>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-600 dark:text-gray-300">
+                    <span className="capitalize">State: <span className="font-medium text-cyan-700 dark:text-cyan-300">{solar.charge_state}</span></span>
+                    <span className="text-gray-300 dark:text-gray-600">·</span>
+                    <span>Yield today: <span className="font-medium tabular-nums">{solar.yield_today} Wh</span></span>
+                    <span className="text-gray-300 dark:text-gray-600">·</span>
+                    <span>Charge: <span className="font-medium tabular-nums">{solar.charging_current.toFixed(2)} A</span></span>
+                  </div>
+                </>
+              ) : (
+                <div className="py-2">
+                  <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-3">
+                    {[0, 1, 2].map((i) => (
+                      <div key={i}>
+                        <div className={`h-7 sm:h-8 w-20 rounded ${state === 'loading' ? 'animate-pulse' : ''} bg-gray-200/70 dark:bg-gray-700/40`} />
+                        <div className="h-3 w-16 mt-1 rounded bg-gray-200/50 dark:bg-gray-700/30" />
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                    {state === 'loading' && 'Connecting to the camera over Tailscale Funnel…'}
+                    {state === 'no-telemetry' && 'Camera is online but hasn’t received a Victron BLE packet yet — telemetry shows up within a minute once the MPPT is in range.'}
+                    {state === 'offline' && 'Endpoint unreachable right now. The camera reconnects automatically once it has WiFi or LTE.'}
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
@@ -187,8 +286,8 @@ export default function CurrentProject() {
             ))}
           </div>
 
-          {/* CTA — V3 live dashboard (go2rtc + solar) via Tailscale Funnel */}
-          <div className="mb-6">
+          {/* CTAs — V3 live dashboard + click-to-watch camera via Tailscale Funnel */}
+          <div className="flex flex-wrap gap-2 mb-6">
             <a
               href="https://cayley-v3-cam.tailc7d6b6.ts.net/"
               target="_blank"
@@ -196,9 +295,20 @@ export default function CurrentProject() {
               className="inline-flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+              Watch live camera
+            </a>
+            <a
+              href="https://cayley-v3-cam.tailc7d6b6.ts.net/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-900 border border-cyan-600 text-cyan-700 dark:text-cyan-300 hover:bg-cyan-50 dark:hover:bg-gray-800 rounded-lg text-sm font-medium transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
               </svg>
-              Open V3 live dashboard
+              Open dashboard
             </a>
           </div>
 
