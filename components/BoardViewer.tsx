@@ -85,8 +85,13 @@ export default function BoardViewer() {
         // Hemisphere fill for natural sky/ground gradient — gives the
         // model legible shape under any rotation, especially on mobile
         // where MSAA is off and dark areas otherwise crush.
-        const hemi = new THREE.HemisphereLight(0xb8e8d4, 0x1a3325, 0.6)
+        const hemi = new THREE.HemisphereLight(0xb8e8d4, 0x1a3325, 0.9)
         scene.add(hemi)
+        // Camera-mounted "head-light" — moves with the user's view so
+        // whatever they're looking at is always lit. Strongest mobile
+        // legibility win.
+        const headLight = new THREE.PointLight(0xffffff, 1.4, 10, 1.4)
+        scene.add(headLight)
 
         const camera = new THREE.PerspectiveCamera(35, width / height, 0.01, 100)
         camera.position.set(0.9, 0.7, 0.9)
@@ -149,21 +154,23 @@ export default function BoardViewer() {
 
             // Material override — Apple-product look. Brighter PCB green
             // with a subtle clearcoat sheen so it reads against the dark
-            // background. Slight emissive prevents shadowed areas from
-            // crushing to invisible black, especially on mobile where
-            // MSAA is off.
+            // background.
+            //
+            // CRITICAL: trimesh's quadric decimation drops vertex normals.
+            // Without normals, lighting calculations return ~0 and the
+            // model renders nearly black. Recompute them after load.
             model.traverse((child: import('three').Object3D) => {
               const mesh = child as import('three').Mesh
               if ((mesh as import('three').Mesh).isMesh) {
-                const mat = new THREE.MeshPhysicalMaterial({
-                  color: new THREE.Color('#3ea872'),
+                if (mesh.geometry) {
+                  mesh.geometry.computeVertexNormals()
+                }
+                const mat = new THREE.MeshStandardMaterial({
+                  color: new THREE.Color('#5fc78f'),
                   metalness: 0.35,
-                  roughness: 0.45,
-                  clearcoat: 0.5,
-                  clearcoatRoughness: 0.35,
-                  reflectivity: 0.5,
-                  emissive: new THREE.Color('#0d2a1a'),
-                  emissiveIntensity: 0.4,
+                  roughness: 0.42,
+                  emissive: new THREE.Color('#1a4a30'),
+                  emissiveIntensity: 0.55,
                 })
                 mesh.material = mat
                 mesh.castShadow = true
@@ -236,6 +243,10 @@ export default function BoardViewer() {
             camera.position.z = r * Math.sin(a)
             camera.lookAt(0, 0, 0)
           }
+
+          // Head-light follows the camera — whatever the user is looking
+          // at is always front-lit.
+          headLight.position.copy(camera.position)
 
           controls.update()
           renderer.render(scene, camera)
