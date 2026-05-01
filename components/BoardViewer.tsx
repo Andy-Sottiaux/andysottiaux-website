@@ -152,27 +152,27 @@ export default function BoardViewer() {
             if (disposed) return
             const model = gltf.scene
 
-            // Material override — Apple-product look. Brighter PCB green
-            // with a subtle clearcoat sheen so it reads against the dark
-            // background.
+            // Use the model's NATIVE materials/colors (preserved from
+            // the STEP file via OpenCASCADE's RWGltf_CafWriter). Don't
+            // override — the assembly carries per-component colors:
+            // green PCB, gold pads, silver connectors, dark plastics.
             //
-            // CRITICAL: trimesh's quadric decimation drops vertex normals.
-            // Without normals, lighting calculations return ~0 and the
-            // model renders nearly black. Recompute them after load.
+            // We do still need to ensure normals exist (for some
+            // generated meshes) and apply a subtle envmap-friendly
+            // material adjustment so the surfaces catch our lighting.
             model.traverse((child: import('three').Object3D) => {
               const mesh = child as import('three').Mesh
               if ((mesh as import('three').Mesh).isMesh) {
-                if (mesh.geometry) {
+                if (mesh.geometry && !mesh.geometry.attributes.normal) {
                   mesh.geometry.computeVertexNormals()
                 }
-                const mat = new THREE.MeshStandardMaterial({
-                  color: new THREE.Color('#5fc78f'),
-                  metalness: 0.35,
-                  roughness: 0.42,
-                  emissive: new THREE.Color('#1a4a30'),
-                  emissiveIntensity: 0.55,
-                })
-                mesh.material = mat
+                // Slightly bump material response for visibility against
+                // the dark background without changing native colors.
+                const m = mesh.material as import('three').MeshStandardMaterial
+                if (m && 'metalness' in m) {
+                  m.metalness = Math.max(m.metalness ?? 0, 0.15)
+                  m.roughness = Math.min(m.roughness ?? 1, 0.55)
+                }
                 mesh.castShadow = true
                 mesh.receiveShadow = true
               }
