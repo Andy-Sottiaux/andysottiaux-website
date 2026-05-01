@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Cayley V3 Explorer</title>
+<style>
+  :root {
+    --bg: #0b0d12;
+    --panel: #11141c;
+    --panel-2: #1a1f2c;
+    --border: #2a3142;
+    --text: #e5e9f0;
+    --muted: #8893a8;
+    --accent: #5dd4a4;
+    --accent-2: #5db0d4;
+    --warn: #ffb454;
+    --danger: #ff6b6b;
+    --code: #1e232f;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  code, pre, .mono {
+    font: 13px/1.5 "SF Mono", Menlo, Consolas, monospace;
+  }
+  .container { max-width: 1100px; margin: 0 auto; padding: 48px 24px; }
+  h1 { font-size: 42px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 8px; }
+  h1 .v { color: var(--accent); }
+  h2 { font-size: 24px; font-weight: 600; letter-spacing: -0.01em; margin: 56px 0 20px; }
+  h2 .num { color: var(--muted); font-weight: 400; margin-right: 12px; }
+  h3 { font-size: 16px; font-weight: 600; margin-bottom: 10px; }
+  p { color: var(--muted); margin-bottom: 14px; }
+  .lede { color: var(--text); font-size: 17px; max-width: 720px; }
+  a { color: var(--accent-2); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Sections */
+  .section { margin: 48px 0; }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin: 16px 0;
+  }
+
+  /* Boot timeline */
+  .timeline {
+    position: relative;
+    padding-left: 32px;
+    margin: 24px 0;
+  }
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 11px;
+    top: 8px;
+    bottom: 8px;
+    width: 2px;
+    background: var(--border);
+  }
+  .stage {
+    position: relative;
+    padding: 14px 0 14px 24px;
+    cursor: pointer;
+    transition: background 0.2s;
+    border-radius: 6px;
+  }
+  .stage:hover { background: var(--panel-2); padding-left: 28px; }
+  .stage::before {
+    content: '';
+    position: absolute;
+    left: -27px;
+    top: 19px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--panel);
+    border: 2px solid var(--accent);
+    box-shadow: 0 0 0 4px var(--bg);
+    transition: all 0.2s;
+  }
+  .stage.active::before {
+    background: var(--accent);
+    box-shadow: 0 0 0 6px rgba(93, 212, 164, 0.2);
+  }
+  .stage-time {
+    font-family: "SF Mono", monospace;
+    font-size: 12px;
+    color: var(--accent);
+    margin-right: 10px;
+  }
+  .stage-title { font-weight: 600; }
+  .stage-desc {
+    color: var(--muted);
+    font-size: 14px;
+    margin-top: 4px;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease, margin 0.3s ease;
+  }
+  .stage.active .stage-desc {
+    max-height: 200px;
+    margin-top: 8px;
+  }
+  .stage-desc code {
+    background: var(--code);
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 12px;
+  }
+
+  /* Architecture layers */
+  .layers { display: flex; flex-direction: column; gap: 8px; }
+  .layer {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .layer:hover { border-color: var(--accent); transform: translateX(4px); }
+  .layer.active { border-color: var(--accent); background: var(--panel-2); }
+  .layer-num {
+    font-family: "SF Mono", monospace;
+    font-size: 18px;
+    color: var(--accent);
+    width: 32px;
+    flex-shrink: 0;
+  }
+  .layer-title { flex: 1; font-weight: 600; }
+  .layer-tag {
+    font-size: 11px;
+    background: var(--code);
+    color: var(--muted);
+    padding: 3px 8px;
+    border-radius: 3px;
+  }
+  .layer-detail {
+    background: var(--panel-2);
+    border-left: 2px solid var(--accent);
+    padding: 16px 20px;
+    margin-left: 16px;
+    border-radius: 0 8px 8px 0;
+    display: none;
+    margin-top: -2px;
+  }
+  .layer-detail.show { display: block; }
+  .layer-detail p { color: var(--text); font-size: 14px; }
+  .layer-detail .fail { color: var(--warn); font-weight: 500; }
+  .layer-detail .fix { color: var(--accent); font-weight: 500; }
+
+  /* Failure matrix */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--panel);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-top: 12px;
+  }
+  th, td {
+    text-align: left;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+  }
+  th { background: var(--panel-2); font-weight: 600; font-size: 13px; }
+  tr:last-child td { border-bottom: none; }
+  td.ok { color: var(--accent); }
+  td.warn { color: var(--warn); }
+  td.fail { color: var(--danger); }
+
+  /* Live status */
+  .live-status {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin: 16px 0;
+  }
+  .pill {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    background: var(--code);
+    color: var(--muted);
+  }
+  .pill.live { background: rgba(93, 212, 164, 0.15); color: var(--accent); }
+  .pill.fail { background: rgba(255, 107, 107, 0.15); color: var(--danger); }
+  .pill.loading { background: rgba(255, 180, 84, 0.15); color: var(--warn); }
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 16px;
+    margin: 16px 0;
+  }
+  .stat {
+    background: var(--panel-2);
+    border-radius: 6px;
+    padding: 12px;
+  }
+  .stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  .stat-value { font-size: 20px; font-weight: 600; margin-top: 4px; }
+  .service-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; margin-top: 12px; }
+  .service {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    background: var(--panel-2);
+    border-radius: 4px;
+    font-size: 13px;
+  }
+  .service-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+
+  /* Code blocks */
+  pre {
+    background: var(--code);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px 18px;
+    overflow-x: auto;
+    margin: 12px 0;
+    font-size: 12.5px;
+  }
+  .key { color: #c0a3ff; }
+  .str { color: #5dd4a4; }
+  .com { color: var(--muted); font-style: italic; }
+  .num { color: #ffb454; }
+
+  /* Heartbeat dot */
+  .heartbeat {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: hb 1.2s infinite;
+    margin-right: 6px;
+  }
+  @keyframes hb {
+    0%, 30%, 100% { transform: scale(1); opacity: 1; }
+    15% { transform: scale(1.5); opacity: 0.6; }
+    50% { transform: scale(1); opacity: 1; }
+    65% { transform: scale(1.5); opacity: 0.6; }
+    80% { transform: scale(1); opacity: 1; }
+  }
+
+  /* Board diagram */
+  .board {
+    background: linear-gradient(135deg, #1a3326 0%, #143620 100%);
+    border: 1px solid #2a4530;
+    border-radius: 12px;
+    padding: 32px 28px;
+    position: relative;
+    margin: 16px 0;
+    aspect-ratio: 1.6;
+    overflow: hidden;
+  }
+  .component {
+    position: absolute;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    backdrop-filter: blur(2px);
+  }
+  .component:hover {
+    background: rgba(93, 212, 164, 0.15);
+    border-color: var(--accent);
+    transform: scale(1.05);
+    z-index: 10;
+  }
+  .component .label {
+    font-weight: 600;
+    font-size: 11px;
+    color: var(--accent);
+  }
+  .component .value {
+    font-size: 11px;
+    color: var(--text);
+    margin-top: 2px;
+  }
+  .led-dot {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 12px var(--accent);
+    animation: hb 1.2s infinite;
+  }
+  .led-dot.power { background: #ff6b6b; box-shadow: 0 0 12px #ff6b6b; animation: none; }
+  .led-dot.net { background: var(--accent-2); box-shadow: 0 0 12px var(--accent-2); animation: hb 0.6s infinite; }
+
+  /* Footer */
+  footer { color: var(--muted); font-size: 13px; margin-top: 80px; padding-top: 24px; border-top: 1px solid var(--border); }
+
+  @media (max-width: 720px) {
+    h1 { font-size: 32px; }
+    .container { padding: 32px 16px; }
+    .board { aspect-ratio: 1.2; padding: 18px; }
+    .component { padding: 6px 8px; font-size: 10px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <header>
+    <h1>Cayley <span class="v">V3</span> Explorer</h1>
+    <p class="lede">A solar-powered AI camera built on a Luckfox Pico Pi A W. <span class="heartbeat"></span>This page is interactive — click anything that looks clickable.</p>
+  </header>
+
+  <!-- HARDWARE -->
+  <section class="section">
+    <h2><span class="num">01</span>The Hardware</h2>
+    <p>A Rockchip RV1106 SoC with embedded NPU + ISP, 256 MB DDR3 (128 MB carved for camera/NPU DMA), an AIC8800DC WiFi 6 module on SDIO, and a SIM7600G-H LTE Cat-4 modem on M.2. All in a board the size of a credit card.</p>
+    <div class="board">
+      <div class="component" style="left: 8%; top: 22%;" title="Rockchip RV1106G3">
+        <div class="label">SoC</div>
+        <div class="value">RV1106 · A7 1.2GHz · 1 TOPS NPU</div>
+      </div>
+      <div class="component" style="left: 38%; top: 18%;" title="WiFi+BT">
+        <div class="label">WIFI</div>
+        <div class="value">AIC8800DC · 2.4GHz · SDIO</div>
+      </div>
+      <div class="component" style="left: 65%; top: 25%;" title="Cellular modem M.2">
+        <div class="label">M.2 LTE</div>
+        <div class="value">SIM7600G-H · Cat-4</div>
+      </div>
+      <div class="component" style="left: 12%; top: 60%;" title="Camera CSI">
+        <div class="label">CAMERA</div>
+        <div class="value">MIS5001 · 5MP · MIPI-CSI</div>
+      </div>
+      <div class="component" style="left: 42%; top: 60%;" title="Storage">
+        <div class="label">eMMC + SD</div>
+        <div class="value">8 GB + 32 GB external</div>
+      </div>
+      <div class="component" style="left: 70%; top: 60%;" title="Type-C USB">
+        <div class="label">USB-C</div>
+        <div class="value">DRD · ADB / power</div>
+      </div>
+      <div class="led-dot power" style="left: 88%; top: 12%;" title="Power LED"></div>
+      <div class="led-dot" style="left: 88%; top: 22%;" title="Work LED (heartbeat)"></div>
+      <div class="led-dot net" style="left: 88%; top: 32%;" title="NET LED (modem)"></div>
+    </div>
+  </section>
+
+  <!-- BOOT SEQUENCE -->
+  <section class="section">
+    <h2><span class="num">02</span>How It Boots</h2>
+    <p>Click any stage to expand. Total power-on to fully-operational: ~75 seconds.</p>
+    <div class="timeline">
+      <div class="stage" data-stage>
+        <div><span class="stage-time">t=0s</span><span class="stage-title">Boot ROM</span></div>
+        <div class="stage-desc">RV1106's mask ROM reads <code>idblock</code> (256 KB at offset 32K+512K) and loads it. This is the rockchip-signed first-stage bootloader.</div>
+      </div>
+      <div class="stage" data-stage>
+        <div><span class="stage-time">t=~0.5s</span><span class="stage-title">U-Boot</span></div>
+        <div class="stage-desc">Reads <code>env</code> partition for kernel cmdline + FDT overlays (this is where <code>dr_mode</code>, <code>USB_MODE</code>, and <code>panic=10</code> live), loads <code>boot.img</code> into RAM, applies overlays, and jumps to the kernel.</div>
+      </div>
+      <div class="stage" data-stage>
+        <div><span class="stage-time">t=~3s</span><span class="stage-title">Linux Kernel 5.10.160</span></div>
+        <div class="stage-desc">Decompresses, mounts <code>/dev/mmcblk0p7</code> (rootfs, ext4), starts <code>/sbin/init</code> (busybox). With Phase 1: <span style="color: var(--accent)">PANIC_ON_OOPS</span>, <span style="color: var(--accent)">HARDLOCKUP</span>, <span style="color: var(--accent)">SOFTLOCKUP</span>, <span style="color: var(--accent)">ZRAM</span> all active here.</div>
+      </div>
+      <div class="stage" data-stage>
+        <div><span class="stage-time">t=~6s</span><span class="stage-title">init scripts (rcS)</span></div>
+        <div class="stage-desc">Busybox init runs <code>S01...S98</code> alphabetically: udev, networking, dhcpcd, dbus, sshd. Most are stock Buildroot. <code>S98zram</code> sets up the 32 MB compressed swap before cayley services start.</div>
+      </div>
+      <div class="stage" data-stage>
+        <div><span class="stage-time">t=~10s</span><span class="stage-title">S99cayley</span></div>
+        <div class="stage-desc"><strong>The orchestration script we wrote.</strong> First action: open <code>/dev/watchdog</code> via <code>cayley-extwd</code> (so any subsequent hang triggers a 30 s reboot). Then DNS lockdown, route metric fixup, SD card mount, HTTPS time sync, tailscaled launch with DERP-only env, finally <code>cayleyd</code>.</div>
+      </div>
+      <div class="stage" data-stage>
+        <div><span class="stage-time">t=~30s</span><span class="stage-title">cayleyd starts services</span></div>
+        <div class="stage-desc">Forks 9 children: go2rtc (camera bridge), cayley-record (15-min MP4 segments), cayley-detect-loop (NPU YOLOv5s), cayley-victron (Bluetooth solar telemetry), cayley-solar-api (HTTP), cayley-net-watchdog (failover + recovery ladder), cayley-snapshot (observability), cayley-cleanup (SD eviction).</div>
+      </div>
+      <div class="stage" data-stage>
+        <div><span class="stage-time">t=~75s</span><span class="stage-title">Online + serving</span></div>
+        <div class="stage-desc">Tailscale connects via DERP relay. Funnel cert provisioned. Public HTTPS endpoints respond. Camera RTSP active. Detector running. <strong>Heartbeat LED double-blinks.</strong> Steady state.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ARCHITECTURE LAYERS -->
+  <section class="section">
+    <h2><span class="num">03</span>Six Recovery Layers</h2>
+    <p>Each layer catches what the layer above missed. Click to expand.</p>
+    <div class="layers" id="layers">
+      <div class="layer" data-layer="6">
+        <div class="layer-num">6</div>
+        <div class="layer-title">Hardware watchdog (RV1106 DesignWare)</div>
+        <div class="layer-tag">SoC</div>
+      </div>
+      <div class="layer-detail" data-detail="6">
+        <p><span class="fail">If</span> userspace stops petting <code>/dev/watchdog</code> for 30 s → <span class="fix">SoC resets itself</span>. Phase 1 added <code>CONFIG_WATCHDOG_NOWAYOUT=y</code> so even <code>close()</code> can't disarm it. Once opened, the dog WILL fire. The deepest safety net.</p>
+      </div>
+
+      <div class="layer" data-layer="5">
+        <div class="layer-num">5</div>
+        <div class="layer-title">cayley-extwd heartbeat watchdog</div>
+        <div class="layer-tag">Python</div>
+      </div>
+      <div class="layer-detail" data-detail="5">
+        <p>Holds <code>/dev/watchdog</code> open. Pets only while <code>/var/run/cayley/heartbeat</code> mtime is fresh (&lt;45 s). <span class="fail">If cayleyd hangs</span> → heartbeat goes stale → extwd stops petting → <span class="fix">layer 6 fires</span>. Monotonic-clock-aware so NTP jumps don't false-fire.</p>
+      </div>
+
+      <div class="layer" data-layer="4">
+        <div class="layer-num">4</div>
+        <div class="layer-title">cayley-net-watchdog</div>
+        <div class="layer-tag">shell</div>
+      </div>
+      <div class="layer-detail" data-detail="4">
+        <p>Per-iface TCP-probe (not ICMP — T-Mobile drops it). Classifies wlan0/usb0 as <code>noip</code> / <code>apipa</code> / <code>sad</code> / <code>up</code>. Active route arbitration: only real-IP ifaces get default routes. <span class="fail">Tailscale magicsock wedge</span> (rx counter stalled) → <span class="fix">kill -9 tailscaled</span>. Three kicks in 10 min → sysrq reboot.</p>
+      </div>
+
+      <div class="layer" data-layer="3">
+        <div class="layer-num">3</div>
+        <div class="layer-title">cayleyd supervisor</div>
+        <div class="layer-tag">Python</div>
+      </div>
+      <div class="layer-detail" data-detail="3">
+        <p>Forks 9 children with <code>PR_SET_PDEATHSIG</code>. Exponential backoff (1→30 s) on crash. Restart-rate cap: 10 crashes in 60 s → 60 s penalty. <code>OOM_score_adj=-500</code> for self + extwd. Crash artifacts (last 4 KB stderr) saved to SD card ringbuffer.</p>
+      </div>
+
+      <div class="layer" data-layer="2">
+        <div class="layer-num">2</div>
+        <div class="layer-title">Kernel panic / oops handler</div>
+        <div class="layer-tag">kernel</div>
+      </div>
+      <div class="layer-detail" data-detail="2">
+        <p>Phase 1 added <code>CONFIG_PANIC_ON_OOPS=y</code> and <code>panic=10</code>. <span class="fail">Any kernel oops</span> → panic → <span class="fix">auto-reboot in 10 s</span>. Combined with <code>HARDLOCKUP_DETECTOR</code> + <code>SOFTLOCKUP_DETECTOR</code>, even a CPU stuck in a tight kernel loop produces a stack trace and reboot.</p>
+      </div>
+
+      <div class="layer" data-layer="1">
+        <div class="layer-num">1</div>
+        <div class="layer-title">cayley-snapshot — flight recorder</div>
+        <div class="layer-tag">shell</div>
+      </div>
+      <div class="layer-detail" data-detail="1">
+        <p>Doesn't recover anything — but writes boot manifest, 5-min health JSONL, and tail of all cayley logs to SD card. <span class="fix">Survives reboots.</span> When something does break, post-mortem is possible. 20-session ringbuffer.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAILURE MATRIX -->
+  <section class="section">
+    <h2><span class="num">04</span>Failure-Mode Coverage</h2>
+    <p>Real failure scenarios, what catches them, how long until recovery.</p>
+    <table>
+      <thead>
+        <tr><th>Failure</th><th>Caught by</th><th>Recovery</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Service crashes</td><td class="ok">cayleyd</td><td>1-30 s</td></tr>
+        <tr><td>Service crash-loops</td><td class="ok">cayleyd rate cap</td><td>60 s penalty</td></tr>
+        <tr><td>Service OOM-killed</td><td class="ok">cayleyd</td><td>1-30 s</td></tr>
+        <tr><td>cayleyd OOM-killed</td><td class="ok">extwd</td><td>≤75 s</td></tr>
+        <tr><td>cayleyd hangs (deadlock)</td><td class="ok">extwd → SoC reset</td><td>≤75 s</td></tr>
+        <tr><td>WiFi APIPA stuck</td><td class="ok">net-watchdog</td><td>30-60 s</td></tr>
+        <tr><td>Tailscale LocalAPI hang</td><td class="ok">net-watchdog</td><td>30-60 s</td></tr>
+        <tr><td>magicsock wedge (rx stalled)</td><td class="ok">net-watchdog rx-stall</td><td>~120 s</td></tr>
+        <tr><td>Both WiFi + cellular dead 3 min</td><td class="ok">sysrq reboot</td><td>~90 s</td></tr>
+        <tr><td>Kernel oops, half-alive</td><td class="ok">PANIC_ON_OOPS (Phase 1)</td><td>10 s</td></tr>
+        <tr><td>CPU hardlocked in kernel</td><td class="ok">HARDLOCKUP_DETECTOR (Phase 1)</td><td>10-20 s</td></tr>
+        <tr><td>Userspace tight-loop hang</td><td class="ok">SOFTLOCKUP_DETECTOR (Phase 1)</td><td>10-20 s</td></tr>
+        <tr><td>Watchdog disarmed by cleanup</td><td class="ok">NOWAYOUT (Phase 1)</td><td>impossible now</td></tr>
+        <tr><td>Bad new kernel push</td><td class="warn">— (Phase 2 needed)</td><td>physical reflash</td></tr>
+        <tr><td>Power loss + flash corruption</td><td class="warn">— (Phase 3 needed)</td><td>physical reflash</td></tr>
+        <tr><td>Hardware death</td><td class="fail">— no software fix</td><td>replacement</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- LIVE STATUS -->
+  <section class="section">
+    <h2><span class="num">05</span>Live Status</h2>
+    <p>This block fetches <code>/api/health</code> from the actual board over Tailscale Funnel. Updates every 30 s. <span class="pill" id="live-pill">connecting…</span></p>
+    <div class="live-status" id="live-status">
+      <div class="stats" id="stats"></div>
+      <h3 style="margin-top: 16px;">Services</h3>
+      <div class="service-list" id="services"></div>
+    </div>
+  </section>
+
+  <!-- CODE TOUR -->
+  <section class="section">
+    <h2><span class="num">06</span>The Key Code</h2>
+    <p>The few hundred lines that turn a stock Pico Pi into Cayley V3.</p>
+
+    <div class="panel">
+      <h3>S99cayley start sequence (boot orchestration)</h3>
+      <pre><span class="com"># /etc/init.d/S99cayley — first thing: claim the watchdog</span>
+<span class="key">case</span> <span class="str">"$1"</span> <span class="key">in</span>
+  start)
+    mkdir -p /var/run/tailscale /dev/net /var/log/cayley /var/run/cayley
+
+    <span class="com"># cayley-extwd FIRST — claim /dev/watchdog before any other</span>
+    <span class="com"># step that could block (DNS, dhcpcd, tailscaled launch).</span>
+    <span class="key">if</span> ! pgrep -f <span class="str">"/usr/local/bin/cayley-extwd"</span> >/dev/null; <span class="key">then</span>
+      nohup /usr/local/bin/cayley-extwd \
+        > /var/log/cayley/cayley-extwd.stdout 2>&1 < /dev/null &
+    <span class="key">fi</span>
+
+    <span class="com"># Heartbeat LED — kernel-side trigger if available (Phase 1)</span>
+    echo heartbeat > /sys/class/leds/work/trigger 2>/dev/null
+
+    <span class="com"># tailscaled in DERP-only mode (cellular CGNAT defeats direct WG)</span>
+    TS_DEBUG_DISABLE_DIRECT=true \
+    nohup /userdata/tailscale/tailscaled \
+        --statedir=/userdata/tailscale/state \
+        --socket=/var/run/tailscale/tailscaled.sock \
+        --port=<span class="num">41641</span> > /var/log/cayley/tailscaled.log 2>&1 &</pre>
+    </div>
+
+    <div class="panel">
+      <h3>Hardware watchdog daemon (Python)</h3>
+      <pre><span class="com"># cayley-extwd — owns /dev/watchdog, pets only while heartbeat is fresh</span>
+<span class="key">while</span> True:
+    age = heartbeat_age()                  <span class="com"># time.time() - mtime</span>
+    mono = time.monotonic()
+    in_grace = (mono - boot_mono) < GRACE_BOOT
+    recent_fresh = (mono - last_fresh_mono) < STALE_AFTER
+
+    <span class="key">if</span> age <span class="key">is</span> None:
+        healthy = in_grace                 <span class="com"># pet during boot grace</span>
+    <span class="key">elif</span> age < STALE_AFTER:
+        healthy = True                     <span class="com"># normal</span>
+        last_fresh_mono = mono
+    <span class="key">elif</span> recent_fresh:
+        healthy = True                     <span class="com"># NTP clock jump cushion</span>
+    <span class="key">else</span>:
+        healthy = in_grace                 <span class="com"># withhold pet → SoC reset</span>
+
+    <span class="key">if</span> healthy:
+        os.write(WDT_FD, b<span class="str">"P"</span>)
+    time.sleep(PET_INTERVAL)</pre>
+    </div>
+
+    <div class="panel">
+      <h3>Network failover (shell)</h3>
+      <pre><span class="com"># cayley-net-watchdog — per-iface TCP probe, route arbitration</span>
+classify_iface() {
+    iface=$1
+    ip=$(iface_ipv4 <span class="str">"$iface"</span>)
+    [ -z <span class="str">"$ip"</span> ] && echo <span class="str">"noip"</span> && return
+    is_apipa <span class="str">"$ip"</span> && echo <span class="str">"apipa"</span> && return
+    probe_iface <span class="str">"$iface"</span> && echo <span class="str">"up"</span> && return
+    echo <span class="str">"sad"</span>     <span class="com"># has IP but probe fails</span>
+}
+
+<span class="com"># When iface degrades from up → not-up while the other is up,</span>
+<span class="com"># kick tailscaled so it re-binds to the healthy path.</span>
+<span class="key">if</span> [ <span class="str">"$wifi_degraded"</span> -eq <span class="num">1</span> ] && [ <span class="str">"$cell_state"</span> = <span class="str">"up"</span> ]; <span class="key">then</span>
+    log <span class="str">"iface-failover: kicking tailscaled to rebind"</span>
+    kick_tailscaled
+<span class="key">fi</span></pre>
+    </div>
+  </section>
+
+  <!-- WHAT'S NEXT -->
+  <section class="section">
+    <h2><span class="num">07</span>What's Next</h2>
+    <div class="panel">
+      <h3>Phase 2 — A/B kernel partitions</h3>
+      <p>Two boot.img slots, U-Boot picks active. New kernel installs to inactive slot in trial mode; if it doesn't mark itself healthy in 5 min, U-Boot rolls back automatically. Eliminates "bad OTA bricks the board" forever. Designed in <code>v3/docs/PHASE2-DESIGN.md</code>, ready to implement.</p>
+    </div>
+    <div class="panel">
+      <h3>Phase 3 — Read-only rootfs + OverlayFS</h3>
+      <p>Mount <code>/</code> read-only, runtime state in tmpfs/overlay. Power-loss filesystem corruption becomes impossible. Phase 1 already added <code>CONFIG_OVERLAY_FS=y</code> so the kernel is ready.</p>
+    </div>
+    <div class="panel">
+      <h3>Hardware additions</h3>
+      <p>LTE aux antenna ($10) — current cellular RSRP is -118 dBm (marginal). Aux gives MIMO downlink diversity, typically +30–80% throughput.<br>
+      12V smart relay ($15) — remote power cycle for the day the watchdog can't catch something.</p>
+    </div>
+  </section>
+
+  <footer>
+    <p>Cayley V3 — built on a Luckfox Pico Pi A W. <a href="https://github.com/Andy-Sottiaux/SolarCamera">github.com/Andy-Sottiaux/SolarCamera</a></p>
+    <p style="margin-top: 8px;">Public live API: <a href="https://cayley-v3-cam.tailc7d6b6.ts.net/api/solar">/api/solar</a> · <a href="https://cayley-v3-cam.tailc7d6b6.ts.net/api/health">/api/health</a> · <a href="https://cayley-v3-cam.tailc7d6b6.ts.net/api/detections">/api/detections</a></p>
+  </footer>
+</div>
+
+<script>
+  // Boot timeline expand
+  document.querySelectorAll('[data-stage]').forEach(el => {
+    el.addEventListener('click', () => {
+      el.classList.toggle('active');
+    });
+  });
+  // First stage open by default
+  document.querySelector('[data-stage]').classList.add('active');
+
+  // Architecture layer expand
+  document.querySelectorAll('[data-layer]').forEach(el => {
+    el.addEventListener('click', () => {
+      const id = el.dataset.layer;
+      const detail = document.querySelector(`[data-detail="${id}"]`);
+      const wasActive = el.classList.contains('active');
+      // Close all
+      document.querySelectorAll('.layer.active').forEach(x => x.classList.remove('active'));
+      document.querySelectorAll('.layer-detail.show').forEach(x => x.classList.remove('show'));
+      if (!wasActive) {
+        el.classList.add('active');
+        detail.classList.add('show');
+        // Re-arrange so detail is right after the clicked layer
+        el.parentNode.insertBefore(detail, el.nextSibling);
+      }
+    });
+  });
+
+  // Live status fetch
+  const HEALTH_URL = 'https://cayley-v3-cam.tailc7d6b6.ts.net/api/health';
+  const pill = document.getElementById('live-pill');
+  const statsEl = document.getElementById('stats');
+  const servicesEl = document.getElementById('services');
+
+  function fmtUptime(s) {
+    if (s < 60) return Math.floor(s) + 's';
+    if (s < 3600) return Math.floor(s/60) + 'm';
+    if (s < 86400) return (s/3600).toFixed(1) + 'h';
+    return (s/86400).toFixed(1) + 'd';
+  }
+
+  async function refreshLive() {
+    pill.textContent = 'fetching…';
+    pill.className = 'pill loading';
+    try {
+      const ctrl = new AbortController();
+      setTimeout(() => ctrl.abort(), 8000);
+      const res = await fetch(HEALTH_URL, { signal: ctrl.signal, cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const d = await res.json();
+      pill.textContent = '● live';
+      pill.className = 'pill live';
+      statsEl.innerHTML = `
+        <div class="stat"><div class="stat-label">Services</div><div class="stat-value">${d.service_count}</div></div>
+        <div class="stat"><div class="stat-label">Down</div><div class="stat-value">${(d.services_down||[]).length}</div></div>
+        <div class="stat"><div class="stat-label">Supervisor PID</div><div class="stat-value">${d.supervisor_pid}</div></div>
+        <div class="stat"><div class="stat-label">State Age</div><div class="stat-value">${(d.state_age_s||0).toFixed(1)}s</div></div>
+      `;
+      servicesEl.innerHTML = (d.services||[]).map(s =>
+        `<div class="service"><span class="service-dot" style="background: ${s.status==='running' ? 'var(--accent)' : 'var(--danger)'};"></span><span>${s.name}</span><span style="color: var(--muted); margin-left: auto; font-size: 11px;">${fmtUptime(s.uptime_s||0)}</span></div>`
+      ).join('');
+    } catch (e) {
+      pill.textContent = '○ unreachable';
+      pill.className = 'pill fail';
+      statsEl.innerHTML = `<div class="stat" style="grid-column: 1/-1;"><div class="stat-label">Status</div><div class="stat-value" style="font-size: 14px; color: var(--muted);">Board offline or Funnel timeout. The robustness layer is probably mid-recovery — try again in 60–180 s.</div></div>`;
+      servicesEl.innerHTML = '';
+    }
+  }
+  refreshLive();
+  setInterval(refreshLive, 30000);
+</script>
+</body>
+</html>
