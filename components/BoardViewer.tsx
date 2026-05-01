@@ -71,17 +71,22 @@ export default function BoardViewer() {
         scene.background = null  // transparent — let the page gradient show
 
         // Soft studio lighting (Apple-product style)
-        const key = new THREE.DirectionalLight(0xffffff, 1.4)
+        const key = new THREE.DirectionalLight(0xffffff, 2.4)
         key.position.set(2, 3, 4)
         scene.add(key)
-        const fill = new THREE.DirectionalLight(0xa8c8ff, 0.4)
+        const fill = new THREE.DirectionalLight(0xa8c8ff, 0.9)
         fill.position.set(-3, 1, -2)
         scene.add(fill)
-        const rim = new THREE.DirectionalLight(0x30d158, 0.35)
+        const rim = new THREE.DirectionalLight(0x30d158, 0.7)
         rim.position.set(0, -2, -3)
         scene.add(rim)
-        const ambient = new THREE.AmbientLight(0xffffff, 0.35)
+        const ambient = new THREE.AmbientLight(0xffffff, 0.55)
         scene.add(ambient)
+        // Hemisphere fill for natural sky/ground gradient — gives the
+        // model legible shape under any rotation, especially on mobile
+        // where MSAA is off and dark areas otherwise crush.
+        const hemi = new THREE.HemisphereLight(0xb8e8d4, 0x1a3325, 0.6)
+        scene.add(hemi)
 
         const camera = new THREE.PerspectiveCamera(35, width / height, 0.01, 100)
         camera.position.set(0.9, 0.7, 0.9)
@@ -142,17 +147,23 @@ export default function BoardViewer() {
             if (disposed) return
             const model = gltf.scene
 
-            // Material override — Apple-product look (matte greenish PCB)
+            // Material override — Apple-product look. Brighter PCB green
+            // with a subtle clearcoat sheen so it reads against the dark
+            // background. Slight emissive prevents shadowed areas from
+            // crushing to invisible black, especially on mobile where
+            // MSAA is off.
             model.traverse((child: import('three').Object3D) => {
               const mesh = child as import('three').Mesh
               if ((mesh as import('three').Mesh).isMesh) {
                 const mat = new THREE.MeshPhysicalMaterial({
-                  color: new THREE.Color('#1f5e3a'),
-                  metalness: 0.25,
-                  roughness: 0.55,
-                  clearcoat: 0.4,
-                  clearcoatRoughness: 0.4,
-                  reflectivity: 0.4,
+                  color: new THREE.Color('#3ea872'),
+                  metalness: 0.35,
+                  roughness: 0.45,
+                  clearcoat: 0.5,
+                  clearcoatRoughness: 0.35,
+                  reflectivity: 0.5,
+                  emissive: new THREE.Color('#0d2a1a'),
+                  emissiveIntensity: 0.4,
                 })
                 mesh.material = mat
                 mesh.castShadow = true

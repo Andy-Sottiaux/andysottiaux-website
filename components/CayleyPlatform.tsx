@@ -240,10 +240,10 @@ export default function CayleyPlatform() {
                 aspectRatio: '1.5',
                 minHeight: 280,
                 background:
-                  'radial-gradient(ellipse 60% 40% at 50% 50%, rgba(48,209,88,0.06), transparent),' +
-                  'linear-gradient(180deg, #0a0a0c 0%, #050507 100%)',
-                border: '1px solid rgba(255,255,255,0.08)',
-                boxShadow: '0 40px 100px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04)',
+                  'radial-gradient(ellipse 70% 50% at 50% 50%, rgba(255,255,255,0.04), transparent),' +
+                  'linear-gradient(180deg, #15151a 0%, #08080a 100%)',
+                border: '1px solid rgba(255,255,255,0.10)',
+                boxShadow: '0 40px 100px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05)',
               }}
             >
               <BoardViewer />
