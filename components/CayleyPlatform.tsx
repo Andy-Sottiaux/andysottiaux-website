@@ -185,7 +185,7 @@ export default function CayleyPlatform() {
   ], [])
 
   return (
-    <main className="min-h-screen bg-black text-white" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif' }}>
+    <main className="min-h-screen bg-black text-white overflow-x-hidden" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif' }}>
 
       {/* Sticky nav */}
       <nav
@@ -269,7 +269,7 @@ export default function CayleyPlatform() {
           Every byte that reaches the dashboard above starts as a photon hitting the sensor or a Bluetooth packet from the solar charger. Here&apos;s the whole journey.
         </p>
         <Reveal delay={0.05}>
-          <div className="grid md:grid-cols-2 gap-4">
+          <div className="grid md:grid-cols-2 gap-4 min-w-0">
             <PipelineCard
               icon="📷"
               step="Camera → AI"
@@ -573,7 +573,7 @@ esac`}
           The whole stack is open source. Clone, build, deploy, observe. Each command below is one of the steps in our daily workflow.
         </p>
         <Reveal delay={0.05}>
-          <div className="grid md:grid-cols-2 gap-4">
+          <div className="grid md:grid-cols-2 gap-4 min-w-0">
             <DevCard title="Source" sub="Repository · github" href="https://github.com/Andy-Sottiaux/SolarCamera"
               cmd="git clone https://github.com/Andy-Sottiaux/SolarCamera" />
             <DevCard title="Build firmware" sub="Reproducible Docker SDK build" href={null}
@@ -633,8 +633,8 @@ esac`}
 
 function Section({ eyebrow, title, children }: { eyebrow: string; title: string; children: React.ReactNode }) {
   return (
-    <section className="py-24 px-6 md:py-32" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-      <div className="max-w-5xl mx-auto">
+    <section className="py-24 px-5 md:px-6 md:py-32" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+      <div className="max-w-5xl mx-auto min-w-0">
         <Reveal>
           <div className="text-emerald-400 text-[13px] font-semibold uppercase tracking-widest mb-4">{eyebrow}</div>
         </Reveal>
@@ -692,15 +692,15 @@ function Stat({ label, value }: { label: string; value: string }) {
 
 function CodePanel({ title, sub, code }: { title: string; sub: string; code: string }) {
   return (
-    <div className="rounded-2xl p-7" style={{ background: '#0a0a0c', border: '1px solid rgba(255,255,255,0.08)' }}>
+    <div className="rounded-2xl p-5 md:p-7 min-w-0 overflow-hidden" style={{ background: '#0a0a0c', border: '1px solid rgba(255,255,255,0.08)' }}>
       <h3 className="text-[17px] font-semibold tracking-tight mb-1.5">{title}</h3>
       <p className="text-[13px] text-white/40 mb-4">{sub}</p>
       <pre
-        className="overflow-x-auto rounded-xl text-[13px] leading-relaxed"
+        className="overflow-x-auto rounded-xl text-[12px] md:text-[13px] leading-relaxed max-w-full"
         style={{
           background: 'rgba(255,255,255,0.025)',
           border: '1px solid rgba(255,255,255,0.06)',
-          padding: '18px 22px',
+          padding: '14px 16px',
           fontFamily: '"SF Mono", ui-monospace, monospace',
           color: 'rgba(255,255,255,0.85)',
         }}
@@ -721,18 +721,18 @@ function RoadmapCard({ badge, title, body }: { badge: string; title: string; bod
 
 function DevCard({ title, sub, href, cmd }: { title: string; sub: string; href: string | null; cmd: string }) {
   return (
-    <div className="rounded-2xl p-6" style={{ background: '#0a0a0c', border: '1px solid rgba(255,255,255,0.08)' }}>
+    <div className="rounded-2xl p-5 md:p-6 min-w-0 overflow-hidden" style={{ background: '#0a0a0c', border: '1px solid rgba(255,255,255,0.08)' }}>
       <div className="flex items-start justify-between gap-4 mb-3">
-        <div>
+        <div className="min-w-0">
           <h3 className="text-[16px] font-semibold tracking-tight">{title}</h3>
           <p className="text-[12.5px] text-white/40 mt-0.5">{sub}</p>
         </div>
         {href && (
-          <a className="text-[12px] text-emerald-400 hover:underline" href={href} target="_blank" rel="noopener noreferrer">open ↗</a>
+          <a className="text-[12px] text-emerald-400 hover:underline flex-shrink-0" href={href} target="_blank" rel="noopener noreferrer">open ↗</a>
         )}
       </div>
       <pre
-        className="text-[12px] rounded-lg p-3 overflow-x-auto"
+        className="text-[11.5px] md:text-[12px] rounded-lg p-3 overflow-x-auto max-w-full whitespace-pre"
         style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.06)', fontFamily: '"SF Mono", ui-monospace, monospace', color: 'rgba(255,255,255,0.85)' }}
       >{cmd}</pre>
     </div>
