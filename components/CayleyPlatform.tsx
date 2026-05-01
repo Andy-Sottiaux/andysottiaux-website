@@ -1,18 +1,12 @@
 'use client'
 
 /**
- * Cayley V3 development platform — single-page experience covering:
- * - Hero with live 3D board (CAD model, hover annotations)
- * - Live system telemetry from /api/health, /api/solar, /api/detections
- * - Camera live-stream link
- * - Boot timeline (interactive)
- * - Six recovery layers (interactive)
- * - Failure-mode coverage matrix
- * - Code tour (key snippets)
- * - Phase 2/3 roadmap
+ * Cayley V3 platform — interactive education + live operations dashboard.
  *
- * Apple-grade polish: typography, spring easing, scroll-triggered reveals,
- * backdrop blur, careful palette, generous whitespace.
+ * Tone: exciting, educational. Showcases how the board operates, the
+ * pipeline from solar to camera to AI inference to public API. Uses
+ * the actual board as the centerpiece, with progressive disclosure on
+ * each subsystem.
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -149,43 +143,45 @@ export default function CayleyPlatform() {
     return () => clearTimeout(timer)
   }, [])
 
+  // Boot timeline as an education narrative
   const stages = useMemo(() => [
-    { t: 't = 0 s', title: 'Boot ROM',
-      summary: 'Mask ROM in the SoC reads idblock.',
-      detail: 'RV1106’s factory-burned ROM reads idblock (256 KB at offset 32K + 512K) and loads it as the rockchip-signed first-stage bootloader. The only code that runs from non-writable storage.' },
-    { t: 't ≈ 0.5 s', title: 'U-Boot',
-      summary: 'Reads env partition, applies FDT overlays, loads the kernel.',
-      detail: 'Reads env for kernel cmdline + FDT overlays. Where dr_mode, USB_MODE, and panic=10 live. Loads boot.img into RAM, applies overlays, jumps to the kernel entry point.' },
-    { t: 't ≈ 3 s', title: 'Linux 5.10.160',
-      summary: 'Decompresses, mounts rootfs, brings up busybox init.',
-      detail: 'Custom kernel: CONFIG_TUN + CONFIG_WIREGUARD for Tailscale. Phase 1 also adds PANIC_ON_OOPS, HARDLOCKUP/SOFTLOCKUP detectors, ZRAM, kernel-side LED heartbeat, and watchdog NOWAYOUT.' },
-    { t: 't ≈ 6 s', title: 'init.d sequence',
-      summary: 'Stock Buildroot scripts: udev, networking, dhcpcd, dbus.',
-      detail: 'Busybox init runs S01…S98 alphabetically. Our addition: S98zram sets up the 32 MB compressed swap before the cayley layer starts.' },
-    { t: 't ≈ 10 s', title: 'S99cayley',
-      summary: 'First action: claim the watchdog. Then everything else.',
-      detail: 'Starts cayley-extwd, which opens /dev/watchdog. With NOWAYOUT, that’s a hard commitment. Then DNS lockdown, route metrics, SD mount, HTTPS time sync, tailscaled in DERP-only mode, finally cayleyd.' },
-    { t: 't ≈ 30 s', title: 'cayleyd lights up the services',
-      summary: 'Nine children, supervised, OOM-protected, restart-rate-capped.',
-      detail: 'Forks go2rtc, cayley-record, cayley-cleanup, cayley-detect-loop (NPU YOLOv5s), cayley-victron, cayley-solar-api, cayley-net-watchdog, cayley-snapshot, cayley-ledpulse. Crash artifacts ringbuffer to SD card.' },
+    { t: 't = 0 s', title: 'Power on',
+      summary: 'The SoC wakes up. A factory-burned ROM begins reading flash.',
+      detail: 'Rockchip’s mask ROM — a tiny program physically baked into the silicon — runs first. It reads the idblock partition (256 KB) and verifies it against a Rockchip signature, then loads it as the first-stage bootloader.' },
+    { t: 't ≈ 0.5 s', title: 'U-Boot takes over',
+      summary: 'A real bootloader, with logic. Reads kernel parameters from flash.',
+      detail: 'U-Boot reads the env partition for kernel cmdline + device-tree overlays. This is where things like USB role (peripheral vs host), CMA size, and panic timeout live. It loads boot.img into RAM and jumps to Linux.' },
+    { t: 't ≈ 3 s', title: 'Linux 5.10.160 comes up',
+      summary: 'Custom-built kernel decompresses, mounts the filesystem.',
+      detail: 'Compiled from the Luckfox SDK with our own config fragment: TUN + WireGuard for Tailscale, ZRAM for compressed swap, kernel-side LED heartbeat, hardware-watchdog NOWAYOUT. Built reproducibly via a Docker volume.' },
+    { t: 't ≈ 6 s', title: 'Init scripts run',
+      summary: 'Buildroot S01…S98 bring up udev, networking, dhcpcd, dbus.',
+      detail: 'Standard busybox init reads /etc/inittab, runs /etc/init.d/rcS, which executes everything in alphabetical order. We added S98zram to set up a 32 MB compressed swap before our orchestration starts.' },
+    { t: 't ≈ 10 s', title: 'S99cayley orchestrates',
+      summary: 'Network bring-up, time sync, Tailscale, then the supervisor.',
+      detail: 'DNS lockdown to 1.1.1.1/8.8.8.8, default-route metric tuning so wifi wins over cellular, SD card mount, HTTPS-Date time sync (NTP-blocking-tolerant), tailscaled launch, finally cayleyd.' },
+    { t: 't ≈ 30 s', title: 'Nine services light up',
+      summary: 'cayleyd forks the application layer.',
+      detail: 'go2rtc bridges the camera to WebRTC; cayley-record writes 15-min MP4 segments; cayley-detect-loop runs YOLOv5s on the NPU; cayley-victron decodes Bluetooth solar telemetry; cayley-solar-api serves the public HTTP. All supervised, all OOM-protected.' },
     { t: 't ≈ 75 s', title: 'Online and serving',
-      summary: 'Tailscale connects. Funnel cert provisioned. Heartbeat blinks.',
-      detail: 'Tailscale connects via DERP relay. Funnel HTTPS endpoints come up. Camera RTSP active. Detector running. Heartbeat LED double-blinks. Steady state.' },
+      summary: 'Tailscale Funnel certifies. Public APIs respond. Heartbeat pulses.',
+      detail: 'A DERP relay handshake, a Let’s-Encrypt certificate via SNI, a kernel heartbeat double-blink. The board is now reachable from anywhere on the internet at https://cayley-v3-cam.tailc7d6b6.ts.net.' },
   ], [])
 
+  // Architecture as components / pipeline (educational, not defensive)
   const layers = useMemo(() => [
-    { n: '01', t: 'Kernel — panic and lockup detection', tag: 'kernel',
-      d: 'Phase 1: PANIC_ON_OOPS + panic=10. Any kernel oops auto-reboots in 10 s. Hardlockup and softlockup detectors print stack traces and force panic on stuck CPUs.' },
-    { n: '02', t: 'Hardware watchdog — DesignWare WDT', tag: 'SoC',
-      d: 'NOWAYOUT means once /dev/watchdog opens, nothing disarms it. If the userspace owner stops petting for 30 s, the SoC resets itself — independent of any software state.' },
-    { n: '03', t: 'cayley-extwd — heartbeat watchdog', tag: 'Python',
-      d: 'Holds /dev/watchdog open. Pets only while cayleyd’s heartbeat file is fresh. Monotonic-clock cushion so NTP +8 h jumps don’t false-fire.' },
-    { n: '04', t: 'cayley-net-watchdog — failover', tag: 'shell',
-      d: 'Per-iface TCP probes. Active default-route arbitration. Magicsock wedge detection. Three kicks in 10 min → sysrq reboot. Iface-failover triggers tailscaled rebind.' },
-    { n: '05', t: 'cayleyd — supervisor', tag: 'Python',
-      d: 'Forks 9 children with PR_SET_PDEATHSIG. Exponential backoff. Restart-rate cap. OOM_score_adj=-500 for self and extwd. Crash artifacts to SD-card ringbuffer.' },
-    { n: '06', t: 'cayley-snapshot — flight recorder', tag: 'shell',
-      d: 'Boot manifest, 5-min health JSONL, event-log tail to SD card. Survives reboots. 20-session ringbuffer. The forensic record.' },
+    { n: '01', t: 'Camera pipeline · ISP → H.265', tag: 'hardware',
+      d: 'A 5 MP MIS5001 sensor feeds the Rockchip ISP, which auto-exposes / white-balances / corrects the image, then hands it to a hardware H.265 encoder. CPU never touches a frame. The result is RTSP at 127.0.0.1:554, ready for streaming or AI.' },
+    { n: '02', t: 'NPU inference · YOLOv5s INT8', tag: 'edge AI',
+      d: 'A 1 TOPS NPU runs an INT8-quantized YOLOv5s model. ffmpeg pipes 640×640 RGB frames into our cayley_detector binary which does inference at ~12 FPS standalone (5 FPS with the camera/recording stack running concurrently). Detections emit as JSONL.' },
+    { n: '03', t: 'Solar telemetry · Bluetooth → AES → JSON', tag: 'IoT',
+      d: 'A Victron SmartSolar charge controller broadcasts AES-128-CTR-encrypted telemetry over Bluetooth Instant Readout. cayley-victron scans via bluetoothctl, decodes with a pure-Python AES implementation (no external deps), and writes solar.jsonl.' },
+    { n: '04', t: 'Network · WiFi + LTE + Tailscale', tag: 'connectivity',
+      d: 'Two physical paths: AIC8800DC WiFi 6 over SDIO, SIM7600G-H LTE Cat-4 over M.2. Tailscale provides a tailnet identity. Funnel exposes selected paths publicly via HTTPS — no port forwarding, no DDNS, no router config.' },
+    { n: '05', t: 'Supervisor · cayleyd', tag: 'Python',
+      d: 'A small Python supervisor that forks all services, watches them, restarts on exit with exponential backoff and rate caps. Adjusts OOM scores so it stays alive under memory pressure. Writes a health JSON for /api/health.' },
+    { n: '06', t: 'Observability · cayley-snapshot', tag: 'shell',
+      d: 'Boot manifest + 5-min health JSONL + tail of all service logs, written to SD card every boot. 20-session ringbuffer. The forensic record — survives reboots, makes post-mortems possible without being there live.' },
   ], [])
 
   return (
@@ -200,11 +196,11 @@ export default function CayleyPlatform() {
           className="w-1.5 h-1.5 rounded-full mr-2"
           style={{ background: '#30d158', animation: 'cayPulse 2s cubic-bezier(0.4,0,0.2,1) infinite' }}
         />
-        Cayley V3 · Development Platform
-        <a href="/" className="ml-6 text-white/50 hover:text-white transition-colors">← back to andysottiaux</a>
+        Cayley V3 · Live Build
+        <a href="/" className="ml-6 text-white/50 hover:text-white transition-colors">← back</a>
       </nav>
 
-      {/* HERO with 3D board front and center */}
+      {/* HERO */}
       <header
         className="relative overflow-hidden"
         style={{
@@ -216,7 +212,7 @@ export default function CayleyPlatform() {
       >
         <div className="max-w-6xl mx-auto text-center">
           <div className="text-emerald-400 text-xs font-semibold uppercase tracking-widest mb-4">
-            Embedded · Solar · NPU · Edge AI
+            Solar · Edge AI · Autonomous
           </div>
           <h1
             className="font-bold leading-[1.04] tracking-tight"
@@ -228,13 +224,13 @@ export default function CayleyPlatform() {
               backgroundClip: 'text',
             }}
           >
-            The board that<br />fixes itself.
+            Sun goes in.<br />Vision comes out.
           </h1>
           <p className="text-[19px] md:text-[22px] text-white/60 mt-5 max-w-2xl mx-auto leading-snug tracking-tight">
-            A Luckfox Pico Pi A W, kernel-hardened, six recovery layers, designed for unattended deployment in places no one is going to drive to.
+            A solar-powered Linux board with a 5 MP camera, an on-chip neural engine, and a live public API. Built end-to-end. Open source. Explore every layer.
           </p>
 
-          {/* 3D viewer — front and center */}
+          {/* 3D viewer */}
           <div className="mt-12 mx-auto" style={{ maxWidth: 880, aspectRatio: '1.5', position: 'relative' }}>
             <div
               className="relative w-full h-full rounded-[24px] overflow-hidden"
@@ -249,16 +245,59 @@ export default function CayleyPlatform() {
               <BoardViewer />
             </div>
             <p className="text-white/40 text-[13px] mt-4">
-              Drag to orbit · scroll to zoom · hover any pulsing dot for a component callout
+              Drag to orbit · scroll to zoom · hover any pulsing dot to learn what it does
             </p>
+          </div>
+
+          {/* Quick-stat strip */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-12 max-w-3xl mx-auto">
+            <QuickStat top="1 TOPS" mid="NPU" sub="on-chip neural engine" />
+            <QuickStat top="5 MP" mid="camera" sub="hardware H.265 encoder" />
+            <QuickStat top="2 paths" mid="WiFi + LTE" sub="dual-network failover" />
+            <QuickStat top="100%" mid="open source" sub="kernel to dashboard" />
           </div>
         </div>
       </header>
 
-      {/* LIVE DASHBOARD */}
-      <Section eyebrow="01 — Live" title="From the actual board, right now.">
-        <p className="text-[19px] text-white/60 max-w-xl mb-8">
-          Every value below is fetched live over Tailscale Funnel. Refreshes every 30 seconds.
+      {/* PIPELINE — visual story of how data flows */}
+      <Section eyebrow="01 — The Pipeline" title="From photons to public API.">
+        <p className="text-[19px] text-white/60 max-w-2xl mb-12">
+          Every byte that reaches the dashboard above starts as a photon hitting the sensor or a Bluetooth packet from the solar charger. Here&apos;s the whole journey.
+        </p>
+        <Reveal delay={0.05}>
+          <div className="grid md:grid-cols-2 gap-4">
+            <PipelineCard
+              icon="📷"
+              step="Camera → AI"
+              flow="Sensor → ISP → H.265 → ffmpeg → NPU YOLO → JSONL"
+              detail="Photons hit the MIS5001 sensor. Hardware ISP corrects exposure and color. The H.265 encoder compresses without touching the CPU. ffmpeg pipes 640×640 RGB frames to a quantized YOLOv5s on the NPU. Detection events stream to disk and to the public /api/detections endpoint — privacy-aware, counts only, no images leave the board."
+            />
+            <PipelineCard
+              icon="☀️"
+              step="Solar → Telemetry"
+              flow="Victron BLE → AES-128 decode → JSONL → /api/solar"
+              detail="The Victron SmartSolar charger broadcasts encrypted telemetry over Bluetooth roughly every second. cayley-victron decodes it with pure-Python AES (no external deps), parses the SmartSolar binary record format, and writes JSONL. The HTTP API exposes the most recent reading at /api/solar."
+            />
+            <PipelineCard
+              icon="📡"
+              step="Network → Public"
+              flow="WiFi + LTE → Tailscale → DERP → Funnel → HTTPS"
+              detail="Two independent network paths — WiFi 6 on SDIO and LTE Cat-4 on M.2. Tailscale provides identity and Funnel routes traffic through their HTTPS edge. No port forwarding, no DDNS, no router config. The board is reachable from any browser at a fixed URL."
+            />
+            <PipelineCard
+              icon="🎬"
+              step="Storage → Replay"
+              flow="rkipc RTSP → ffmpeg segment → 15-min MP4 → SD card"
+              detail="A second ffmpeg process pulls the H.265 stream from the local rkipc service and writes 15-minute MP4 segments to SD card without re-encoding. With a 32 GB SD card, that&apos;s ~22-30 hours of rolling footage. cayley-cleanup auto-evicts the oldest segments when the card hits 85%."
+            />
+          </div>
+        </Reveal>
+      </Section>
+
+      {/* LIVE — read live values */}
+      <Section eyebrow="02 — Live" title="See it now.">
+        <p className="text-[19px] text-white/60 max-w-2xl mb-8">
+          Every value below is fetched from the actual board as you read this. Updates every 30 seconds.
         </p>
         <Reveal delay={0.05}>
           <div className="grid md:grid-cols-3 gap-4">
@@ -290,7 +329,7 @@ export default function CayleyPlatform() {
                   </div>
                 </>
               ) : (
-                <div className="text-white/40 text-sm">Recovery layer is probably mid-cycle. Try in 60–180 s.</div>
+                <div className="text-white/40 text-sm">Live readout will appear when the board is reachable.</div>
               )}
             </div>
 
@@ -309,8 +348,7 @@ export default function CayleyPlatform() {
                 </div>
               ) : (
                 <div className="text-white/40 text-sm leading-relaxed">
-                  No telemetry yet — board is currently away from the Victron device.
-                  <br /><span className="text-white/30 text-[12.5px]">Will populate when board is in BLE range of the SmartSolar.</span>
+                  Telemetry populates when the board is in Bluetooth range of the SmartSolar.
                 </div>
               )}
             </div>
@@ -318,7 +356,7 @@ export default function CayleyPlatform() {
             {/* Detections */}
             <div className="rounded-2xl p-6" style={{ background: '#0a0a0c', border: '1px solid rgba(255,255,255,0.08)' }}>
               <div className="flex items-center justify-between mb-4">
-                <div className="text-sm font-semibold text-white/90">NPU Detections (1 h)</div>
+                <div className="text-sm font-semibold text-white/90">Detections (1 h)</div>
                 <StatPill status={detections ? 'live' : healthState} />
               </div>
               {detections ? (
@@ -340,8 +378,7 @@ export default function CayleyPlatform() {
                   </>
                 ) : (
                   <div className="text-white/40 text-sm leading-relaxed">
-                    No detections in the last hour.
-                    <br /><span className="text-white/30 text-[12.5px]">Privacy-aware: only counts + class names exposed (no bboxes, no frames).</span>
+                    No detections in the last hour. Privacy-aware: only counts + class names exposed.
                   </div>
                 )
               ) : (
@@ -356,7 +393,7 @@ export default function CayleyPlatform() {
           <div className="mt-6 rounded-2xl p-6 flex flex-col md:flex-row items-start md:items-center gap-5"
                style={{ background: 'linear-gradient(135deg, rgba(10,132,255,0.08) 0%, rgba(48,209,88,0.06) 100%)', border: '1px solid rgba(255,255,255,0.10)' }}>
             <div>
-              <div className="text-sm font-semibold mb-1">Live camera feed</div>
+              <div className="text-sm font-semibold mb-1">Live camera</div>
               <div className="text-white/60 text-[14px] leading-snug">5 MP H.265 streamed via WebRTC over Tailscale Funnel — public HTTPS endpoint, latency &lt; 1 s in good conditions.</div>
             </div>
             <a
@@ -367,16 +404,16 @@ export default function CayleyPlatform() {
               style={{ background: 'rgba(255,255,255,0.95)', color: '#000', minWidth: 160, justifyContent: 'center' }}
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M15 10l4.55-2.28A1 1 0 0121 8.62v6.76a1 1 0 01-1.45.9L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-              Open live stream
+              Open the stream
             </a>
           </div>
         </Reveal>
       </Section>
 
-      {/* BOOT */}
-      <Section eyebrow="02 — Boot" title="Off to online in 75 seconds.">
-        <p className="text-[19px] text-white/60 max-w-xl mb-8">
-          Each stage clickable. Watch the kernel come up, the init scripts run, the watchdog claim its territory, and the supervisor light up nine services in sequence.
+      {/* BOOT — story of how it comes alive */}
+      <Section eyebrow="03 — Boot" title="Watch it come alive.">
+        <p className="text-[19px] text-white/60 max-w-2xl mb-8">
+          From a cold ROM to a full edge-AI server in seventy-five seconds. Each stage is a different layer of the system claiming its job. Click any to expand.
         </p>
         <Reveal delay={0.05}>
           <div>
@@ -403,7 +440,7 @@ export default function CayleyPlatform() {
                   <div className="text-white/60 text-[15px] mt-1 leading-relaxed">{s.summary}</div>
                   <div
                     style={{
-                      maxHeight: openStage === i ? 280 : 0,
+                      maxHeight: openStage === i ? 320 : 0,
                       opacity: openStage === i ? 1 : 0,
                       overflow: 'hidden',
                       marginTop: openStage === i ? 14 : 0,
@@ -419,10 +456,10 @@ export default function CayleyPlatform() {
         </Reveal>
       </Section>
 
-      {/* LAYERS */}
-      <Section eyebrow="03 — Defense" title="Six independent layers of recovery.">
-        <p className="text-[19px] text-white/60 max-w-xl mb-8">
-          Each layer covers a different failure class. Layer N&#39;s failure becomes layer N+1&#39;s input. The kernel is the deepest backstop.
+      {/* ARCHITECTURE — six subsystems */}
+      <Section eyebrow="04 — Architecture" title="Six subsystems, one board.">
+        <p className="text-[19px] text-white/60 max-w-2xl mb-8">
+          Each subsystem is independently developed, supervised, and observable. The whole greater than the sum.
         </p>
         <Reveal delay={0.05}>
           <div className="grid gap-2">
@@ -441,7 +478,7 @@ export default function CayleyPlatform() {
                   }}
                   onClick={() => setOpenLayer(open ? null : i)}
                 >
-                  <div className="grid items-center" style={{ gridTemplateColumns: '64px 1fr 100px' }}>
+                  <div className="grid items-center" style={{ gridTemplateColumns: '64px 1fr 110px' }}>
                     <div className="text-3xl font-light tracking-tighter" style={{ color: open ? '#30d158' : '#6e6e73', fontWeight: open ? 600 : 200, transition: 'all 0.4s' }}>{l.n}</div>
                     <div className="text-[17px] font-medium tracking-tight">{l.t}</div>
                     <div className="text-right text-[11px] font-medium uppercase tracking-widest text-white/40">{l.tag}</div>
@@ -467,140 +504,101 @@ export default function CayleyPlatform() {
         </Reveal>
       </Section>
 
-      {/* MATRIX */}
-      <Section eyebrow="04 — Coverage" title="Sixteen failure modes, mapped.">
-        <p className="text-[19px] text-white/60 max-w-xl mb-8">
-          Real failure scenarios, what catches each, expected recovery time. The bottom three rows are honest about what&apos;s still out of reach in software.
-        </p>
-        <Reveal delay={0.05}>
-          <div className="rounded-2xl overflow-hidden" style={{ background: '#0a0a0c', border: '1px solid rgba(255,255,255,0.08)' }}>
-            <table className="w-full text-left" style={{ borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ background: '#16161a' }}>
-                  <Th>Failure</Th><Th>Caught by</Th><Th>Recovery</Th>
-                </tr>
-              </thead>
-              <tbody>
-                <Row f="Service crashes" by="cayleyd" recovery="1–30 s" tone="ok" />
-                <Row f="Service crash-loops" by="cayleyd rate cap" recovery="60 s penalty" tone="ok" />
-                <Row f="Service OOM-killed" by="cayleyd" recovery="1–30 s" tone="ok" />
-                <Row f="cayleyd OOM-killed" by="extwd" recovery="≤ 75 s" tone="ok" />
-                <Row f="cayleyd hangs" by="extwd → SoC reset" recovery="≤ 75 s" tone="ok" />
-                <Row f="WiFi APIPA stuck" by="net-watchdog" recovery="30–60 s" tone="ok" />
-                <Row f="Tailscale LocalAPI hangs" by="net-watchdog" recovery="30–60 s" tone="ok" />
-                <Row f="magicsock wedge" by="net-watchdog rx-stall" recovery="~120 s" tone="ok" />
-                <Row f="Total network blackout" by="sysrq reboot" recovery="~90 s" tone="ok" />
-                <Row f="Kernel oops, half-alive" by="PANIC_ON_OOPS · Phase 1" recovery="10 s" tone="ok" />
-                <Row f="CPU hardlocked" by="HARDLOCKUP_DETECTOR · Phase 1" recovery="10–20 s" tone="ok" />
-                <Row f="Userspace tight-loop" by="SOFTLOCKUP_DETECTOR · Phase 1" recovery="10–20 s" tone="ok" />
-                <Row f="Watchdog disarmed by cleanup" by="NOWAYOUT · Phase 1" recovery="impossible" tone="ok" />
-                <Row f="Bad new kernel push" by="Phase 2 needed" recovery="physical reflash" tone="warn" />
-                <Row f="Power-loss FS corruption" by="Phase 3 needed" recovery="physical reflash" tone="warn" />
-                <Row f="Hardware death" by="no software fix" recovery="replacement" tone="danger" />
-              </tbody>
-            </table>
-          </div>
-        </Reveal>
-      </Section>
-
       {/* CODE */}
       <Section eyebrow="05 — Code" title="A few hundred lines that turn a Pico Pi into Cayley.">
-        <p className="text-[19px] text-white/60 max-w-xl mb-8">
-          The orchestration primitives. Everything else builds on top of these.
+        <p className="text-[19px] text-white/60 max-w-2xl mb-8">
+          The orchestration primitives. Everything else builds on these.
         </p>
-        <div className="grid gap-4 md:grid-cols-1">
+        <div className="grid gap-4">
           <Reveal delay={0.05}>
             <CodePanel
               title="S99cayley — boot orchestration"
-              sub="First action on boot: claim the watchdog before anything that could block."
-              language="sh"
+              sub="The first script we get to run. Sets up everything the supervisor needs."
               code={`# /etc/init.d/S99cayley
 case "$1" in
   start)
     mkdir -p /var/run/tailscale /dev/net /var/log/cayley /var/run/cayley
 
-    # cayley-extwd FIRST — claim /dev/watchdog before any other
-    # step that could block. With NOWAYOUT, the dog can't be disarmed.
-    if ! pgrep -f "/usr/local/bin/cayley-extwd" >/dev/null; then
-      nohup /usr/local/bin/cayley-extwd \\
-        > /var/log/cayley/cayley-extwd.stdout 2>&1 < /dev/null &
-    fi
-
-    # Heartbeat LED — try kernel-side trigger first (Phase 1)
+    # Heartbeat LED — kernel-side trigger if available
     echo heartbeat > /sys/class/leds/work/trigger 2>/dev/null
 
-    # tailscaled in DERP-only mode (CGNAT defeats direct WireGuard)
+    # Sync the clock — HTTPS Date-header tolerant of NTP-blocking networks
+    /usr/local/bin/timesync >/var/log/cayley/timesync.log 2>&1
+
+    # Tailscale daemon — DERP-only mode keeps the path stable on cellular
     TS_DEBUG_DISABLE_DIRECT=true \\
     nohup /userdata/tailscale/tailscaled \\
         --statedir=/userdata/tailscale/state \\
-        --port=41641 > /var/log/cayley/tailscaled.log 2>&1 &`}
+        --port=41641 > /var/log/cayley/tailscaled.log 2>&1 &
+
+    # The supervisor — owns go2rtc, recorder, NPU detector, victron, …
+    nohup /usr/bin/python3 -u /usr/local/bin/cayleyd \\
+        > /var/log/cayley/cayleyd.stderr 2>&1 < /dev/null &
+    ;;
+esac`}
             />
           </Reveal>
           <Reveal delay={0.1}>
             <CodePanel
-              title="cayley-extwd — heartbeat watchdog"
-              sub="Pets the dog only while cayleyd's heartbeat is fresh. Monotonic-clock cushion."
-              language="py"
-              code={`while True:
-    age = heartbeat_age()                # time.time() - mtime
-    mono = time.monotonic()
-    in_grace = (mono - boot_mono) < GRACE_BOOT
-    recent_fresh = (mono - last_fresh_mono) < STALE_AFTER
+              title="cayley-victron — pure-Python AES-128 BLE decoder"
+              sub="Decrypts Victron Instant Readout broadcasts with zero external dependencies."
+              code={`def parse_advertisement(data: bytes, key: bytes) -> dict:
+    if len(data) < 8 or data[:2] != b"\\x10\\x02":
+        return {}
+    iv = data[5:7]                           # 16-bit IV
+    ct = data[7:]                            # ciphertext
 
-    if age is None:
-        healthy = in_grace               # pet during boot grace
-    elif age < STALE_AFTER:
-        healthy = True
-        last_fresh_mono = mono
-    elif recent_fresh:
-        healthy = True                   # NTP clock jump cushion
-    else:
-        healthy = in_grace               # withhold → SoC reset
+    # AES-128-CTR with the IV in low 16 bits, counter in high 4 bytes
+    nonce = iv + b"\\x00" * 12 + b"\\x00" * 2
+    pt = aes_ctr_decrypt(ct, key, nonce)
 
-    if healthy:
-        os.write(WDT_FD, b"P")
-    time.sleep(PET_INTERVAL)`}
+    return {
+        "battery_v":    int.from_bytes(pt[2:4],  "little") / 100.0,
+        "solar_w":      int.from_bytes(pt[4:6],  "little"),
+        "yield_today":  int.from_bytes(pt[6:8],  "little") * 10,
+        "charge_state": ["off","fault","bulk","absorb","float"][pt[0]],
+    }`}
             />
           </Reveal>
         </div>
       </Section>
 
-      {/* ROADMAP */}
-      <Section eyebrow="06 — Next" title="What's still out of reach.">
-        <p className="text-[19px] text-white/60 max-w-xl mb-8">
-          Phase 1 closed the kernel-level gap. Two more phases bring genuinely unattended-grade reliability.
-        </p>
-        <Reveal delay={0.05}>
-          <div className="grid md:grid-cols-3 gap-4">
-            <RoadmapCard badge="Phase 2 · designed" title="A/B kernel partitions"
-              body="Two boot.img slots, U-Boot picks active. New kernel installs to inactive slot in trial mode; if it doesn't mark itself healthy in 5 min, U-Boot rolls back automatically. Eliminates 'bad OTA bricks the board' forever." />
-            <RoadmapCard badge="Phase 3 · planned" title="Read-only rootfs + OverlayFS"
-              body="Mount / read-only, runtime state in tmpfs/overlay. Power-loss filesystem corruption becomes impossible. Phase 1 already added CONFIG_OVERLAY_FS=y — kernel is ready." />
-            <RoadmapCard badge="Hardware" title="Aux antenna + smart relay"
-              body="LTE aux for MIMO downlink (~$10) — site has -118 dBm RSRP, biggest practical improvement. 12V smart relay (~$15) for remote power cycle when nothing else can." />
-          </div>
-        </Reveal>
-      </Section>
-
       {/* DEV TOOLS */}
-      <Section eyebrow="07 — Develop" title="Dev surface.">
-        <p className="text-[19px] text-white/60 max-w-xl mb-8">
-          The repo, the OTA flow, the live endpoints. Everything you need to iterate.
+      <Section eyebrow="06 — Develop" title="Build it yourself.">
+        <p className="text-[19px] text-white/60 max-w-2xl mb-8">
+          The whole stack is open source. Clone, build, deploy, observe. Each command below is one of the steps in our daily workflow.
         </p>
         <Reveal delay={0.05}>
           <div className="grid md:grid-cols-2 gap-4">
             <DevCard title="Source" sub="Repository · github" href="https://github.com/Andy-Sottiaux/SolarCamera"
               cmd="git clone https://github.com/Andy-Sottiaux/SolarCamera" />
-            <DevCard title="Build firmware" sub="Docker SDK + V3 kernel fragment" href={null}
+            <DevCard title="Build firmware" sub="Reproducible Docker SDK build" href={null}
               cmd={'cd v3/firmware && ./build.sh\n# kernel-only:  ./build.sh kernel'} />
             <DevCard title="OTA package" sub="Versioned tarball with sha256 manifest" href={null}
               cmd="v3/scripts/cayley-package --notes 'release notes here'" />
-            <DevCard title="OTA install" sub="Atomic on-board · auto-rollback if /api/health fails" href={null}
+            <DevCard title="OTA install" sub="Atomic on-board · auto-rollback if /api/health regresses" href={null}
               cmd="cayley-update --file /tmp/cayley-update-VERSION.tar.gz\n# or:\ncayley-update --url https://example.com/release.tar.gz" />
             <DevCard title="Pull logs" sub="rsync-resilient, lands in v3/logs/<ts>/" href={null}
               cmd="v3/scripts/cayley-pull-logs" />
-            <DevCard title="SSH config" sub="ControlMaster + 5-min keepalive — survives cellular blips" href={null}
+            <DevCard title="SSH config" sub="ControlMaster + 5-min keepalive over Tailscale" href={null}
               cmd="cat v3/scripts/cayley-ssh-config-snippet >> ~/.ssh/config" />
+          </div>
+        </Reveal>
+      </Section>
+
+      {/* WHY IT MATTERS */}
+      <Section eyebrow="07 — Why" title="Edge AI without a cloud.">
+        <p className="text-[19px] text-white/60 max-w-2xl mb-8">
+          Cayley runs entirely off-grid. No cloud subscription, no monthly fees, no data leaving the property unless you explicitly publish it. A single 30 W solar panel keeps it running 24/7.
+        </p>
+        <Reveal delay={0.05}>
+          <div className="grid md:grid-cols-3 gap-4">
+            <RoadmapCard badge="Privacy" title="Frames never leave"
+              body="The NPU processes every frame locally. Only counts and class names ever cross the network. No image upload to any third-party API." />
+            <RoadmapCard badge="Cost" title="$0 / month operating"
+              body="Solar panel powers the board. Tailscale Funnel handles HTTPS for free. Open-source software stack. Total recurring cost: zero." />
+            <RoadmapCard badge="Open" title="100% inspectable"
+              body="Every line of code, every kernel config, every init script is in the public repo. Fork it, learn from it, deploy your own." />
           </div>
         </Reveal>
       </Section>
@@ -610,16 +608,15 @@ case "$1" in
         className="text-center py-16 text-white/40 text-[13px]"
         style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}
       >
-        <div>Cayley V3 · open source · self-healing</div>
+        <div>Cayley V3 · open source · solar-powered edge AI</div>
         <div className="mt-3 text-xs">
-          Public APIs: {' '}
+          Public APIs:{' '}
           <a className="text-white/60 hover:text-emerald-400 transition-colors" href={SOLAR_URL} target="_blank" rel="noopener noreferrer">/api/solar</a>{' '}·{' '}
           <a className="text-white/60 hover:text-emerald-400 transition-colors" href={HEALTH_URL} target="_blank" rel="noopener noreferrer">/api/health</a>{' '}·{' '}
           <a className="text-white/60 hover:text-emerald-400 transition-colors" href={DETECTIONS_URL} target="_blank" rel="noopener noreferrer">/api/detections</a>
         </div>
       </footer>
 
-      {/* Global keyframes for the platform */}
       <style jsx global>{`
         @keyframes cayPulse {
           0%, 100% { box-shadow: 0 0 0 0 rgba(48,209,88,0.45); }
@@ -657,6 +654,29 @@ function Section({ eyebrow, title, children }: { eyebrow: string; title: string;
   )
 }
 
+function QuickStat({ top, mid, sub }: { top: string; mid: string; sub: string }) {
+  return (
+    <div className="rounded-2xl p-4" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
+      <div className="text-[28px] font-semibold leading-none tracking-tight"
+        style={{ background: 'linear-gradient(180deg, #fff, #b0b0b8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}
+      >{top}</div>
+      <div className="text-emerald-400 text-[11px] font-semibold uppercase tracking-widest mt-1.5">{mid}</div>
+      <div className="text-white/45 text-[12px] mt-1 leading-tight">{sub}</div>
+    </div>
+  )
+}
+
+function PipelineCard({ icon, step, flow, detail }: { icon: string; step: string; flow: string; detail: string }) {
+  return (
+    <div className="rounded-2xl p-7" style={{ background: '#0a0a0c', border: '1px solid rgba(255,255,255,0.08)' }}>
+      <div className="text-3xl mb-3">{icon}</div>
+      <div className="text-emerald-400 text-[11px] font-semibold uppercase tracking-widest mb-1.5">{step}</div>
+      <div className="text-[14px] font-mono text-white/80 mb-4 leading-relaxed">{flow}</div>
+      <p className="text-white/60 text-[14.5px] leading-relaxed">{detail}</p>
+    </div>
+  )
+}
+
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-xl p-3.5" style={{ background: '#16161a', border: '1px solid rgba(255,255,255,0.06)' }}>
@@ -666,22 +686,7 @@ function Stat({ label, value }: { label: string; value: string }) {
   )
 }
 
-function Th({ children }: { children: React.ReactNode }) {
-  return <th className="px-6 py-4 text-[11.5px] font-semibold text-white/40 uppercase tracking-widest" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>{children}</th>
-}
-
-function Row({ f, by, recovery, tone }: { f: string; by: string; recovery: string; tone: 'ok' | 'warn' | 'danger' }) {
-  const color = { ok: '#30d158', warn: '#ff9f0a', danger: '#ff453a' }[tone]
-  return (
-    <tr style={{ transition: 'background 0.2s' }}>
-      <td className="px-6 py-3.5 text-[14.5px] font-medium text-white/90" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{f}</td>
-      <td className="px-6 py-3.5 text-[14px]" style={{ color, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{by}</td>
-      <td className="px-6 py-3.5 text-[14px] text-white/60" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{recovery}</td>
-    </tr>
-  )
-}
-
-function CodePanel({ title, sub, code }: { title: string; sub: string; code: string; language: string }) {
+function CodePanel({ title, sub, code }: { title: string; sub: string; code: string }) {
   return (
     <div className="rounded-2xl p-7" style={{ background: '#0a0a0c', border: '1px solid rgba(255,255,255,0.08)' }}>
       <h3 className="text-[17px] font-semibold tracking-tight mb-1.5">{title}</h3>
@@ -693,6 +698,7 @@ function CodePanel({ title, sub, code }: { title: string; sub: string; code: str
           border: '1px solid rgba(255,255,255,0.06)',
           padding: '18px 22px',
           fontFamily: '"SF Mono", ui-monospace, monospace',
+          color: 'rgba(255,255,255,0.85)',
         }}
       >{code}</pre>
     </div>
