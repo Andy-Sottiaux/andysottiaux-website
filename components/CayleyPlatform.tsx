@@ -230,11 +230,15 @@ export default function CayleyPlatform() {
             A solar-powered Linux board with a 5 MP camera, an on-chip neural engine, and a live public API. Built end-to-end. Open source. Explore every layer.
           </p>
 
-          {/* 3D viewer */}
-          <div className="mt-12 mx-auto" style={{ maxWidth: 880, aspectRatio: '1.5', position: 'relative' }}>
+          {/* 3D viewer — explicit min-height so the layout never collapses
+              even if Three.js takes time to load on mobile. aspect-ratio
+              is the primary sizer; min-height is the fallback. */}
+          <div className="mt-12 mx-auto w-full" style={{ maxWidth: 880 }}>
             <div
-              className="relative w-full h-full rounded-[24px] overflow-hidden"
+              className="relative w-full rounded-[24px] overflow-hidden"
               style={{
+                aspectRatio: '1.5',
+                minHeight: 280,
                 background:
                   'radial-gradient(ellipse 60% 40% at 50% 50%, rgba(48,209,88,0.06), transparent),' +
                   'linear-gradient(180deg, #0a0a0c 0%, #050507 100%)',
@@ -244,8 +248,8 @@ export default function CayleyPlatform() {
             >
               <BoardViewer />
             </div>
-            <p className="text-white/40 text-[13px] mt-4">
-              Drag to orbit · scroll to zoom · hover any pulsing dot to learn what it does
+            <p className="text-white/40 text-[13px] mt-4 px-2">
+              Drag to orbit · pinch / scroll to zoom · tap any pulsing dot to learn what it does
             </p>
           </div>
 

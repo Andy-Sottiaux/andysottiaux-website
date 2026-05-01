@@ -51,8 +51,21 @@ export default function BoardViewer() {
         const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js')
         const { OrbitControls } = await import('three/examples/jsm/controls/OrbitControls.js')
 
-        const width = container.clientWidth
-        const height = container.clientHeight
+        // Wait for the container to have non-zero dimensions. On mobile
+        // Safari, aspect-ratio sometimes resolves after the first paint,
+        // so reading clientWidth/Height immediately gives 0×0.
+        const waitForSize = (): Promise<{ w: number; h: number }> =>
+          new Promise((resolve) => {
+            const tryRead = () => {
+              const w = container.clientWidth
+              const h = container.clientHeight
+              if (w > 0 && h > 0) return resolve({ w, h })
+              requestAnimationFrame(tryRead)
+            }
+            tryRead()
+          })
+        const { w: width, h: height } = await waitForSize()
+        if (disposed) return
 
         const scene = new THREE.Scene()
         scene.background = null  // transparent — let the page gradient show
@@ -73,8 +86,23 @@ export default function BoardViewer() {
         const camera = new THREE.PerspectiveCamera(35, width / height, 0.01, 100)
         camera.position.set(0.9, 0.7, 0.9)
 
-        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+        // Mobile-friendly renderer setup: lower DPR cap saves a lot of
+        // GPU memory on phones (where WebGL contexts are tight).
+        const isMobile = /android|iphone|ipad/i.test(navigator.userAgent) || window.innerWidth < 720
+        let renderer: import('three').WebGLRenderer
+        try {
+          renderer = new THREE.WebGLRenderer({
+            antialias: !isMobile,    // skip MSAA on mobile (saves GPU memory)
+            alpha: true,
+            powerPreference: 'default',
+          })
+        } catch (err) {
+          console.error('WebGL init failed', err)
+          setError('WebGL not available on this browser.')
+          setLoading(false)
+          return
+        }
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2))
         renderer.setSize(width, height)
         renderer.outputColorSpace = THREE.SRGBColorSpace
         renderer.toneMapping = THREE.ACESFilmicToneMapping
@@ -95,6 +123,16 @@ export default function BoardViewer() {
         controls.maxDistance = 3
         controls.minPolarAngle = Math.PI * 0.15
         controls.maxPolarAngle = Math.PI * 0.75
+        // Touch controls — three's OrbitControls supports touch by default,
+        // but we explicitly map to Apple-style gestures: one-finger orbit,
+        // two-finger pinch zoom (no rotate-about-Z).
+        controls.touches = {
+          ONE: THREE.TOUCH.ROTATE,
+          TWO: THREE.TOUCH.DOLLY_PAN,
+        }
+        // On the canvas, prevent default touchmove to disable page scroll
+        // capture while interacting with the model.
+        renderer.domElement.style.touchAction = 'none'
         cleanups.push(() => controls.dispose())
 
         const loader = new GLTFLoader()
