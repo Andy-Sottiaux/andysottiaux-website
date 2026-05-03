@@ -20,12 +20,8 @@ export default function Hero() {
         <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold mb-4 sm:mb-6 text-white drop-shadow-lg">
           Andy Sottiaux
         </h1>
-        <p className="text-lg sm:text-xl md:text-2xl text-white/90 mb-2 drop-shadow-md">
+        <p className="text-lg sm:text-xl md:text-2xl text-white/90 mb-6 sm:mb-8 drop-shadow-md">
           Aerospace Hardware · Production Software
-        </p>
-        {/* Connective tagline — captures the hardware↔software bridge identity. */}
-        <p className="italic text-sm sm:text-base text-white/70 mb-6 sm:mb-8 drop-shadow-md tracking-wide">
-          Hardware up to its API. Code down to the silicon.
         </p>
         <p className="text-base sm:text-lg text-white/80 max-w-2xl mx-auto mb-8 sm:mb-12 drop-shadow-md px-2">
           Engineer & Founder building UAV systems at AVX Aircraft and shipping production apps at HatchingPoint.
