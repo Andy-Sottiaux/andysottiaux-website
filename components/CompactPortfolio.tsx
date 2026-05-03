@@ -4,22 +4,19 @@
  * CompactPortfolio — single-viewport bento alternative to the scrolling
  * home page. Lives at /compact for side-by-side evaluation.
  *
- * Design synthesis (research notes):
- *   - leerob.com / brittanychiang.com / rauno.me / maggieappleton.com all
- *     prefer low-density, single-column scrolling layouts with generous
- *     whitespace. That's the OPPOSITE of what this brief asks for, but the
- *     useful lesson is restraint: don't pack tiles with bullets, let one
- *     headline carry each tile.
- *   - Apple's Vision Pro page sets the cinematic-dark-mode tone — gradient
- *     ambient backgrounds, big SF-like type, generous radii.
- *   - Vercel's homepage demonstrates that asymmetry (different tile aspect
- *     ratios within a single grid) is what makes a "bento" actually feel
- *     like bento rather than a regular grid.
+ * Two upgrades layered on top of the original bento:
  *
- * Pattern chosen: ASYMMETRIC BENTO with the Field Live cards (Solar /
- * Camera / Health) as the dominant first row. Identity, experience,
- * projects, marathon, contact are supporting tiles arranged so the row
- * heights vary and the eye lands on the camera tile first.
+ *   1. Smart fallback tiles. The board (`/api/v3/health`) is polled by a
+ *      single shared `useBoardLive()` hook with hysteresis (see lib).
+ *      When live: row 1 shows Solar / Camera / Health.
+ *      When stale: row 1 swaps to Stats / Building / MoreProjects with a
+ *      cross-fade. Identical grid positions and column spans, so the rest
+ *      of the bento doesn't reflow.
+ *
+ *   2. Modal expansion. Clicking a tile body opens an in-place modal with
+ *      an expanded view of that section instead of navigating off to
+ *      `/#section`. The deep-link `<a>` is still rendered as a fallback,
+ *      but `onOpen` takes precedence when provided.
  *
  * Layout (1440×900 desktop, ~85vh of bento):
  *   ┌────────────┬─────────────────────────┬────────────┐
@@ -30,18 +27,27 @@
  *   │ projects     │ marathon      │ contact            │
  *   └──────────────┴───────────────┴────────────────────┘
  *
- * Mobile: stacks vertically (allowed by the brief). All Field Live cards
- * keep polling the same `/api/v3/*` proxies as on the home page.
+ * Mobile: stacks vertically. Modal renders full-bleed-ish.
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
-import { useTheme } from 'next-themes'
 import FieldSolarCard from './FieldSolarCard'
 import FieldHealthCard from './FieldHealthCard'
 import { FieldThemeProvider, useFieldTheme } from './fieldTheme'
 import ThemeToggle from './ThemeToggle'
+import Modal from './Modal'
+import {
+  AboutModalContent,
+  ContactModalContent,
+  ExperienceModalContent,
+  LiveModalContent,
+  MarathonModalContent,
+  ProjectsModalContent,
+  type ModalKey,
+} from './CompactModals'
+import { useBoardLive } from '@/lib/useBoardLive'
 
 // Same dynamic import the home page uses — the camera feed polls a
 // browser-side proxy, so SSR'ing it is wasted work.
@@ -61,6 +67,10 @@ export default function CompactPortfolio() {
 function CompactInner() {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
+  const boardLive = useBoardLive()
+
+  const [openModal, setOpenModal] = useState<ModalKey | null>(null)
+  const close = () => setOpenModal(null)
 
   return (
     <main
@@ -72,34 +82,113 @@ function CompactInner() {
           '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
       }}
     >
-      <CompactHeader />
+      <CompactHeader boardLive={boardLive} />
 
       {/* Bento — vertically centers on tall viewports, fills naturally on
           short ones. Uses minmax(0,1fr) so children can shrink below
           intrinsic content size and the grid honors row heights. */}
       <div className="flex-1 flex items-center justify-center px-4 sm:px-6 md:px-8 pb-6 md:pb-8">
         <div className="w-full max-w-[1380px] mx-auto">
-          <Bento />
+          <Bento boardLive={boardLive} onOpen={setOpenModal} />
         </div>
       </div>
+
+      {/* Modals — one source of truth, switched by current `openModal`.
+          Stays mounted only when open so the dynamically imported camera
+          feed in <LiveModalContent> doesn't poll while idle. */}
+      <Modal
+        open={openModal === 'about'}
+        onClose={close}
+        title="About Andy"
+        eyebrow="Profile"
+      >
+        <AboutModalContent />
+      </Modal>
+      <Modal
+        open={openModal === 'live'}
+        onClose={close}
+        title="Field Live"
+        eyebrow="Edge-AI deployment"
+        size="lg"
+      >
+        <LiveModalContent />
+      </Modal>
+      <Modal
+        open={openModal === 'experience'}
+        onClose={close}
+        title="Experience"
+        eyebrow="Career timeline"
+        size="lg"
+      >
+        <ExperienceModalContent />
+      </Modal>
+      <Modal
+        open={openModal === 'projects'}
+        onClose={close}
+        title="Projects"
+        eyebrow="Things I've built"
+        size="lg"
+      >
+        <ProjectsModalContent />
+      </Modal>
+      <Modal
+        open={openModal === 'marathon'}
+        onClose={close}
+        title="2026 TCS NYC Marathon"
+        eyebrow="Running for Team for Kids"
+      >
+        <MarathonModalContent />
+      </Modal>
+      <Modal
+        open={openModal === 'contact'}
+        onClose={close}
+        title="Contact"
+        eyebrow="Get in touch"
+      >
+        <ContactModalContent />
+      </Modal>
     </main>
   )
 }
 
 /* ─────────────────────────── Header ─────────────────────────── */
 
-function CompactHeader() {
-  // Thin header — the home page's <Header/> is fixed and ~64px tall with a
-  // ken-burns hero behind it. /compact has no hero image, so we render an
-  // inline, transparent header that doesn't reserve the same vertical real
-  // estate.
+function CompactHeader({ boardLive }: { boardLive: boolean }) {
+  const palette = useFieldTheme()
+  const isLight = palette.mode === 'light'
+
+  // Tiny field-status hint in the corner — discoverable but unobtrusive.
+  // Color is the only signal at a distance; the tooltip carries the words.
+  const dotColor = boardLive ? '#30d158' : '#8e8e93'
+  const dotGlow = boardLive
+    ? '0 0 8px rgba(48,209,88,0.6)'
+    : '0 0 6px rgba(142,142,147,0.4)'
+
   return (
     <header className="w-full px-4 sm:px-6 md:px-8 pt-4 md:pt-5">
       <div className="max-w-[1380px] mx-auto flex items-center justify-between">
-        <a href="/" className="text-sm font-semibold tracking-tight opacity-80 hover:opacity-100 transition-opacity">
+        <a
+          href="/"
+          className="text-sm font-semibold tracking-tight opacity-80 hover:opacity-100 transition-opacity"
+        >
           Andy Sottiaux
         </a>
-        <ThemeToggle />
+        <div className="flex items-center gap-3">
+          <span
+            className="inline-flex items-center gap-1.5 text-[10.5px] tracking-[0.18em] uppercase font-semibold opacity-70 hover:opacity-100 transition-opacity"
+            style={{ color: isLight ? '#1c1a1c' : '#fff' }}
+            title={boardLive ? 'Field online' : 'Field offline'}
+            aria-label={boardLive ? 'Field online' : 'Field offline'}
+          >
+            <span
+              aria-hidden="true"
+              className="inline-block w-1.5 h-1.5 rounded-full"
+              style={{ background: dotColor, boxShadow: dotGlow }}
+            />
+            <span className="hidden sm:inline">{boardLive ? 'Field' : 'Studio'}</span>
+          </span>
+          <ThemeToggle />
+        </div>
       </div>
     </header>
   )
@@ -107,9 +196,13 @@ function CompactHeader() {
 
 /* ─────────────────────────── Bento ──────────────────────────── */
 
-function Bento() {
-  // grid-template-areas keeps the layout legible. Heights are weighted so
-  // the camera (the most visually arresting tile) gets the most room.
+function Bento({
+  boardLive,
+  onOpen,
+}: {
+  boardLive: boolean
+  onOpen: (key: ModalKey) => void
+}) {
   return (
     <div
       className="grid gap-3 md:gap-4 mt-4 md:mt-5"
@@ -118,20 +211,108 @@ function Bento() {
         gridAutoRows: 'minmax(0, auto)',
       }}
     >
-      {/* Row 1: identity (3 cols) · camera (6 cols) · solar (3 cols) */}
-      <div className="col-span-12 md:col-span-3"><IdentityTile /></div>
-      <div className="col-span-12 md:col-span-6"><CameraTile /></div>
-      <div className="col-span-12 md:col-span-3 md:row-span-2"><SolarTile /></div>
+      {/* Row 1: identity (3 cols) · camera-or-building (6 cols) · solar-or-stats (3 cols, spans 2 rows) */}
+      <div className="col-span-12 md:col-span-3">
+        <IdentityTile onOpen={() => onOpen('about')} />
+      </div>
 
-      {/* Row 2: experience (5 cols) · health (4 cols) · solar tile already
-          spans into this row */}
-      <div className="col-span-12 md:col-span-5"><ExperienceTile /></div>
-      <div className="col-span-12 md:col-span-4"><HealthTile /></div>
+      {/* Wide tile (col 4–9): Camera when live, Building when stale */}
+      <div className="col-span-12 md:col-span-6">
+        <CrossfadeTile
+          showLive={boardLive}
+          live={<CameraTile onOpen={() => onOpen('live')} />}
+          fallback={<BuildingTile />}
+        />
+      </div>
 
-      {/* Row 3: projects (5 cols) · marathon (4 cols) · contact (3 cols) */}
-      <div className="col-span-12 md:col-span-5"><ProjectsTile /></div>
-      <div className="col-span-12 md:col-span-4"><MarathonTile /></div>
-      <div className="col-span-12 md:col-span-3"><ContactTile /></div>
+      {/* Tall tile (col 10–12, rows 1–2): Solar when live, Stats when stale */}
+      <div className="col-span-12 md:col-span-3 md:row-span-2">
+        <CrossfadeTile
+          showLive={boardLive}
+          live={<SolarTile onOpen={() => onOpen('live')} />}
+          fallback={<StatsTile />}
+        />
+      </div>
+
+      {/* Row 2: experience (5 cols) · health-or-more-projects (4 cols) · solar/stats already spans into this row */}
+      <div className="col-span-12 md:col-span-5">
+        <ExperienceTile onOpen={() => onOpen('experience')} />
+      </div>
+      <div className="col-span-12 md:col-span-4">
+        <CrossfadeTile
+          showLive={boardLive}
+          live={<HealthTile onOpen={() => onOpen('live')} />}
+          fallback={<MoreProjectsTile />}
+        />
+      </div>
+
+      {/* Row 3 */}
+      <div className="col-span-12 md:col-span-5">
+        <ProjectsTile onOpen={() => onOpen('projects')} />
+      </div>
+      <div className="col-span-12 md:col-span-4">
+        <MarathonTile onOpen={() => onOpen('marathon')} />
+      </div>
+      <div className="col-span-12 md:col-span-3">
+        <ContactTile onOpen={() => onOpen('contact')} />
+      </div>
+    </div>
+  )
+}
+
+/* ─────────────────── Cross-fade wrapper ──────────────────────── */
+
+function CrossfadeTile({
+  showLive,
+  live,
+  fallback,
+}: {
+  showLive: boolean
+  live: React.ReactNode
+  fallback: React.ReactNode
+}) {
+  // Track previous state to keep both children mounted briefly during the
+  // fade. After the fade we drop the inactive child so its polling timers
+  // (camera feed, etc.) don't run forever.
+  const [activeIsLive, setActiveIsLive] = useState(showLive)
+  const [renderBoth, setRenderBoth] = useState(false)
+  const firstRef = useRef(true)
+
+  useEffect(() => {
+    if (firstRef.current) {
+      firstRef.current = false
+      setActiveIsLive(showLive)
+      return
+    }
+    if (showLive === activeIsLive) return
+    setRenderBoth(true)
+    setActiveIsLive(showLive)
+    const t = window.setTimeout(() => setRenderBoth(false), 320)
+    return () => window.clearTimeout(t)
+  }, [showLive, activeIsLive])
+
+  // While crossfading: render both, the active one fully opaque, the
+  // outgoing fading to 0. Steady state: render only the active one.
+  if (!renderBoth) {
+    return <>{activeIsLive ? live : fallback}</>
+  }
+
+  return (
+    <div className="relative h-full">
+      <div
+        className="absolute inset-0 transition-opacity duration-300"
+        style={{ opacity: activeIsLive ? 0 : 1 }}
+      >
+        {fallback}
+      </div>
+      <div
+        className="absolute inset-0 transition-opacity duration-300"
+        style={{ opacity: activeIsLive ? 1 : 0 }}
+      >
+        {live}
+      </div>
+      {/* Phantom sizer so the wrapper still has the height of one child */}
+      <div className="invisible">{activeIsLive ? live : fallback}</div>
     </div>
   )
 }
@@ -144,17 +325,23 @@ function Tile({
   accent,
   label,
   deepLink,
+  onOpen,
+  modalLabel,
 }: {
   children: React.ReactNode
   className?: string
   /** small uppercase eyebrow color (passed to label) */
   accent?: { light: string; dark: string }
   label?: string
-  /** when provided, the whole tile becomes a clickable link to that
-   *  fragment on the full home page (e.g. "/#now"). Internal interactive
-   *  elements (anchors / buttons) take precedence via z-index so the
-   *  whole-tile click only fires on empty space. */
+  /** when provided AND `onOpen` is NOT, the whole tile becomes a clickable
+   *  link to that fragment on the full home page. Kept as a fallback so
+   *  disabling modals doesn't break tile interactivity. */
   deepLink?: string
+  /** when provided, the whole tile becomes a button that opens the
+   *  matching modal. Wins over `deepLink`. */
+  onOpen?: () => void
+  /** Aria label for the modal-trigger button. Defaults to `Open ${label}`. */
+  modalLabel?: string
 }) {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
@@ -176,23 +363,31 @@ function Tile({
         transition: 'transform 0.4s cubic-bezier(0.16,1,0.3,1), box-shadow 0.4s cubic-bezier(0.16,1,0.3,1)',
       }}
     >
-      {/* Whole-tile deep link — sits behind interactive content so explicit
-          inner <a>s and <button>s win the click. Visit `/#section` on the
-          home page when the tile body (not an inner control) is clicked. */}
-      {deepLink && (
+      {/* Whole-tile click target. `onOpen` (modal) wins over `deepLink`
+          (anchor). Sits behind interactive content (z-0) so explicit
+          inner <a>s and <button>s win the click. */}
+      {onOpen ? (
+        <button
+          type="button"
+          onClick={onOpen}
+          aria-haspopup="dialog"
+          aria-label={modalLabel ?? (label ? `Open ${label}` : 'Open')}
+          className="absolute inset-0 z-0 cursor-pointer"
+        />
+      ) : deepLink ? (
         <a
           href={deepLink}
           aria-label={label ? `Open ${label} on the full site` : 'Open on the full site'}
           className="absolute inset-0 z-0"
         />
-      )}
+      ) : null}
       {label && (
         <div
           className="relative z-10 px-5 md:px-6 pt-4 md:pt-5 text-[10px] font-semibold uppercase tracking-[0.22em] flex items-center justify-between pointer-events-none"
           style={{ color: accentColor ?? palette.mutedText }}
         >
           <span>{label}</span>
-          {deepLink && (
+          {(deepLink || onOpen) && (
             <svg
               className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity"
               fill="none"
@@ -200,12 +395,16 @@ function Tile({
               viewBox="0 0 24 24"
               aria-hidden="true"
             >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.4} d="M7 17L17 7M9 7h8v8" />
+              {onOpen ? (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.4} d="M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.4} d="M7 17L17 7M9 7h8v8" />
+              )}
             </svg>
           )}
         </div>
       )}
-      {/* Content sits above the deep-link layer so its own anchors/buttons
+      {/* Content sits above the click-target layer so its own anchors/buttons
           capture clicks first. */}
       <div className="relative z-10 flex flex-1 flex-col">
         {children}
@@ -216,12 +415,17 @@ function Tile({
 
 /* ───────────────────── Identity tile ──────────────────────── */
 
-function IdentityTile() {
+function IdentityTile({ onOpen }: { onOpen?: () => void }) {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
 
   return (
-    <Tile deepLink="/#about" className="min-h-[170px] md:min-h-[270px]">
+    <Tile
+      deepLink="/#about"
+      onOpen={onOpen}
+      modalLabel="Open About"
+      className="min-h-[170px] md:min-h-[270px]"
+    >
       <div className="flex-1 flex flex-col px-5 md:px-6 py-5">
         {/* Hero portrait — much bigger now. Square with a subtle ring + an
             ambient color glow that picks up the ambient palette accent. */}
@@ -294,7 +498,7 @@ function IdentityTile() {
 
 /* ───────────────────── Camera tile ──────────────────────── */
 
-function CameraTile() {
+function CameraTile({ onOpen }: { onOpen?: () => void }) {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
 
@@ -303,6 +507,8 @@ function CameraTile() {
       label="Camera"
       accent={{ light: '#0a8aa8', dark: 'rgba(103, 232, 249, 0.9)' }}
       deepLink="/#now"
+      onOpen={onOpen}
+      modalLabel="Open Field Live"
       className="min-h-[170px] md:min-h-[270px]"
     >
       <div className="px-3 md:px-4 pt-2 md:pt-3 pb-3 md:pb-4 flex-1 flex flex-col">
@@ -331,10 +537,23 @@ function CameraTile() {
 
 /* ───────────────────── Solar tile ──────────────────────── */
 
-function SolarTile() {
-  // FieldSolarCard already brings its own chrome. Wrapped in an anchor so
-  // a click on the card body deep-links to the same section on the home
-  // page; the card is read-only so no internal click conflicts.
+function SolarTile({ onOpen }: { onOpen?: () => void }) {
+  // FieldSolarCard already brings its own chrome. Wrap in a button or anchor
+  // so the click on the card body opens the live modal (or, when modals are
+  // disabled, deep-links to the home-page section).
+  if (onOpen) {
+    return (
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-haspopup="dialog"
+        aria-label="Open Field Live"
+        className="block w-full h-full min-h-[360px] md:min-h-[558px] [&>div]:h-full hover:scale-[1.005] transition-transform duration-300 text-left"
+      >
+        <FieldSolarCard />
+      </button>
+    )
+  }
   return (
     <a
       href="/#now"
@@ -348,7 +567,20 @@ function SolarTile() {
 
 /* ───────────────────── Health tile ──────────────────────── */
 
-function HealthTile() {
+function HealthTile({ onOpen }: { onOpen?: () => void }) {
+  if (onOpen) {
+    return (
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-haspopup="dialog"
+        aria-label="Open Field Live"
+        className="block w-full h-full min-h-[260px] md:min-h-[270px] [&>div]:h-full hover:scale-[1.005] transition-transform duration-300 text-left"
+      >
+        <FieldHealthCard />
+      </button>
+    )
+  }
   return (
     <a
       href="/#now"
@@ -357,6 +589,268 @@ function HealthTile() {
     >
       <FieldHealthCard />
     </a>
+  )
+}
+
+/* ───────────────── Fallback tiles (board offline) ───────────────── */
+
+/** Replaces SolarTile (tall right column, 2-row span). Three crisp facts
+ *  in a stacked vertical layout. Designed to feel substantive without
+ *  reading as filler. */
+function StatsTile() {
+  const palette = useFieldTheme()
+  const isLight = palette.mode === 'light'
+
+  const stats: { value: string; suffix?: string; label: string }[] = [
+    { value: '10', suffix: '+', label: 'Production iOS apps' },
+    { value: '9', suffix: 'yr', label: 'Hardware + software' },
+    { value: '4', label: 'Aerospace and product orgs' },
+  ]
+
+  return (
+    <div
+      className="relative rounded-2xl h-full min-h-[360px] md:min-h-[558px] flex flex-col p-7 md:p-8 overflow-hidden"
+      style={{
+        background: palette.cardBackground,
+        border: palette.cardBorder,
+        backdropFilter: 'blur(24px)',
+        WebkitBackdropFilter: 'blur(24px)',
+        boxShadow: palette.cardShadow,
+      }}
+      role="region"
+      aria-label="Profile stats"
+    >
+      <div
+        className="pointer-events-none absolute -top-24 -right-20 w-64 h-64 rounded-full"
+        style={{
+          background: isLight
+            ? 'radial-gradient(circle, rgba(10,132,255,0.10), transparent 70%)'
+            : 'radial-gradient(circle, rgba(10,132,255,0.16), transparent 70%)',
+        }}
+      />
+      <div
+        className="text-[10.5px] font-semibold uppercase tracking-[0.22em] mb-5"
+        style={{ color: isLight ? '#0a8aa8' : 'rgba(103, 232, 249, 0.9)' }}
+      >
+        Track Record
+      </div>
+
+      <div className="flex-1 flex flex-col justify-around gap-6">
+        {stats.map((s) => (
+          <div key={s.label}>
+            <div
+              className="flex items-baseline gap-1"
+              style={{
+                backgroundImage: palette.headlineGradient,
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}
+            >
+              <span className="text-[56px] md:text-[64px] font-semibold leading-none tracking-tight tabular-nums">
+                {s.value}
+              </span>
+              {s.suffix && (
+                <span className="text-[22px] md:text-[24px] font-semibold leading-none tracking-tight">
+                  {s.suffix}
+                </span>
+              )}
+            </div>
+            <div
+              className="text-[12px] md:text-[12.5px] uppercase tracking-[0.18em] font-medium mt-2"
+              style={{ color: palette.mutedText }}
+            >
+              {s.label}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div
+        className="text-[11px] tracking-tight mt-auto pt-5"
+        style={{ color: palette.fadedText }}
+      >
+        Across rotor systems, UAV autonomy, and shipping mobile products.
+      </div>
+    </div>
+  )
+}
+
+/** Replaces CameraTile (wide hero). Currently-building summary with a
+ *  subtle ambient gradient so it carries visual weight by itself. */
+function BuildingTile() {
+  const palette = useFieldTheme()
+  const isLight = palette.mode === 'light'
+
+  const items = [
+    { glyph: '◐', text: 'Solar-powered edge-AI systems' },
+    { glyph: '◑', text: 'NFC-based privacy and focus tools' },
+    { glyph: '◒', text: 'UAV autonomy and rotor design' },
+  ]
+
+  return (
+    <div
+      className="relative rounded-2xl h-full min-h-[170px] md:min-h-[270px] flex flex-col p-6 md:p-7 overflow-hidden"
+      style={{
+        background: palette.cardBackground,
+        border: palette.cardBorder,
+        backdropFilter: 'blur(24px)',
+        WebkitBackdropFilter: 'blur(24px)',
+        boxShadow: palette.cardShadow,
+      }}
+      role="region"
+      aria-label="Currently building"
+    >
+      {/* Ambient diagonal sweep, low opacity. Slow drift instead of pulse,
+          so it reads as "in motion" without being a fidget. */}
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background: isLight
+            ? 'linear-gradient(135deg, rgba(10,138,168,0.06) 0%, transparent 40%, rgba(180,83,9,0.06) 100%)'
+            : 'linear-gradient(135deg, rgba(103,232,249,0.08) 0%, transparent 40%, rgba(252,211,77,0.06) 100%)',
+        }}
+      />
+      <div
+        className="pointer-events-none absolute -bottom-20 -left-12 w-72 h-72 rounded-full"
+        style={{
+          background: isLight
+            ? 'radial-gradient(circle, rgba(10,138,168,0.08), transparent 70%)'
+            : 'radial-gradient(circle, rgba(103,232,249,0.12), transparent 70%)',
+        }}
+      />
+
+      <div
+        className="relative text-[10px] font-semibold uppercase tracking-[0.22em]"
+        style={{ color: isLight ? '#0a8aa8' : 'rgba(103, 232, 249, 0.9)' }}
+      >
+        Currently Building
+      </div>
+
+      <div
+        className="relative text-[20px] md:text-[24px] font-semibold leading-tight tracking-tight mt-3 mb-4"
+        style={{
+          backgroundImage: palette.headlineGradient,
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          backgroundClip: 'text',
+        }}
+      >
+        At the seam of hardware and software.
+      </div>
+
+      <ul className="relative space-y-2 mt-auto">
+        {items.map((it) => (
+          <li
+            key={it.text}
+            className="flex items-baseline gap-2.5 text-[13px] md:text-[14px] tracking-tight"
+            style={{ color: palette.bodyText }}
+          >
+            <span
+              aria-hidden="true"
+              className="text-[14px] flex-shrink-0"
+              style={{ color: isLight ? '#0a8aa8' : 'rgba(103,232,249,0.85)' }}
+            >
+              {it.glyph}
+            </span>
+            <span>{it.text}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+/** Replaces HealthTile (mid-row, 4 cols). Three additional projects beyond
+ *  ProjectsTile, same row pattern. */
+const MORE_PROJECTS = [
+  {
+    name: 'AirMD+',
+    desc: 'iOS HVAC monitoring · custom hardware',
+    icon: '/images/airmd-icon.jpg',
+  },
+  {
+    name: 'LevelUp+',
+    desc: 'Habit & goal tracker · iOS · streaks',
+    icon: '/images/recordtranscribe-icon.png',
+  },
+  {
+    name: 'Caffeine Rhythm',
+    desc: 'Caffeine half-life timing · iOS · HealthKit',
+    icon: '/images/rotdot-icon.png',
+  },
+]
+
+function MoreProjectsTile() {
+  const palette = useFieldTheme()
+  const isLight = palette.mode === 'light'
+
+  return (
+    <div
+      className="relative rounded-2xl h-full min-h-[260px] md:min-h-[270px] flex flex-col overflow-hidden"
+      style={{
+        background: palette.cardBackground,
+        border: palette.cardBorder,
+        backdropFilter: 'blur(24px)',
+        WebkitBackdropFilter: 'blur(24px)',
+        boxShadow: palette.cardShadow,
+      }}
+      role="region"
+      aria-label="More projects"
+    >
+      <div
+        className="px-5 md:px-6 pt-4 md:pt-5 text-[10px] font-semibold uppercase tracking-[0.22em]"
+        style={{ color: isLight ? '#b45309' : 'rgba(252, 211, 77, 0.9)' }}
+      >
+        More Projects
+      </div>
+      <div className="px-5 md:px-6 pt-3 pb-4 md:pb-5 flex-1 flex flex-col">
+        <div className="space-y-2 md:space-y-2.5 flex-1">
+          {MORE_PROJECTS.map((p) => (
+            <div
+              key={p.name}
+              className="flex items-center gap-3 py-1"
+            >
+              <div
+                className="w-9 h-9 rounded-lg overflow-hidden flex-shrink-0"
+                style={{
+                  border: palette.cardBorder,
+                  background: isLight ? '#fff' : 'rgba(255,255,255,0.04)',
+                }}
+              >
+                <Image
+                  src={p.icon}
+                  alt=""
+                  width={36}
+                  height={36}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div
+                  className="text-[13px] md:text-[14px] font-semibold tracking-tight"
+                  style={{ color: isLight ? '#1c1a1c' : '#fff' }}
+                >
+                  {p.name}
+                </div>
+                <div
+                  className="text-[11px] md:text-[12px] tracking-tight truncate"
+                  style={{ color: palette.bodyText }}
+                >
+                  {p.desc}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div
+          className="mt-2 pt-2 text-[10px] tracking-wide italic border-t"
+          style={{ color: palette.fadedText, borderColor: palette.hairline }}
+        >
+          Plus the App Store catalog at HatchingPoint.
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -369,7 +863,7 @@ const EXPERIENCE = [
   { title: 'Project Manager', company: 'Texas Air Systems', period: '2016 — 2020', url: 'https://www.texasairsystems.com/' },
 ]
 
-function ExperienceTile() {
+function ExperienceTile({ onOpen }: { onOpen?: () => void }) {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
 
@@ -378,6 +872,8 @@ function ExperienceTile() {
       label="Experience"
       accent={{ light: '#0f9d4f', dark: 'rgb(74 222 128 / 0.9)' }}
       deepLink="/#experience"
+      onOpen={onOpen}
+      modalLabel="Open Experience"
       className="min-h-[200px] md:min-h-[280px]"
     >
       <div className="px-5 md:px-6 pt-3 pb-4 md:pb-5 flex-1 flex flex-col">
@@ -443,7 +939,7 @@ const PROJECTS = [
   { name: 'Record + Transcribe', desc: 'Voice notes with AI summary · iOS', url: 'https://apps.apple.com/app/record-transcribe/id6758643630', icon: '/images/recordtranscribe-icon.png' },
 ]
 
-function ProjectsTile() {
+function ProjectsTile({ onOpen }: { onOpen?: () => void }) {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
 
@@ -452,6 +948,8 @@ function ProjectsTile() {
       label="Projects"
       accent={{ light: '#b45309', dark: 'rgba(252, 211, 77, 0.9)' }}
       deepLink="/#projects"
+      onOpen={onOpen}
+      modalLabel="Open Projects"
       className="min-h-[180px] md:min-h-[210px]"
     >
       <div className="px-5 md:px-6 pt-3 pb-4 md:pb-5 flex-1 flex flex-col">
@@ -544,7 +1042,7 @@ function useDaysUntil(target: Date) {
   return days
 }
 
-function MarathonTile() {
+function MarathonTile({ onOpen }: { onOpen?: () => void }) {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
   const days = useDaysUntil(MARATHON_DATE)
@@ -570,6 +1068,8 @@ function MarathonTile() {
       label="2026 TCS NYC Marathon"
       accent={{ light: '#c2410c', dark: '#ffb84d' }}
       deepLink="/#marathon"
+      onOpen={onOpen}
+      modalLabel="Open Marathon"
       className="min-h-[180px] md:min-h-[210px]"
     >
       <div className="px-5 md:px-6 pt-3 pb-4 md:pb-5 flex-1 flex flex-col">
@@ -694,7 +1194,7 @@ const CONTACTS = [
   },
 ]
 
-function ContactTile() {
+function ContactTile({ onOpen }: { onOpen?: () => void }) {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
 
@@ -702,6 +1202,8 @@ function ContactTile() {
     <Tile
       label="Contact"
       deepLink="/#contact"
+      onOpen={onOpen}
+      modalLabel="Open Contact"
       className="min-h-[180px] md:min-h-[210px]"
     >
       <div className="px-5 md:px-6 pt-3 pb-4 md:pb-5 flex-1 flex flex-col">
