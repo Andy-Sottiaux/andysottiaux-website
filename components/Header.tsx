@@ -26,11 +26,10 @@ export default function Header() {
   // in-context per job), so it's removed from the nav. Six items now:
   // About · ● Now · Experience · Projects · Education · Contact.
   const navLinks: NavLink[] = [
-    { href: '#about', label: 'About' },
     { href: '#now', label: 'Now', live: true },
+    { href: '#about', label: 'About' },
     { href: '#experience', label: 'Experience' },
     { href: '#projects', label: 'Projects' },
-    { href: '#education', label: 'Education' },
     { href: '#contact', label: 'Contact' },
   ]
 

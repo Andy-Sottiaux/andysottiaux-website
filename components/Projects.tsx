@@ -18,14 +18,9 @@ type Project = {
   inProgress?: boolean
 }
 
+// Featured: the four most distinctive projects. The rest of the iOS
+// productivity catalog is signaled via a single "more apps" link below.
 const projects: Project[] = [
-  {
-    title: 'Rot Dot',
-    description: 'Block distracting apps with a physical tap. Place NFC stickers around your space and scan to instantly lock or unlock apps. Uses Apple Screen Time API for real-world friction against phone addiction.',
-    tech: ['iOS', 'Swift', 'SwiftUI', 'NFC', 'FamilyControls', 'Screen Time'],
-    link: 'https://apps.apple.com/us/app/rot-dot/id6758902103',
-    icon: '/images/rotdot-icon.png',
-  },
   {
     title: 'WYZECAR',
     description: 'Vision-based autonomous RC car using YOLOv8 for real-time human detection and following. Features web-based WASD remote control, live video streaming, and PID-controlled smooth motion.',
@@ -34,25 +29,11 @@ const projects: Project[] = [
     icon: '/images/wyzecar.png',
   },
   {
-    title: 'LevelUp+',
-    description: 'Track your progress. Level up your life. A personal advancement tool enabling you to monitor improvements across various life areas.',
-    tech: ['iOS', 'Swift', 'SwiftUI', 'Progress Tracking'],
-    link: 'https://apps.apple.com/us/app/levelup/id6757681084',
-    icon: '/images/levelup-icon.jpg',
-  },
-  {
-    title: 'AirMD+',
-    description: 'Monitor your HVAC system with real-time temperature tracking. Full-stack iOS + custom hardware solution providing comprehensive climate control oversight.',
-    tech: ['iOS', 'Swift', 'Hardware Design', 'IoT', 'Embedded Systems'],
-    link: 'https://www.hatchingpoint.com/airmd',
-    icon: '/images/airmd-icon.jpg',
-  },
-  {
-    title: 'Caffeine Rhythm',
-    description: 'Optimize your caffeine timing for peak energy. Strategically plan your caffeine consumption for maximum alertness throughout the day.',
-    tech: ['iOS', 'Swift', 'Data Visualization', 'Health Optimization'],
-    link: 'https://apps.apple.com/us/app/caffeine-rhythm/id6756790180',
-    icon: '/images/caffeine-icon.jpg',
+    title: 'Rot Dot',
+    description: 'Block distracting apps with a physical tap. Place NFC stickers around your space and scan to instantly lock or unlock apps. Uses Apple Screen Time API for real-world friction against phone addiction.',
+    tech: ['iOS', 'Swift', 'SwiftUI', 'NFC', 'FamilyControls', 'Screen Time'],
+    link: 'https://apps.apple.com/us/app/rot-dot/id6758902103',
+    icon: '/images/rotdot-icon.png',
   },
   {
     title: 'Record+Transcribe',
@@ -62,18 +43,11 @@ const projects: Project[] = [
     icon: '/images/recordtranscribe-icon.png',
   },
   {
-    title: 'Travel Agent AI',
-    description: 'Your personal AI travel planning assistant. Get personalized trip recommendations, detailed itineraries, local insights, and smart booking suggestions tailored to your preferences.',
-    tech: ['iOS', 'Swift', 'SwiftUI', 'AI', 'Travel Planning'],
-    link: 'https://apps.apple.com/us/app/travel-agent-ai/id6758284691',
-    icon: '/images/travelagentai-icon.png',
-  },
-  {
-    title: 'DoorDot',
-    description: 'NFC-powered privacy doorbell for iPhone. Visitors tap a sticker at your door to ring, and you get a push notification. No cameras, no cloud video, just simple, private alerts via iCloud.',
-    tech: ['iOS', 'Swift', 'SwiftUI', 'CloudKit', 'NFC', 'StoreKit'],
-    link: 'https://apps.apple.com/app/doordot/id6758969043',
-    icon: '/images/doordot-icon.png',
+    title: 'AirMD+',
+    description: 'Monitor your HVAC system with real-time temperature tracking. Full-stack iOS + custom hardware solution providing comprehensive climate control oversight.',
+    tech: ['iOS', 'Swift', 'Hardware Design', 'IoT', 'Embedded Systems'],
+    link: 'https://www.hatchingpoint.com/airmd',
+    icon: '/images/airmd-icon.jpg',
   },
 ]
 
@@ -176,6 +150,28 @@ export default function Projects() {
               )}
             </div>
           ))}
+        </div>
+
+        {/* More iOS apps — single link instead of cluttering the grid with
+            6+ similar productivity apps. */}
+        <div className="mt-8 sm:mt-10 text-center">
+          <a
+            href="https://www.hatchingpoint.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 text-sm sm:text-base font-medium text-foreground/70 hover:text-foreground transition-colors"
+          >
+            More iOS apps on the App Store
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </a>
         </div>
 
         {/* Featured Design */}

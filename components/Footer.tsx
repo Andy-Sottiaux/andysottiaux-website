@@ -61,6 +61,9 @@ export default function Footer() {
 
         {/* Divider + Bottom */}
         <div className="pt-6 sm:pt-8 border-t border-white/20 text-center">
+          <p className="text-xs sm:text-sm text-gray-300 dark:text-gray-400 mb-2 sm:mb-3">
+            B.S. Mechanical Engineering · Texas Tech University, 2016 · Study abroad: Seville, Spain
+          </p>
           <div className="flex items-center justify-center gap-2">
             <p className="text-xs sm:text-sm text-gray-300 dark:text-gray-400">
               © {new Date().getFullYear()} Andy Sottiaux. All rights reserved.
