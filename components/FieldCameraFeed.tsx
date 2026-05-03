@@ -1,171 +1,128 @@
 'use client'
 
 /**
- * FieldCameraFeed — live WebRTC video from the field device, with a
- * graceful fallback that keeps the page beautiful when the camera is
- * unreachable.
+ * FieldCameraFeed — live image from the field device, polled as JPEG
+ * snapshots through a same-origin Edge proxy.
  *
- * Data path:
- *   browser ──WHEP──> /api/v3/feed (this origin)
- *                        │
- *                        ▼ (server-side proxy)
- *                     upstream WebRTC bridge
+ * Why snapshot polling instead of WebRTC:
+ *   The previous implementation used WHEP (WebRTC over HTTP) signalled
+ *   through `/api/v3/feed`. End-to-end through Edge runtime + the upstream
+ *   funnel turned out to be unreliable (header stripping, ICE timing,
+ *   non-trickle SDP quirks). For a portfolio visitor we don't need
+ *   sub-second latency — we need a reliable "this thing is alive" frame.
+ *   So we poll `/api/v3/snapshot` every 2s, swap an <img> src, and the
+ *   feed reads as a ~0.5 fps live view. No signaling failure modes.
  *
- * The browser POSTs an SDP offer (Content-Type: application/sdp) and
- * receives an SDP answer in the response body. No extra JS deps; just the
- * browser's native RTCPeerConnection. We auto-retry every 30 s on failure.
+ * States:
+ *   - 'connecting'  : initial — never received a frame yet (shimmer).
+ *   - 'live'        : at least one frame loaded recently.
+ *   - 'offline'     : >POLL_GRACE_MS without a successful frame; show
+ *                     the polished offline placeholder. Polling continues
+ *                     in the background; transitions back to 'live' as
+ *                     soon as a frame lands.
  *
- * Theme: the live video itself has no palette, but the connecting shimmer
- * and offline placeholder both adapt. The red LIVE badge is constant.
+ * Theme: shimmer + offline placeholder adapt to light/dark; the LIVE
+ * pill stays constant.
  */
 
 import { useEffect, useRef, useState } from 'react'
 import { useFieldTheme } from './fieldTheme'
 
-const FEED_URL = '/api/v3/feed'
+const SNAPSHOT_URL = '/api/v3/snapshot'
+const POLL_INTERVAL_MS = 2000
+const POLL_GRACE_MS = 30_000
 
-type FeedState = 'idle' | 'connecting' | 'live' | 'offline'
+type FeedState = 'connecting' | 'live' | 'offline'
 
 export default function FieldCameraFeed() {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
 
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const pcRef = useRef<RTCPeerConnection | null>(null)
-  const retryRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const [state, setState] = useState<FeedState>('idle')
-  const [retryCountdown, setRetryCountdown] = useState<number>(0)
+  const imgRef = useRef<HTMLImageElement>(null)
+  const objectUrlRef = useRef<string | null>(null)
+  const [state, setState] = useState<FeedState>('connecting')
 
-  // The connect routine. Cancellable via cleanup, idempotent: tearing down
-  // an existing PC is safe to re-call.
   useEffect(() => {
     let cancelled = false
+    let timer: ReturnType<typeof setTimeout> | null = null
+    let lastOkAt = 0
 
-    const teardown = () => {
-      if (pcRef.current) {
-        try { pcRef.current.close() } catch {}
-        pcRef.current = null
-      }
-      if (videoRef.current) {
-        videoRef.current.srcObject = null
+    const swap = (objectUrl: string) => {
+      const previous = objectUrlRef.current
+      objectUrlRef.current = objectUrl
+      if (imgRef.current) imgRef.current.src = objectUrl
+      // Revoke the previous frame's blob URL one tick later so the <img>
+      // has a chance to swap without flicker.
+      if (previous) {
+        setTimeout(() => {
+          try { URL.revokeObjectURL(previous) } catch {}
+        }, 100)
       }
     }
 
-    const connect = async () => {
+    const tick = async () => {
       if (cancelled) return
-      teardown()
-      setState('connecting')
-
-      const pc = new RTCPeerConnection({
-        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
-      })
-      pcRef.current = pc
-
-      pc.addTransceiver('video', { direction: 'recvonly' })
-      pc.addTransceiver('audio', { direction: 'recvonly' })
-
-      const remoteStream = new MediaStream()
-      pc.ontrack = (e) => {
-        const tracks = e.streams[0]?.getTracks() ?? [e.track]
-        for (const track of tracks) {
-          remoteStream.addTrack(track)
-        }
-        if (videoRef.current && videoRef.current.srcObject !== remoteStream) {
-          videoRef.current.srcObject = remoteStream
-        }
-      }
-
-      pc.oniceconnectionstatechange = () => {
-        if (cancelled) return
-        const s = pc.iceConnectionState
-        if (s === 'connected' || s === 'completed') {
-          setState('live')
-        } else if (s === 'failed' || s === 'disconnected' || s === 'closed') {
-          scheduleRetry('ice ' + s)
-        }
-      }
-
       try {
-        const offer = await pc.createOffer()
-        await pc.setLocalDescription(offer)
-
-        // Wait for ICE gathering to settle (or 1.5s, whichever first) so the
-        // offer carries candidates — non-trickle WHEP.
-        await new Promise<void>((resolve) => {
-          if (pc.iceGatheringState === 'complete') return resolve()
-          const t = setTimeout(resolve, 1500)
-          pc.addEventListener('icegatheringstatechange', () => {
-            if (pc.iceGatheringState === 'complete') {
-              clearTimeout(t)
-              resolve()
-            }
-          })
-        })
-
-        if (cancelled) return
-
-        const localSdp = pc.localDescription?.sdp
-        if (!localSdp) throw new Error('no local SDP')
-
         const ctrl = new AbortController()
-        const timeoutId = setTimeout(() => ctrl.abort(), 8000)
-        const res = await fetch(FEED_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/sdp' },
-          body: localSdp,
+        const t = setTimeout(() => ctrl.abort(), 5000)
+        const res = await fetch(`${SNAPSHOT_URL}?t=${Date.now()}`, {
+          cache: 'no-store',
           signal: ctrl.signal,
         })
-        clearTimeout(timeoutId)
-
-        if (!res.ok) throw new Error('whep ' + res.status)
-        const answerSdp = await res.text()
-        if (!answerSdp.startsWith('v=')) throw new Error('bad sdp')
+        clearTimeout(t)
         if (cancelled) return
 
-        await pc.setRemoteDescription({ type: 'answer', sdp: answerSdp })
-      } catch (err) {
-        if (cancelled) return
-        scheduleRetry((err as Error)?.message || 'connect failed')
-      }
-    }
-
-    const scheduleRetry = (_reason: string) => {
-      if (cancelled) return
-      teardown()
-      setState('offline')
-      let remaining = 30
-      setRetryCountdown(remaining)
-      const tick = () => {
-        if (cancelled) return
-        remaining -= 1
-        setRetryCountdown(remaining)
-        if (remaining <= 0) {
-          connect()
+        if (res.ok) {
+          const blob = await res.blob()
+          if (cancelled) return
+          if (blob.size > 0 && blob.type.startsWith('image/')) {
+            const url = URL.createObjectURL(blob)
+            swap(url)
+            lastOkAt = Date.now()
+            setState('live')
+          } else {
+            // 200 with empty/non-image body — treat as failure.
+            maybeOffline()
+          }
         } else {
-          retryRef.current = setTimeout(tick, 1000)
+          maybeOffline()
         }
+      } catch {
+        if (!cancelled) maybeOffline()
       }
-      retryRef.current = setTimeout(tick, 1000)
+
+      if (!cancelled) timer = setTimeout(tick, POLL_INTERVAL_MS)
     }
 
-    connect()
+    const maybeOffline = () => {
+      // Never received a frame yet → straight to offline (don't pretend
+      // we're still connecting after several poll failures).
+      // Have a frame but it's gone stale beyond the grace window → offline.
+      // Otherwise: keep the last live frame on screen, no UI thrash.
+      if (lastOkAt === 0 || Date.now() - lastOkAt > POLL_GRACE_MS) {
+        setState('offline')
+      }
+    }
+
+    tick()
 
     return () => {
       cancelled = true
-      if (retryRef.current) clearTimeout(retryRef.current)
-      teardown()
+      if (timer) clearTimeout(timer)
+      if (objectUrlRef.current) {
+        try { URL.revokeObjectURL(objectUrlRef.current) } catch {}
+        objectUrlRef.current = null
+      }
     }
   }, [])
 
   return (
     <div className="relative w-full h-full overflow-hidden rounded-[16px]">
-      {/* Video — always mounted, even before live, so srcObject swap is instant */}
-      <video
-        ref={videoRef}
-        autoPlay
-        muted
-        playsInline
-        aria-label="Live camera feed"
+      {/* Snapshot image — always mounted so frame swap is instant */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        ref={imgRef}
+        alt="Live camera frame"
         className="absolute inset-0 w-full h-full object-cover"
         style={{
           opacity: state === 'live' ? 1 : 0,
@@ -174,14 +131,16 @@ export default function FieldCameraFeed() {
         }}
       />
 
-      {/* Connecting shimmer */}
-      {(state === 'connecting' || state === 'idle') && (
+      {/* Connecting shimmer — first paint until first frame lands */}
+      {state === 'connecting' && (
         <FeedShimmer label="connecting…" isLight={isLight} />
       )}
 
-      {/* Offline placeholder */}
+      {/* Offline placeholder — polished, intentional. No retry countdown:
+          polling continues in background and the card flips to live as soon
+          as a frame lands. */}
       {state === 'offline' && (
-        <FeedOffline countdown={retryCountdown} isLight={isLight} />
+        <FeedOffline isLight={isLight} />
       )}
 
       {/* Live indicator */}
@@ -247,7 +206,7 @@ function FeedShimmer({ label, isLight }: { label: string; isLight: boolean }) {
   )
 }
 
-function FeedOffline({ countdown, isLight }: { countdown: number; isLight: boolean }) {
+function FeedOffline({ isLight }: { isLight: boolean }) {
   return (
     <div
       className="absolute inset-0 flex items-center justify-center"
@@ -271,7 +230,7 @@ function FeedOffline({ countdown, isLight }: { countdown: number; isLight: boole
           className="text-[11px] tracking-wide"
           style={{ color: isLight ? 'rgba(0,0,0,0.4)' : 'rgba(255,255,255,0.4)' }}
         >
-          {countdown > 0 ? `Retrying in ${countdown}s` : 'Reconnecting…'}
+          Reconnecting…
         </div>
       </div>
     </div>

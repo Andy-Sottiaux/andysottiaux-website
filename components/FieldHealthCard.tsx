@@ -73,6 +73,9 @@ export default function FieldHealthCard() {
   const isLight = palette.mode === 'light'
 
   const [digest, setDigest] = useState<HealthDigest | null>(null)
+  // Tri-state: 'connecting' until the first poll resolves, then 'online'
+  // or 'offline'. Avoids a "broken-looking" Offline flash on first paint.
+  const [phase, setPhase] = useState<'connecting' | 'resolved'>('connecting')
   const [, forceTick] = useState(0) // re-render every 30s for "X min ago"
   const lastOkRef = useRef<HealthDigest | null>(null)
 
@@ -98,6 +101,10 @@ export default function FieldHealthCard() {
       }
       const rttMs = Math.round(performance.now() - t0)
       if (cancelled) return
+
+      // Mark phase resolved either way — we've heard back (success or
+      // failure) at least once, so the UI can stop saying "Connecting".
+      setPhase('resolved')
 
       if (ok && parsed && parsed.ok !== false && !('error' in (parsed as object))) {
         const services = parsed.services ?? []
@@ -134,6 +141,7 @@ export default function FieldHealthCard() {
     }
   }, [])
 
+  const connecting = phase === 'connecting'
   const online = digest != null && digest.ok
   const lastOk = lastOkRef.current
 
@@ -141,6 +149,22 @@ export default function FieldHealthCard() {
   const offlineHeadline = isLight
     ? 'linear-gradient(180deg, #b2261d 0%, #6e6e73 100%)'
     : 'linear-gradient(180deg, #ffb0aa 0%, #6e6e73 100%)'
+  const connectingHeadline = isLight
+    ? 'linear-gradient(180deg, #1c1a1c 0%, #6e6e73 100%)'
+    : 'linear-gradient(180deg, #f5f5f7 0%, #8e8e93 100%)'
+
+  const headlineLabel = connecting ? 'Connecting' : online ? 'Online' : 'Offline'
+  const headlineGradient = connecting
+    ? connectingHeadline
+    : online
+      ? onlineHeadline
+      : offlineHeadline
+  const dotColor = connecting ? '#8e8e93' : online ? '#30d158' : '#ff453a'
+  const dotGlow = connecting
+    ? '0 0 6px rgba(142,142,147,0.45)'
+    : online
+      ? '0 0 12px rgba(48,209,88,0.6)'
+      : '0 0 8px rgba(255,69,58,0.5)'
 
   const valueColor = isLight ? '#1c1a1c' : '#fff'
 
@@ -160,9 +184,11 @@ export default function FieldHealthCard() {
       <div
         className="pointer-events-none absolute -top-20 -right-20 w-56 h-56 rounded-full"
         style={{
-          background: online
-            ? `radial-gradient(circle, rgba(48,209,88,${isLight ? 0.12 : 0.18}), transparent 70%)`
-            : `radial-gradient(circle, rgba(255,69,58,${isLight ? 0.08 : 0.12}), transparent 70%)`,
+          background: connecting
+            ? `radial-gradient(circle, rgba(142,142,147,${isLight ? 0.08 : 0.12}), transparent 70%)`
+            : online
+              ? `radial-gradient(circle, rgba(48,209,88,${isLight ? 0.12 : 0.18}), transparent 70%)`
+              : `radial-gradient(circle, rgba(255,69,58,${isLight ? 0.08 : 0.12}), transparent 70%)`,
           transition: 'background 0.8s ease',
         }}
       />
@@ -179,29 +205,31 @@ export default function FieldHealthCard() {
           <span
             className="absolute inline-flex h-full w-full rounded-full"
             style={{
-              background: online ? '#30d158' : '#ff453a',
-              opacity: online ? 0.55 : 0.4,
-              animation: online ? 'fldHealthPing 2.2s cubic-bezier(0,0,0.2,1) infinite' : 'none',
+              background: dotColor,
+              opacity: online ? 0.55 : connecting ? 0.5 : 0.4,
+              animation: online || connecting
+                ? 'fldHealthPing 2.2s cubic-bezier(0,0,0.2,1) infinite'
+                : 'none',
             }}
           />
           <span
             className="relative inline-flex h-3 w-3 rounded-full"
             style={{
-              background: online ? '#30d158' : '#ff453a',
-              boxShadow: online ? '0 0 12px rgba(48,209,88,0.6)' : '0 0 8px rgba(255,69,58,0.5)',
+              background: dotColor,
+              boxShadow: dotGlow,
             }}
           />
         </span>
         <div
           className="text-[34px] sm:text-[40px] font-semibold leading-none tracking-tight"
           style={{
-            background: online ? onlineHeadline : offlineHeadline,
+            background: headlineGradient,
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
           }}
         >
-          {online ? 'Online' : 'Offline'}
+          {headlineLabel}
         </div>
       </div>
 

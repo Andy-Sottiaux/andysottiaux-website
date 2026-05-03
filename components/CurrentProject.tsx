@@ -24,8 +24,8 @@ import FieldSolarCard from './FieldSolarCard'
 import { FieldThemeProvider, useFieldTheme } from './fieldTheme'
 import { useReducedMotion } from '@/lib/useReducedMotion'
 
-// Dynamic import — WebRTC + RTCPeerConnection are browser-only and the
-// component pulls roughly nothing on the server, so SSR-skip it.
+// Dynamic import — the camera feed polls a same-origin snapshot proxy
+// from the browser; SSR'ing it is wasted work, so skip it server-side.
 const FieldCameraFeed = dynamic(() => import('./FieldCameraFeed'), {
   ssr: false,
   loading: () => <CameraLoadingShimmer />,
@@ -254,7 +254,7 @@ function CameraCardShell() {
           className="text-[13px] tracking-tight leading-snug"
           style={{ color: palette.bodyText }}
         >
-          Live edge-AI camera. Encrypted public stream, no port forwarding.
+          Live edge-AI camera. Public read-only stream.
         </div>
       </div>
     </div>

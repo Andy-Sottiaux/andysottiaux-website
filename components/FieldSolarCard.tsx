@@ -73,21 +73,35 @@ export default function FieldSolarCard() {
         const res = await fetch(SOLAR_URL, { signal: ctrl.signal, cache: 'no-store' })
         clearTimeout(t)
         if (cancelled) return
-        if (!res.ok) {
+
+        // Read body even on non-2xx — the upstream's 503 carries useful
+        // info ({"error":"no telemetry yet"}). We treat any successful HTTP
+        // round-trip with parseable JSON as "we heard from the device";
+        // only true network/proxy failures count as 'offline'.
+        let data: Partial<Solar> & { error?: string } | null = null
+        try {
+          data = await res.json()
+        } catch {
+          data = null
+        }
+
+        if (data && typeof data.battery_voltage === 'number' && !data.error) {
+          const live = data as Solar
+          setSolar(live)
+          setState('live')
+          const next = [...sparkRef.current, live.solar_power].slice(-SPARK_MAX)
+          sparkRef.current = next
+          setSpark(next)
+        } else if (data && (data.error || res.status === 503)) {
+          // Upstream is reachable but reports no telemetry yet (e.g. BMV
+          // out of BLE range). Treat as 'idle / awaiting', not broken.
+          setState('no-telemetry')
+        } else if (!res.ok) {
+          // Proxy or upstream actively failing (502 / unreachable).
           setState('offline')
         } else {
-          const data: Solar | { error: string } = await res.json()
-          if ('error' in data) {
-            setState('no-telemetry')
-          } else if (typeof data.battery_voltage === 'number') {
-            setSolar(data)
-            setState('live')
-            const next = [...sparkRef.current, data.solar_power].slice(-SPARK_MAX)
-            sparkRef.current = next
-            setSpark(next)
-          } else {
-            setState('no-telemetry')
-          }
+          // 2xx but unparseable / unexpected shape.
+          setState('no-telemetry')
         }
       } catch {
         if (!cancelled) setState('offline')
@@ -154,19 +168,38 @@ export default function FieldSolarCard() {
         </div>
       </div>
       <div
-        className="text-[13px] tracking-tight mb-6"
-        style={{ color: palette.bodyText }}
+        className="text-[13px] tracking-tight mb-6 flex items-center gap-2"
+        style={{ color: palette.bodyText, minHeight: '1.25rem' }}
       >
         {live ? (
           <>
-            Battery <span className="tabular-nums" style={{ color: valueColor, opacity: 0.85 }}>{soc}%</span>
-            <span className="mx-2" style={{ color: palette.fadedText }}>·</span>
-            <span className="capitalize">{solar.charge_state}</span>
+            <span>
+              Battery <span className="tabular-nums" style={{ color: valueColor, opacity: 0.85 }}>{soc}%</span>
+              <span className="mx-2" style={{ color: palette.fadedText }}>·</span>
+              <span className="capitalize">{solar.charge_state}</span>
+            </span>
+          </>
+        ) : state === 'loading' ? (
+          <span style={{ color: palette.mutedText }}>Connecting…</span>
+        ) : state === 'no-telemetry' ? (
+          <>
+            <span
+              aria-hidden="true"
+              className="inline-block h-1.5 w-1.5 rounded-full"
+              style={{
+                background: isLight ? '#b45309' : '#fcd34d',
+                boxShadow: isLight ? '0 0 6px rgba(180,83,9,0.45)' : '0 0 8px rgba(252,211,77,0.55)',
+                animation: 'fldSolarIdlePulse 2.4s cubic-bezier(0.4,0,0.6,1) infinite',
+              }}
+            />
+            <span>
+              Awaiting telemetry
+              <span className="mx-2" style={{ color: palette.fadedText }}>·</span>
+              <span style={{ color: palette.mutedText }}>sensor link inactive</span>
+            </span>
           </>
         ) : (
-          state === 'loading' ? 'Connecting…'
-            : state === 'no-telemetry' ? 'Awaiting telemetry packet'
-            : 'Telemetry unreachable'
+          <span style={{ color: palette.mutedText }}>Telemetry unreachable</span>
         )}
       </div>
 
@@ -247,6 +280,13 @@ export default function FieldSolarCard() {
         </div>
         <Sparkline data={spark} isLight={isLight} />
       </div>
+
+      <style jsx global>{`
+        @keyframes fldSolarIdlePulse {
+          0%, 100% { opacity: 0.4; transform: scale(1); }
+          50%      { opacity: 1;   transform: scale(1.25); }
+        }
+      `}</style>
     </div>
   )
 }
