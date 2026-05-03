@@ -1,20 +1,20 @@
 'use client'
 
 /**
- * CayleySolarCard — battery, solar in, SOC bar, session-buffer sparkline.
+ * FieldSolarCard — battery, solar in, SOC bar, session-buffer sparkline.
  *
- * Polls /api/solar every 30s. Builds a rolling client-side ring buffer of
- * solar power readings across the user's session — clearly labelled
- * "session" so it's not misread as a 24h history.
+ * Polls the same-origin solar proxy every 30s. Builds a rolling client-side
+ * ring buffer of solar power readings across the user's session — clearly
+ * labelled "session" so it's not misread as a 24h history.
  *
- * Theme: card chrome / typography swap via useCayleyTheme(); the warm
- * amber sparkline + green→cyan SOC gradient stay constant in both themes.
+ * Theme: card chrome / typography swap via useFieldTheme(); the warm amber
+ * sparkline + green→cyan SOC gradient stay constant in both themes.
  */
 
 import { useEffect, useRef, useState } from 'react'
-import { useCayleyTheme } from './cayleyTheme'
+import { useFieldTheme } from './fieldTheme'
 
-const SOLAR_URL = process.env.NEXT_PUBLIC_V3_SOLAR_URL || 'https://cayley-v3-cam-1.tailc7d6b6.ts.net/api/solar'
+const SOLAR_URL = '/api/v3/solar'
 
 type Solar = {
   battery_voltage: number
@@ -30,9 +30,7 @@ type Solar = {
 
 type CardState = 'loading' | 'live' | 'no-telemetry' | 'offline'
 
-// 4S LiFePO4 OCV → SOC, with internal-resistance compensation. Same table
-// as the legacy CurrentProject for parity with what the user has been
-// reading on the live board.
+// 4S LiFePO4 OCV → SOC, with internal-resistance compensation.
 function calcSOC(bv: number, loadA = 0, chargeA = 0): number {
   const ocv = bv + (loadA * 0.025) - (Math.max(0, chargeA) * 0.025)
   const table: [number, number][] = [
@@ -55,8 +53,8 @@ function calcSOC(bv: number, loadA = 0, chargeA = 0): number {
 
 const SPARK_MAX = 60 // 60 samples × 30s ≈ 30 minutes of session history
 
-export default function CayleySolarCard() {
-  const palette = useCayleyTheme()
+export default function FieldSolarCard() {
+  const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
 
   const [solar, setSolar] = useState<Solar | null>(null)
@@ -84,7 +82,6 @@ export default function CayleySolarCard() {
           } else if (typeof data.battery_voltage === 'number') {
             setSolar(data)
             setState('live')
-            // append solar_power to sparkline buffer
             const next = [...sparkRef.current, data.solar_power].slice(-SPARK_MAX)
             sparkRef.current = next
             setSpark(next)
@@ -167,8 +164,8 @@ export default function CayleySolarCard() {
             <span className="capitalize">{solar.charge_state}</span>
           </>
         ) : (
-          state === 'loading' ? 'Connecting to the board…'
-            : state === 'no-telemetry' ? 'Awaiting Victron BLE packet'
+          state === 'loading' ? 'Connecting…'
+            : state === 'no-telemetry' ? 'Awaiting telemetry packet'
             : 'Telemetry unreachable'
         )}
       </div>
@@ -255,8 +252,6 @@ export default function CayleySolarCard() {
 }
 
 function Sparkline({ data, isLight }: { data: number[]; isLight: boolean }) {
-  // SVG sparkline. We always render a 36px-tall strip; if no data yet,
-  // render a faint baseline so the layout doesn't shift.
   const W = 280
   const H = 36
   const strokeColor = isLight ? '#c2410c' : '#ffb84d'

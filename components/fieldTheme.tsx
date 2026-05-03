@@ -1,13 +1,12 @@
 'use client'
 
 /**
- * cayleyTheme — palette for the home-page Cayley section, theme-aware.
+ * fieldTheme — palette for the home-page live-telemetry section.
  *
  * The CurrentProject section + its three child cards (Solar, Camera, Health)
- * share a cinematic visual language. In dark mode it's the original
- * navy-to-near-black gradient with white-glass cards. In light mode it's a
- * calm bone-on-cream Apple-product-page treatment with white-glass cards on
- * a warm gradient.
+ * share a cinematic visual language. In dark mode it's a navy-to-near-black
+ * gradient with white-glass cards. In light mode it's a calm bone-on-cream
+ * Apple-product-page treatment with white-glass cards on a warm gradient.
  *
  * Live-data accent colors (cyan/emerald/amber) stay constant across themes —
  * they're the visual hooks that say "this number is alive right now."
@@ -16,7 +15,7 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { useTheme } from 'next-themes'
 
-type CayleyPalette = {
+type FieldPalette = {
   mode: 'light' | 'dark'
 
   // Section-level
@@ -38,7 +37,7 @@ type CayleyPalette = {
   hairline: string
 }
 
-const DARK_PALETTE: CayleyPalette = {
+const DARK_PALETTE: FieldPalette = {
   mode: 'dark',
   sectionBackground:
     'radial-gradient(ellipse 80% 50% at 50% 0%, rgba(48,209,88,0.06), transparent 60%),' +
@@ -56,10 +55,8 @@ const DARK_PALETTE: CayleyPalette = {
   hairline: 'rgba(255,255,255,0.06)',
 }
 
-const LIGHT_PALETTE: CayleyPalette = {
+const LIGHT_PALETTE: FieldPalette = {
   mode: 'light',
-  // Subtle warm + cool ambient glows on a bone-on-cream gradient. Tuned to
-  // feel like an Apple light-mode product page — present but not flat.
   sectionBackground:
     'radial-gradient(ellipse 80% 50% at 50% 0%, rgba(48,209,88,0.06), transparent 60%),' +
     'radial-gradient(ellipse 80% 60% at 50% 100%, rgba(10,132,255,0.04), transparent 60%),' +
@@ -77,9 +74,9 @@ const LIGHT_PALETTE: CayleyPalette = {
   hairline: 'rgba(0,0,0,0.08)',
 }
 
-const CayleyThemeContext = createContext<CayleyPalette>(DARK_PALETTE)
+const FieldThemeContext = createContext<FieldPalette>(DARK_PALETTE)
 
-export function CayleyThemeProvider({ children }: { children: React.ReactNode }) {
+export function FieldThemeProvider({ children }: { children: React.ReactNode }) {
   const { resolvedTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
 
@@ -91,12 +88,12 @@ export function CayleyThemeProvider({ children }: { children: React.ReactNode })
   const palette = mounted && resolvedTheme === 'light' ? LIGHT_PALETTE : DARK_PALETTE
 
   return (
-    <CayleyThemeContext.Provider value={palette}>
+    <FieldThemeContext.Provider value={palette}>
       {children}
-    </CayleyThemeContext.Provider>
+    </FieldThemeContext.Provider>
   )
 }
 
-export function useCayleyTheme(): CayleyPalette {
-  return useContext(CayleyThemeContext)
+export function useFieldTheme(): FieldPalette {
+  return useContext(FieldThemeContext)
 }

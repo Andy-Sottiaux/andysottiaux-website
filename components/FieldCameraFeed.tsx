@@ -1,36 +1,33 @@
 'use client'
 
 /**
- * CayleyCameraFeed — live WebRTC video from the on-board go2rtc, with a
+ * FieldCameraFeed — live WebRTC video from the field device, with a
  * graceful fallback that keeps the page beautiful when the camera is
  * unreachable.
  *
  * Data path:
- *   browser ──WHEP──> https://cayley-v3-cam-1.tailc7d6b6.ts.net/api/webrtc?src=cayley
- *                            │
- *                            ▼ (Tailscale Funnel proxies "/" to 127.0.0.1:1984)
- *                       go2rtc ──RTSP──> rkipc (5MP H.265)
+ *   browser ──WHEP──> /api/v3/feed (this origin)
+ *                        │
+ *                        ▼ (server-side proxy)
+ *                     upstream WebRTC bridge
  *
- * go2rtc speaks WHEP: POST the SDP offer to /api/webrtc?src=<stream>, get
- * the SDP answer back in the body. No extra JS deps; just the browser's
- * native RTCPeerConnection. We auto-retry every 30 s on failure.
+ * The browser POSTs an SDP offer (Content-Type: application/sdp) and
+ * receives an SDP answer in the response body. No extra JS deps; just the
+ * browser's native RTCPeerConnection. We auto-retry every 30 s on failure.
  *
  * Theme: the live video itself has no palette, but the connecting shimmer
  * and offline placeholder both adapt. The red LIVE badge is constant.
  */
 
 import { useEffect, useRef, useState } from 'react'
-import { useCayleyTheme } from './cayleyTheme'
+import { useFieldTheme } from './fieldTheme'
 
-// Default points at the Funnel hostname; override with NEXT_PUBLIC_V3_FEED_URL
-// (e.g. http://localhost:1984 for local dev against a port-forwarded board).
-const FEED_BASE = (process.env.NEXT_PUBLIC_V3_FEED_URL || 'https://cayley-v3-cam-1.tailc7d6b6.ts.net').replace(/\/$/, '')
-const STREAM_NAME = 'cayley'
+const FEED_URL = '/api/v3/feed'
 
 type FeedState = 'idle' | 'connecting' | 'live' | 'offline'
 
-export default function CayleyCameraFeed() {
-  const palette = useCayleyTheme()
+export default function FieldCameraFeed() {
+  const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
 
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -64,8 +61,6 @@ export default function CayleyCameraFeed() {
       })
       pcRef.current = pc
 
-      // Receive video + audio tracks. addTransceiver before createOffer so
-      // the SDP advertises recvonly capability for both media types.
       pc.addTransceiver('video', { direction: 'recvonly' })
       pc.addTransceiver('audio', { direction: 'recvonly' })
 
@@ -95,7 +90,7 @@ export default function CayleyCameraFeed() {
         await pc.setLocalDescription(offer)
 
         // Wait for ICE gathering to settle (or 1.5s, whichever first) so the
-        // offer carries candidates — go2rtc accepts non-trickle WHEP.
+        // offer carries candidates — non-trickle WHEP.
         await new Promise<void>((resolve) => {
           if (pc.iceGatheringState === 'complete') return resolve()
           const t = setTimeout(resolve, 1500)
@@ -114,7 +109,7 @@ export default function CayleyCameraFeed() {
 
         const ctrl = new AbortController()
         const timeoutId = setTimeout(() => ctrl.abort(), 8000)
-        const res = await fetch(`${FEED_BASE}/api/webrtc?src=${encodeURIComponent(STREAM_NAME)}`, {
+        const res = await fetch(FEED_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/sdp' },
           body: localSdp,
@@ -128,7 +123,6 @@ export default function CayleyCameraFeed() {
         if (cancelled) return
 
         await pc.setRemoteDescription({ type: 'answer', sdp: answerSdp })
-        // ICE will fire connected; state flips to 'live' there.
       } catch (err) {
         if (cancelled) return
         scheduleRetry((err as Error)?.message || 'connect failed')
@@ -139,8 +133,6 @@ export default function CayleyCameraFeed() {
       if (cancelled) return
       teardown()
       setState('offline')
-      // 30s retry with a visible countdown so the placeholder doesn't feel
-      // dead.
       let remaining = 30
       setRetryCountdown(remaining)
       const tick = () => {
@@ -173,7 +165,7 @@ export default function CayleyCameraFeed() {
         autoPlay
         muted
         playsInline
-        aria-label="Live camera feed from the Cayley board"
+        aria-label="Live camera feed"
         className="absolute inset-0 w-full h-full object-cover"
         style={{
           opacity: state === 'live' ? 1 : 0,
@@ -206,22 +198,22 @@ export default function CayleyCameraFeed() {
           <span className="w-1.5 h-1.5 rounded-full" style={{
             background: '#ff453a',
             boxShadow: '0 0 6px #ff453a',
-            animation: 'cayLivePulse 1.6s cubic-bezier(0.4,0,0.6,1) infinite',
+            animation: 'fldLivePulse 1.6s cubic-bezier(0.4,0,0.6,1) infinite',
           }} />
           LIVE
         </div>
       )}
 
       <style jsx global>{`
-        @keyframes cayLivePulse {
+        @keyframes fldLivePulse {
           0%, 100% { opacity: 1; }
           50%      { opacity: 0.35; }
         }
-        @keyframes cayShimmer {
+        @keyframes fldShimmer {
           0%   { background-position: -200% 0; }
           100% { background-position: 200% 0; }
         }
-        @keyframes cayPlaceholderPulse {
+        @keyframes fldPlaceholderPulse {
           0%, 100% { opacity: 0.45; transform: scale(1); }
           50%      { opacity: 0.85; transform: scale(1.04); }
         }
@@ -239,7 +231,7 @@ function FeedShimmer({ label, isLight }: { label: string; isLight: boolean }) {
           ? 'linear-gradient(105deg, #ececef 25%, #f6f6f8 50%, #ececef 75%)'
           : 'linear-gradient(105deg, #0a0a0c 25%, #16161a 50%, #0a0a0c 75%)',
         backgroundSize: '200% 100%',
-        animation: 'cayShimmer 2.4s linear infinite',
+        animation: 'fldShimmer 2.4s linear infinite',
       }}
     >
       <div className="flex flex-col items-center gap-3">
@@ -266,7 +258,7 @@ function FeedOffline({ countdown, isLight }: { countdown: number; isLight: boole
       }}
     >
       <div className="flex flex-col items-center gap-3 px-6 text-center">
-        <div style={{ animation: 'cayPlaceholderPulse 2.8s cubic-bezier(0.4,0,0.6,1) infinite' }}>
+        <div style={{ animation: 'fldPlaceholderPulse 2.8s cubic-bezier(0.4,0,0.6,1) infinite' }}>
           <CameraGlyph dim isLight={isLight} />
         </div>
         <div
@@ -287,7 +279,6 @@ function FeedOffline({ countdown, isLight }: { countdown: number; isLight: boole
 }
 
 function CameraGlyph({ dim = false, isLight = false }: { dim?: boolean; isLight?: boolean }) {
-  // A simple, dignified camera silhouette — better than a spinner.
   const color = isLight
     ? (dim ? 'rgba(0,0,0,0.32)' : 'rgba(0,0,0,0.5)')
     : (dim ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.55)')

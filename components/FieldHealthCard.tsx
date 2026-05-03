@@ -1,25 +1,25 @@
 'use client'
 
 /**
- * CayleyHealthCard — board liveness, uptime, services, latency.
+ * FieldHealthCard — board liveness, uptime, services, latency.
  *
- * Polls /api/health every 15s, measures wall-clock RTT against the fetch
- * (this is end-to-end including Tailscale Funnel hop), and degrades
- * gracefully when the board is unreachable.
+ * Polls a same-origin health proxy every 15s, measures wall-clock RTT
+ * against the fetch (this is end-to-end, browser → proxy → device), and
+ * degrades gracefully when the device is unreachable.
  *
  * Health JSON shape (varies slightly by version; we read both old/new keys):
  *   { ok, uptime_s, services: [{ name, status, ... }], services_down, ... }
  *
- * Theme: pulls chrome / typography colors from useCayleyTheme(); the
+ * Theme: pulls chrome / typography colors from useFieldTheme(); the
  * online/offline accent (emerald/red) stays constant in both themes.
  */
 
 import { useEffect, useRef, useState } from 'react'
-import { useCayleyTheme } from './cayleyTheme'
+import { useFieldTheme } from './fieldTheme'
 
-const HEALTH_URL = process.env.NEXT_PUBLIC_V3_HEALTH_URL || 'https://cayley-v3-cam-1.tailc7d6b6.ts.net/api/health'
+const HEALTH_URL = '/api/v3/health'
 
-// Defensive: the cayley_app /api/health JSON shape has evolved. Accept a
+// Defensive: the upstream /api/health JSON shape has evolved. Accept a
 // few field-name variants without exploding.
 type ServiceLoose = {
   name?: string
@@ -68,8 +68,8 @@ function fmtAge(ms: number): string {
   return `${h}h ago`
 }
 
-export default function CayleyHealthCard() {
-  const palette = useCayleyTheme()
+export default function FieldHealthCard() {
+  const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
 
   const [digest, setDigest] = useState<HealthDigest | null>(null)
@@ -99,7 +99,7 @@ export default function CayleyHealthCard() {
       const rttMs = Math.round(performance.now() - t0)
       if (cancelled) return
 
-      if (ok && parsed) {
+      if (ok && parsed && parsed.ok !== false && !('error' in (parsed as object))) {
         const services = parsed.services ?? []
         const total = parsed.service_count ?? services.length
         const down = parsed.services_down?.length ?? services.filter((s) => {
@@ -137,14 +137,11 @@ export default function CayleyHealthCard() {
   const online = digest != null && digest.ok
   const lastOk = lastOkRef.current
 
-  // Headline gradient swaps on offline so "Offline" reads softer than the
-  // primary headline color.
   const onlineHeadline = palette.headlineGradient
   const offlineHeadline = isLight
     ? 'linear-gradient(180deg, #b2261d 0%, #6e6e73 100%)'
     : 'linear-gradient(180deg, #ffb0aa 0%, #6e6e73 100%)'
 
-  // Secondary value color (Uptime / Services / RTT etc).
   const valueColor = isLight ? '#1c1a1c' : '#fff'
 
   return (
@@ -158,10 +155,8 @@ export default function CayleyHealthCard() {
         boxShadow: palette.cardShadow,
       }}
       role="region"
-      aria-label="Board health"
+      aria-label="System health"
     >
-      {/* Subtle ambient glow tinted by state — slightly more present in
-          light mode (rgba(48,209,88,0.10) vs 0.18) so it still reads. */}
       <div
         className="pointer-events-none absolute -top-20 -right-20 w-56 h-56 rounded-full"
         style={{
@@ -186,7 +181,7 @@ export default function CayleyHealthCard() {
             style={{
               background: online ? '#30d158' : '#ff453a',
               opacity: online ? 0.55 : 0.4,
-              animation: online ? 'cayHealthPing 2.2s cubic-bezier(0,0,0.2,1) infinite' : 'none',
+              animation: online ? 'fldHealthPing 2.2s cubic-bezier(0,0,0.2,1) infinite' : 'none',
             }}
           />
           <span
@@ -272,7 +267,7 @@ export default function CayleyHealthCard() {
       </dl>
 
       <style jsx global>{`
-        @keyframes cayHealthPing {
+        @keyframes fldHealthPing {
           0%   { transform: scale(1);   opacity: 0.55; }
           80%  { transform: scale(2.4); opacity: 0;    }
           100% { transform: scale(2.4); opacity: 0;    }
