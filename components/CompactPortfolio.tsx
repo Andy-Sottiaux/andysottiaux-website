@@ -474,6 +474,18 @@ function IdentityTile({ onOpen }: { onOpen?: () => void }) {
           Aerospace hardware · Production software
         </div>
 
+        {/* Compact bio — fills the space between the subtitle and the
+            action pill. Mirrors the Hero copy so the site reads in one
+            consistent voice; the full 3-paragraph version lives behind
+            the About modal. */}
+        <div
+          className="text-center text-[12px] md:text-[12.5px] leading-relaxed tracking-tight mt-3 px-2"
+          style={{ color: palette.mutedText }}
+        >
+          Engineer &amp; founder building UAV systems at AVX Aircraft and
+          shipping production iOS apps at HatchingPoint.
+        </div>
+
         <div className="mt-auto pt-4 flex justify-center">
           <a
             href="mailto:andrewsottiaux@gmail.com"
