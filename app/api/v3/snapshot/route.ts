@@ -18,12 +18,15 @@ export const runtime = 'edge'
 export const dynamic = 'force-dynamic'
 
 const UPSTREAM = process.env.V3_UPSTREAM_HOST || 'https://cayley-v3-cam-1.tailc7d6b6.ts.net'
-const STREAM = process.env.V3_FEED_STREAM || 'cayley'
+// Use the sub-stream (D1, ~13 KB) instead of the 5 MP main (160+ KB).
+// Funnel transit of the main stream consistently exceeds Edge timeout;
+// sub arrives in 2-3s. Same visible content for a 0.5 fps web preview.
+const STREAM = process.env.V3_FEED_STREAM || 'cayley-sub'
 
 export async function GET() {
   try {
     const ctrl = new AbortController()
-    const timeoutId = setTimeout(() => ctrl.abort(), 6000)
+    const timeoutId = setTimeout(() => ctrl.abort(), 15000)
     const r = await fetch(
       `${UPSTREAM}/api/frame.jpeg?src=${encodeURIComponent(STREAM)}`,
       {
