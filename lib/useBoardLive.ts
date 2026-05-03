@@ -20,8 +20,8 @@
 import { useEffect, useRef, useState } from 'react'
 
 const HEALTH_URL = '/api/v3/health'
-const POLL_MS = 15_000
-const OFFLINE_GRACE_MS = 30_000
+const POLL_MS = 8_000
+const OFFLINE_GRACE_MS = 10_000
 
 type HealthLoose = { ok?: boolean; error?: string }
 
@@ -62,10 +62,10 @@ export function useBoardLive(): boolean {
       } else {
         consecutiveFailRef.current += 1
         const sinceLastOk = Date.now() - lastSuccessRef.current
-        // Flip to offline only after we've gone past the grace window AND
-        // observed at least 2 consecutive failures. Either condition alone
-        // could be a transient blip.
-        if (consecutiveFailRef.current >= 2 && sinceLastOk >= OFFLINE_GRACE_MS) {
+        // Flip to offline once a single failure has persisted past the grace
+        // window. Tightened from "2 consecutive + 30s" so the swap is
+        // observable within ~10s of the board going down.
+        if (sinceLastOk >= OFFLINE_GRACE_MS) {
           setLive(false)
         }
       }

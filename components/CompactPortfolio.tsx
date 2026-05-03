@@ -225,12 +225,12 @@ function Bento({
         />
       </div>
 
-      {/* Tall tile (col 10–12, rows 1–2): Solar when live, Stats when stale */}
+      {/* Tall tile (col 10–12, rows 1–2): Solar when live, Education when stale */}
       <div className="col-span-12 md:col-span-3 md:row-span-2">
         <CrossfadeTile
           showLive={boardLive}
           live={<SolarTile onOpen={() => onOpen('live')} />}
-          fallback={<StatsTile />}
+          fallback={<EducationTile />}
         />
       </div>
 
@@ -609,15 +609,12 @@ function HealthTile({ onOpen }: { onOpen?: () => void }) {
 /** Replaces SolarTile (tall right column, 2-row span). Three crisp facts
  *  in a stacked vertical layout. Designed to feel substantive without
  *  reading as filler. */
-function StatsTile() {
+/** Education fallback for the tall right-column slot. Replaces SolarTile
+ *  when the board is offline. Texas Tech mark + degree info — concrete,
+ *  visual, and personal. */
+function EducationTile() {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
-
-  const stats: { value: string; suffix?: string; label: string }[] = [
-    { value: '10', suffix: '+', label: 'Production iOS apps' },
-    { value: '9', suffix: 'yr', label: 'Hardware + software' },
-    { value: '4', label: 'Aerospace and product orgs' },
-  ]
 
   return (
     <div
@@ -630,59 +627,78 @@ function StatsTile() {
         boxShadow: palette.cardShadow,
       }}
       role="region"
-      aria-label="Profile stats"
+      aria-label="Education"
     >
+      {/* Texas Tech red ambient glow — recognisable without screaming. */}
       <div
         className="pointer-events-none absolute -top-24 -right-20 w-64 h-64 rounded-full"
         style={{
           background: isLight
-            ? 'radial-gradient(circle, rgba(10,132,255,0.10), transparent 70%)'
-            : 'radial-gradient(circle, rgba(10,132,255,0.16), transparent 70%)',
+            ? 'radial-gradient(circle, rgba(204,0,0,0.08), transparent 70%)'
+            : 'radial-gradient(circle, rgba(204,0,0,0.16), transparent 70%)',
         }}
       />
       <div
-        className="text-[10.5px] font-semibold uppercase tracking-[0.22em] mb-5"
-        style={{ color: isLight ? '#0a8aa8' : 'rgba(103, 232, 249, 0.9)' }}
+        className="text-[10.5px] font-semibold uppercase tracking-[0.22em]"
+        style={{ color: isLight ? '#cc0000' : '#ff7a7a' }}
       >
-        Track Record
+        Education
       </div>
 
-      <div className="flex-1 flex flex-col justify-around gap-6">
-        {stats.map((s) => (
-          <div key={s.label}>
-            <div
-              className="flex items-baseline gap-1"
-              style={{
-                backgroundImage: palette.headlineGradient,
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-              }}
-            >
-              <span className="text-[56px] md:text-[64px] font-semibold leading-none tracking-tight tabular-nums">
-                {s.value}
-              </span>
-              {s.suffix && (
-                <span className="text-[22px] md:text-[24px] font-semibold leading-none tracking-tight">
-                  {s.suffix}
-                </span>
-              )}
-            </div>
-            <div
-              className="text-[12px] md:text-[12.5px] uppercase tracking-[0.18em] font-medium mt-2"
-              style={{ color: palette.mutedText }}
-            >
-              {s.label}
-            </div>
+      <div className="flex-1 flex flex-col items-center justify-center gap-6 py-4">
+        {/* Texas Tech logo as the visual anchor. */}
+        <div
+          className="flex items-center justify-center rounded-2xl flex-shrink-0 p-4"
+          style={{
+            background: isLight ? '#fff' : 'rgba(255,255,255,0.96)',
+            boxShadow: isLight
+              ? '0 8px 24px rgba(28,26,28,0.10), 0 0 0 1px rgba(0,0,0,0.04)'
+              : '0 12px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(0,0,0,0.15)',
+            width: '120px',
+            height: '120px',
+          }}
+        >
+          <Image
+            src="/images/texas-tech-logo.png"
+            alt="Texas Tech University"
+            width={96}
+            height={96}
+            className="w-full h-full object-contain"
+          />
+        </div>
+
+        <div className="text-center">
+          <div
+            className="text-[18px] md:text-[20px] font-semibold tracking-tight leading-tight"
+            style={{
+              backgroundImage: palette.headlineGradient,
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+            }}
+          >
+            B.S. Mechanical Engineering
           </div>
-        ))}
+          <div
+            className="text-[12.5px] tracking-tight mt-1"
+            style={{ color: palette.bodyText }}
+          >
+            Texas Tech University · 2016
+          </div>
+          <div
+            className="text-[11.5px] tracking-tight mt-2 italic"
+            style={{ color: palette.mutedText }}
+          >
+            Minor in Mathematics
+          </div>
+        </div>
       </div>
 
       <div
-        className="text-[11px] tracking-tight mt-auto pt-5"
-        style={{ color: palette.fadedText }}
+        className="text-[10.5px] uppercase tracking-[0.18em] font-medium mt-auto text-center pt-4 border-t"
+        style={{ color: palette.fadedText, borderColor: palette.hairline }}
       >
-        Across rotor systems, UAV autonomy, and shipping mobile products.
+        Study abroad · Seville, Spain
       </div>
     </div>
   )
@@ -1076,73 +1092,138 @@ function MarathonTile({ onOpen }: { onOpen?: () => void }) {
   const pct = Math.min(100, Math.round((raised / goal) * 100))
 
   return (
-    <Tile
-      label="2026 TCS NYC Marathon"
-      accent={{ light: '#c2410c', dark: '#ffb84d' }}
-      deepLink="/#marathon"
-      onOpen={onOpen}
-      modalLabel="Open Marathon"
-      className="min-h-[180px] md:min-h-[210px]"
+    <div
+      className="relative rounded-2xl h-full min-h-[180px] md:min-h-[210px] overflow-hidden group"
+      role="region"
+      aria-label="2026 TCS NYC Marathon"
+      style={{
+        // The marathon tile is intentionally NOT theme-glass-passive. It's
+        // a deep saturated orange brand block with the TCS mark prominent.
+        // Pulls the eye like a real bib number against a calm bento.
+        background: 'linear-gradient(135deg, #f06028 0%, #e8542c 50%, #c63d1f 100%)',
+        boxShadow: isLight
+          ? '0 16px 40px rgba(232,100,44,0.25), inset 0 1px 0 rgba(255,255,255,0.18)'
+          : '0 20px 50px rgba(232,100,44,0.35), inset 0 1px 0 rgba(255,255,255,0.18)',
+      }}
     >
-      <div className="px-5 md:px-6 pt-3 pb-4 md:pb-5 flex-1 flex flex-col">
-        {/* Header row: TCS NYC Marathon official logo + days countdown.
-            White-bg chip preserves the official mark's contrast in both
-            light and dark themes. */}
-        <div className="flex items-center gap-3 mb-2">
+      {/* Whole-tile clickable layer that opens the modal (sits behind the
+          inner Donate button; foreground anchors capture clicks first). */}
+      {onOpen && (
+        <button
+          type="button"
+          onClick={onOpen}
+          aria-label="Open 2026 TCS NYC Marathon"
+          className="absolute inset-0 z-0 cursor-pointer"
+        />
+      )}
+
+      {/* Animated diagonal stripe — subtle, evokes a race chevron without
+          screaming about it. Slowly drifts so it reads as energy. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            'repeating-linear-gradient(135deg, rgba(255,255,255,0.06) 0 14px, transparent 14px 56px)',
+          mixBlendMode: 'screen',
+        }}
+      />
+      {/* Bottom-left ambient warm glow */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -bottom-20 -left-12 w-72 h-72 rounded-full"
+        style={{ background: 'radial-gradient(circle, rgba(255,184,77,0.45), transparent 70%)' }}
+      />
+
+      <div className="relative z-10 px-5 md:px-6 pt-4 pb-4 md:pb-5 h-full flex flex-col">
+        {/* Top row: BIG TCS NYC Marathon logo on a white chip + small year
+            chip. Logo anchors the brand identity at full visual weight. */}
+        <div className="flex items-center gap-2.5 mb-3">
           <div
-            className="flex items-center justify-center rounded-lg flex-shrink-0 px-2 py-1.5"
+            className="flex items-center justify-center rounded-xl flex-shrink-0 px-3 py-2"
             style={{
               background: '#fff',
-              boxShadow: isLight
-                ? '0 1px 2px rgba(28,26,28,0.08), 0 0 0 1px rgba(0,0,0,0.04)'
-                : '0 1px 2px rgba(0,0,0,0.4), 0 0 0 1px rgba(0,0,0,0.2)',
+              boxShadow: '0 6px 18px rgba(0,0,0,0.18)',
             }}
           >
             <Image
               src="/images/tcs-marathon-logo.png"
               alt="2026 TCS New York City Marathon"
-              width={92}
-              height={42}
-              className="h-9 md:h-10 w-auto object-contain"
+              width={120}
+              height={56}
+              className="h-11 md:h-12 w-auto object-contain"
             />
           </div>
-          <div className="flex-1 flex items-baseline gap-1.5 justify-end">
-            <div
-              className="text-[34px] md:text-[40px] font-semibold leading-none tracking-tight tabular-nums"
+          <div className="flex-1" />
+          <div
+            className="text-[10px] font-bold uppercase tracking-[0.2em] px-2 py-1 rounded-full"
+            style={{
+              background: 'rgba(255,255,255,0.18)',
+              color: '#fff',
+              backdropFilter: 'blur(4px)',
+            }}
+          >
+            Nov 2026
+          </div>
+        </div>
+
+        {/* Hero countdown — big bold white tabular-nums with a pulsing dot.
+            "DAYS" beneath in small caps so it reads as a unit. */}
+        <div className="flex items-end gap-3 mb-2">
+          <div className="flex items-baseline gap-2">
+            <span
+              aria-hidden="true"
+              className="inline-block w-2 h-2 rounded-full"
               style={{
-                backgroundImage: palette.headlineGradient,
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
+                background: '#fff',
+                boxShadow: '0 0 12px rgba(255,255,255,0.9)',
+                animation: 'fldMarathonPulse 1.8s ease-in-out infinite',
+              }}
+            />
+            <div
+              className="text-[44px] md:text-[56px] font-bold leading-none tracking-tight tabular-nums text-white"
+              style={{
+                textShadow: '0 2px 8px rgba(0,0,0,0.18)',
               }}
             >
               {days ?? '—'}
             </div>
-            <div className="text-[12px] md:text-[13px] font-medium tracking-tight" style={{ color: palette.mutedText }}>
-              days
+            <div className="text-[12px] md:text-[13px] font-bold uppercase tracking-[0.22em] text-white/85 pb-1.5">
+              Days
             </div>
           </div>
         </div>
-        <div className="text-[11.5px] tracking-tight" style={{ color: palette.bodyText }}>
-          Running for Team for Kids · NYRR
+        <div className="text-[11.5px] md:text-[12px] tracking-tight text-white/85">
+          Running for <span className="font-semibold">Team for Kids</span> · NYRR
         </div>
 
+        {/* Progress + donate row */}
         <div className="mt-auto pt-3">
-          <div className="h-2 w-full rounded-full overflow-hidden" style={{ background: palette.trackBackground }}>
+          <div className="h-2.5 w-full rounded-full overflow-hidden" style={{ background: 'rgba(0,0,0,0.18)' }}>
             <div
-              className="h-full rounded-full"
+              className="h-full rounded-full relative overflow-hidden"
               style={{
                 width: `${pct}%`,
-                background: 'linear-gradient(90deg, #E8642C 0%, #ffb84d 100%)',
-                boxShadow: '0 0 12px rgba(232,100,44,0.35)',
+                background: 'linear-gradient(90deg, #fff 0%, #ffe2b8 100%)',
+                boxShadow: '0 0 16px rgba(255,255,255,0.55)',
                 transition: 'width 0.9s cubic-bezier(0.16, 1, 0.3, 1)',
               }}
-            />
+            >
+              <span
+                aria-hidden="true"
+                className="absolute inset-0"
+                style={{
+                  background:
+                    'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.55) 50%, transparent 100%)',
+                  animation: 'fldMarathonShimmer 2.6s linear infinite',
+                }}
+              />
+            </div>
           </div>
-          <div className="flex items-center justify-between mt-2">
-            <div className="text-[12px] font-semibold tabular-nums tracking-tight" style={{ color: isLight ? '#1c1a1c' : '#fff' }}>
+          <div className="flex items-center justify-between mt-2.5">
+            <div className="text-[13px] font-bold tabular-nums tracking-tight text-white">
               ${raised.toLocaleString()}
-              <span className="font-normal ml-1" style={{ color: palette.mutedText }}>
+              <span className="font-medium text-white/70 ml-1">
                 / ${goal.toLocaleString()}
               </span>
             </div>
@@ -1150,18 +1231,33 @@ function MarathonTile({ onOpen }: { onOpen?: () => void }) {
               href="https://donations.nyrr.org/donations/new?fundraiser=624830c3c37aaaa441f8"
               target="_blank"
               rel="noopener noreferrer"
-              className="relative z-10 text-[11px] font-semibold tracking-tight px-2.5 py-1 rounded-md hover:opacity-80 transition-opacity"
+              className="relative z-10 inline-flex items-center gap-1.5 text-[12px] font-bold tracking-tight px-3.5 py-1.5 rounded-full hover:scale-[1.04] transition-transform"
               style={{
-                background: 'linear-gradient(180deg, #E8642C, #d05722)',
-                color: '#fff',
+                background: '#fff',
+                color: '#c63d1f',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.18)',
               }}
             >
               Donate
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
             </a>
           </div>
         </div>
       </div>
-    </Tile>
+
+      <style jsx global>{`
+        @keyframes fldMarathonPulse {
+          0%, 100% { opacity: 0.55; transform: scale(1); }
+          50%      { opacity: 1;    transform: scale(1.2); }
+        }
+        @keyframes fldMarathonShimmer {
+          0%   { transform: translateX(-100%); }
+          100% { transform: translateX(100%);  }
+        }
+      `}</style>
+    </div>
   )
 }
 
