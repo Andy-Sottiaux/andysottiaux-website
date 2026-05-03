@@ -56,18 +56,26 @@ const FieldCameraFeed = dynamic(() => import('./FieldCameraFeed'), {
   loading: () => <div className="absolute inset-0 bg-black/80" />,
 })
 
-export default function CompactPortfolio() {
+export default function CompactPortfolio({
+  initialBoardLive = true,
+}: {
+  /** SSR-resolved board liveness, passed in from app/compact/page.tsx
+   *  so the initial HTML already shows the correct (live or fallback)
+   *  tiles — no fallback-then-live flicker for visitors arriving while
+   *  the board is down. */
+  initialBoardLive?: boolean
+}) {
   return (
     <FieldThemeProvider>
-      <CompactInner />
+      <CompactInner initialBoardLive={initialBoardLive} />
     </FieldThemeProvider>
   )
 }
 
-function CompactInner() {
+function CompactInner({ initialBoardLive }: { initialBoardLive: boolean }) {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
-  const boardLive = useBoardLive()
+  const boardLive = useBoardLive(initialBoardLive)
 
   const [openModal, setOpenModal] = useState<ModalKey | null>(null)
   const close = () => setOpenModal(null)
@@ -1091,19 +1099,27 @@ function MarathonTile({ onOpen }: { onOpen?: () => void }) {
 
   const pct = Math.min(100, Math.round((raised / goal) * 100))
 
+  // Theme-aware text colors. The card itself sits on the regular bento
+  // glass-bg with a strong TCS-orange outline + accent ring instead of a
+  // saturated orange brand block — distinct enough to read as a bib without
+  // shouting over the rest of the bento.
+  const numberColor = isLight ? '#1c1a1c' : '#fff'
+  const subtleText = isLight ? 'rgba(28,26,28,0.65)' : 'rgba(255,255,255,0.7)'
+
   return (
     <div
       className="relative rounded-2xl h-full min-h-[180px] md:min-h-[210px] overflow-hidden group"
       role="region"
       aria-label="2026 TCS NYC Marathon"
       style={{
-        // The marathon tile is intentionally NOT theme-glass-passive. It's
-        // a deep saturated orange brand block with the TCS mark prominent.
-        // Pulls the eye like a real bib number against a calm bento.
-        background: 'linear-gradient(135deg, #f06028 0%, #e8542c 50%, #c63d1f 100%)',
+        background: palette.cardBackground,
+        // 1.5px TCS-orange outline + a soft warm halo just behind it so the
+        // edge feels deliberate rather than thin.
         boxShadow: isLight
-          ? '0 16px 40px rgba(232,100,44,0.25), inset 0 1px 0 rgba(255,255,255,0.18)'
-          : '0 20px 50px rgba(232,100,44,0.35), inset 0 1px 0 rgba(255,255,255,0.18)',
+          ? '0 0 0 1.5px #E8642C, 0 8px 24px rgba(232,100,44,0.10), inset 0 1px 0 rgba(255,255,255,0.6)'
+          : '0 0 0 1.5px #E8642C, 0 12px 32px rgba(232,100,44,0.18), inset 0 1px 0 rgba(255,255,255,0.05)',
+        backdropFilter: 'blur(24px)',
+        WebkitBackdropFilter: 'blur(24px)',
       }}
     >
       {/* Whole-tile clickable layer that opens the modal (sits behind the
@@ -1117,22 +1133,26 @@ function MarathonTile({ onOpen }: { onOpen?: () => void }) {
         />
       )}
 
-      {/* Animated diagonal stripe — subtle, evokes a race chevron without
-          screaming about it. Slowly drifts so it reads as energy. */}
+      {/* Faint TCS-orange diagonal chevron stripes — race-bib hint at very
+          low opacity so they're texture, not pattern. */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0"
         style={{
-          background:
-            'repeating-linear-gradient(135deg, rgba(255,255,255,0.06) 0 14px, transparent 14px 56px)',
-          mixBlendMode: 'screen',
+          background: isLight
+            ? 'repeating-linear-gradient(135deg, rgba(232,100,44,0.05) 0 14px, transparent 14px 56px)'
+            : 'repeating-linear-gradient(135deg, rgba(232,100,44,0.10) 0 14px, transparent 14px 56px)',
         }}
       />
-      {/* Bottom-left ambient warm glow */}
+      {/* Soft warm corner halo */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute -bottom-20 -left-12 w-72 h-72 rounded-full"
-        style={{ background: 'radial-gradient(circle, rgba(255,184,77,0.45), transparent 70%)' }}
+        style={{
+          background: isLight
+            ? 'radial-gradient(circle, rgba(232,100,44,0.10), transparent 70%)'
+            : 'radial-gradient(circle, rgba(232,100,44,0.18), transparent 70%)',
+        }}
       />
 
       <div className="relative z-10 px-5 md:px-6 pt-4 pb-4 md:pb-5 h-full flex flex-col">
@@ -1158,54 +1178,54 @@ function MarathonTile({ onOpen }: { onOpen?: () => void }) {
           <div
             className="text-[10px] font-bold uppercase tracking-[0.2em] px-2 py-1 rounded-full"
             style={{
-              background: 'rgba(255,255,255,0.18)',
-              color: '#fff',
-              backdropFilter: 'blur(4px)',
+              background: isLight ? 'rgba(232,100,44,0.10)' : 'rgba(232,100,44,0.18)',
+              color: isLight ? '#c63d1f' : '#ff8a4a',
+              border: isLight ? '1px solid rgba(232,100,44,0.25)' : '1px solid rgba(232,100,44,0.35)',
             }}
           >
             Nov 2026
           </div>
         </div>
 
-        {/* Hero countdown — big bold white tabular-nums with a pulsing dot.
-            "DAYS" beneath in small caps so it reads as a unit. */}
+        {/* Hero countdown — theme-aware text + pulsing TCS-orange dot. */}
         <div className="flex items-end gap-3 mb-2">
           <div className="flex items-baseline gap-2">
             <span
               aria-hidden="true"
               className="inline-block w-2 h-2 rounded-full"
               style={{
-                background: '#fff',
-                boxShadow: '0 0 12px rgba(255,255,255,0.9)',
+                background: '#E8642C',
+                boxShadow: '0 0 10px rgba(232,100,44,0.7)',
                 animation: 'fldMarathonPulse 1.8s ease-in-out infinite',
               }}
             />
             <div
-              className="text-[44px] md:text-[56px] font-bold leading-none tracking-tight tabular-nums text-white"
-              style={{
-                textShadow: '0 2px 8px rgba(0,0,0,0.18)',
-              }}
+              className="text-[44px] md:text-[56px] font-bold leading-none tracking-tight tabular-nums"
+              style={{ color: numberColor }}
             >
               {days ?? '—'}
             </div>
-            <div className="text-[12px] md:text-[13px] font-bold uppercase tracking-[0.22em] text-white/85 pb-1.5">
+            <div
+              className="text-[12px] md:text-[13px] font-bold uppercase tracking-[0.22em] pb-1.5"
+              style={{ color: subtleText }}
+            >
               Days
             </div>
           </div>
         </div>
-        <div className="text-[11.5px] md:text-[12px] tracking-tight text-white/85">
-          Running for <span className="font-semibold">Team for Kids</span> · NYRR
+        <div className="text-[11.5px] md:text-[12px] tracking-tight" style={{ color: subtleText }}>
+          Running for <span className="font-semibold" style={{ color: numberColor }}>Team for Kids</span> · NYRR
         </div>
 
         {/* Progress + donate row */}
         <div className="mt-auto pt-3">
-          <div className="h-2.5 w-full rounded-full overflow-hidden" style={{ background: 'rgba(0,0,0,0.18)' }}>
+          <div className="h-2.5 w-full rounded-full overflow-hidden" style={{ background: palette.trackBackground }}>
             <div
               className="h-full rounded-full relative overflow-hidden"
               style={{
                 width: `${pct}%`,
-                background: 'linear-gradient(90deg, #fff 0%, #ffe2b8 100%)',
-                boxShadow: '0 0 16px rgba(255,255,255,0.55)',
+                background: 'linear-gradient(90deg, #E8642C 0%, #ffb84d 100%)',
+                boxShadow: '0 0 14px rgba(232,100,44,0.45)',
                 transition: 'width 0.9s cubic-bezier(0.16, 1, 0.3, 1)',
               }}
             >
@@ -1214,16 +1234,16 @@ function MarathonTile({ onOpen }: { onOpen?: () => void }) {
                 className="absolute inset-0"
                 style={{
                   background:
-                    'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.55) 50%, transparent 100%)',
+                    'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.45) 50%, transparent 100%)',
                   animation: 'fldMarathonShimmer 2.6s linear infinite',
                 }}
               />
             </div>
           </div>
           <div className="flex items-center justify-between mt-2.5">
-            <div className="text-[13px] font-bold tabular-nums tracking-tight text-white">
+            <div className="text-[13px] font-bold tabular-nums tracking-tight" style={{ color: numberColor }}>
               ${raised.toLocaleString()}
-              <span className="font-medium text-white/70 ml-1">
+              <span className="font-medium ml-1" style={{ color: subtleText }}>
                 / ${goal.toLocaleString()}
               </span>
             </div>
@@ -1233,9 +1253,9 @@ function MarathonTile({ onOpen }: { onOpen?: () => void }) {
               rel="noopener noreferrer"
               className="relative z-10 inline-flex items-center gap-1.5 text-[12px] font-bold tracking-tight px-3.5 py-1.5 rounded-full hover:scale-[1.04] transition-transform"
               style={{
-                background: '#fff',
-                color: '#c63d1f',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.18)',
+                background: 'linear-gradient(180deg, #E8642C, #d05722)',
+                color: '#fff',
+                boxShadow: '0 4px 12px rgba(232,100,44,0.32)',
               }}
             >
               Donate

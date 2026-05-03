@@ -25,13 +25,17 @@ const OFFLINE_GRACE_MS = 10_000
 
 type HealthLoose = { ok?: boolean; error?: string }
 
-export function useBoardLive(): boolean {
-  // Default to `true` so first paint matches the historical layout (live
-  // tiles), avoiding a fallback-then-live flicker when the first poll
-  // succeeds. If the device IS offline, we'll flip after the grace window.
-  const [live, setLive] = useState(true)
-  const lastSuccessRef = useRef<number>(Date.now())
-  const consecutiveFailRef = useRef<number>(0)
+export function useBoardLive(initial = true): boolean {
+  // Caller can pass an SSR-resolved initial state (page.tsx probes the
+  // health endpoint on the server and passes the result down). When given,
+  // the initial paint already matches reality — no live→fallback flicker
+  // for visitors arriving while the board is down.
+  const [live, setLive] = useState(initial)
+  // If we already know we're offline, treat "last success" as ancient so
+  // a single failed client poll is enough to keep us in offline (no extra
+  // grace needed since the server already observed it offline).
+  const lastSuccessRef = useRef<number>(initial ? Date.now() : 0)
+  const consecutiveFailRef = useRef<number>(initial ? 0 : 1)
 
   useEffect(() => {
     let cancelled = false
