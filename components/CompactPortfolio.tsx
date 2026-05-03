@@ -143,12 +143,18 @@ function Tile({
   className = '',
   accent,
   label,
+  deepLink,
 }: {
   children: React.ReactNode
   className?: string
   /** small uppercase eyebrow color (passed to label) */
   accent?: { light: string; dark: string }
   label?: string
+  /** when provided, the whole tile becomes a clickable link to that
+   *  fragment on the full home page (e.g. "/#now"). Internal interactive
+   *  elements (anchors / buttons) take precedence via z-index so the
+   *  whole-tile click only fires on empty space. */
+  deepLink?: string
 }) {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
@@ -160,24 +166,50 @@ function Tile({
 
   return (
     <div
-      className={`relative rounded-2xl overflow-hidden h-full flex flex-col ${className}`}
+      className={`group relative rounded-2xl overflow-hidden h-full flex flex-col ${className}`}
       style={{
         background: palette.cardBackground,
         border: palette.cardBorder,
         backdropFilter: 'blur(24px)',
         WebkitBackdropFilter: 'blur(24px)',
         boxShadow: palette.cardShadow,
+        transition: 'transform 0.4s cubic-bezier(0.16,1,0.3,1), box-shadow 0.4s cubic-bezier(0.16,1,0.3,1)',
       }}
     >
+      {/* Whole-tile deep link — sits behind interactive content so explicit
+          inner <a>s and <button>s win the click. Visit `/#section` on the
+          home page when the tile body (not an inner control) is clicked. */}
+      {deepLink && (
+        <a
+          href={deepLink}
+          aria-label={label ? `Open ${label} on the full site` : 'Open on the full site'}
+          className="absolute inset-0 z-0"
+        />
+      )}
       {label && (
         <div
-          className="px-5 md:px-6 pt-4 md:pt-5 text-[10px] font-semibold uppercase tracking-[0.22em]"
+          className="relative z-10 px-5 md:px-6 pt-4 md:pt-5 text-[10px] font-semibold uppercase tracking-[0.22em] flex items-center justify-between pointer-events-none"
           style={{ color: accentColor ?? palette.mutedText }}
         >
-          {label}
+          <span>{label}</span>
+          {deepLink && (
+            <svg
+              className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.4} d="M7 17L17 7M9 7h8v8" />
+            </svg>
+          )}
         </div>
       )}
-      {children}
+      {/* Content sits above the deep-link layer so its own anchors/buttons
+          capture clicks first. */}
+      <div className="relative z-10 flex flex-1 flex-col">
+        {children}
+      </div>
     </div>
   )
 }
@@ -189,61 +221,64 @@ function IdentityTile() {
   const isLight = palette.mode === 'light'
 
   return (
-    <Tile className="min-h-[170px] md:min-h-[270px]">
-      <div className="flex-1 flex flex-col px-5 md:px-6 py-4 md:py-5">
-        <div className="flex items-center gap-3 mb-3 md:mb-4">
+    <Tile deepLink="/#about" className="min-h-[170px] md:min-h-[270px]">
+      <div className="flex-1 flex flex-col px-5 md:px-6 py-5">
+        {/* Hero portrait — much bigger now. Square with a subtle ring + an
+            ambient color glow that picks up the ambient palette accent. */}
+        <div className="flex justify-center mb-4">
           <div
-            className="relative w-12 h-12 md:w-14 md:h-14 rounded-xl overflow-hidden flex-shrink-0"
+            className="relative w-[120px] h-[120px] md:w-[140px] md:h-[140px] rounded-2xl overflow-hidden"
             style={{
               boxShadow: isLight
-                ? '0 4px 12px rgba(28,26,28,0.12)'
-                : '0 4px 12px rgba(0,0,0,0.4)',
-              border: palette.cardBorder,
+                ? '0 12px 32px rgba(28,26,28,0.18), 0 0 0 1px rgba(0,0,0,0.05)'
+                : '0 16px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06)',
             }}
           >
             <Image
               src="/images/profile.jpg"
               alt="Andy Sottiaux"
               fill
-              sizes="56px"
+              sizes="(max-width: 768px) 120px, 140px"
               className="object-cover"
+              priority
             />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div
-              className="text-[15px] md:text-[16px] font-semibold leading-tight tracking-tight"
-              style={{
-                backgroundImage: palette.headlineGradient,
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-              }}
-            >
-              Andy Sottiaux
-            </div>
-            <div
-              className="text-[11px] md:text-[12px] tracking-tight mt-0.5"
-              style={{ color: palette.mutedText }}
-            >
-              Dallas, TX
-            </div>
           </div>
         </div>
 
         <div
-          className="text-[13px] md:text-[14px] leading-snug tracking-tight mb-3"
-          style={{ color: palette.bodyText }}
+          className="text-center text-[20px] md:text-[22px] font-semibold leading-tight tracking-tight"
+          style={{
+            backgroundImage: palette.headlineGradient,
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+          }}
         >
-          Aerospace hardware and production software. UAV systems at AVX
-          Aircraft. Shipping iOS at HatchingPoint.
+          Andy Sottiaux
+        </div>
+        <div
+          className="text-center text-[11.5px] md:text-[12px] uppercase tracking-[0.16em] mt-1"
+          style={{ color: palette.mutedText }}
+        >
+          Dallas, TX
         </div>
 
-        <div className="mt-auto">
+        <div
+          className="text-center text-[12.5px] md:text-[13px] leading-snug tracking-tight mt-3 px-1"
+          style={{ color: palette.bodyText }}
+        >
+          Aerospace hardware · Production software
+        </div>
+
+        <div className="mt-auto pt-4 flex justify-center">
           <a
             href="mailto:andrewsottiaux@gmail.com"
-            className="inline-flex items-center gap-1.5 text-[12px] font-semibold tracking-tight hover:gap-2 transition-all"
+            className="relative z-10 inline-flex items-center gap-1.5 text-[12px] font-semibold tracking-tight hover:gap-2 transition-all px-3 py-1.5 rounded-full"
             style={{
               color: isLight ? '#0a8aa8' : 'rgb(103, 232, 249)',
+              background: isLight
+                ? 'rgba(10, 138, 168, 0.08)'
+                : 'rgba(103, 232, 249, 0.08)',
             }}
           >
             Get in touch
@@ -267,6 +302,7 @@ function CameraTile() {
     <Tile
       label="Camera"
       accent={{ light: '#0a8aa8', dark: 'rgba(103, 232, 249, 0.9)' }}
+      deepLink="/#now"
       className="min-h-[170px] md:min-h-[270px]"
     >
       <div className="px-3 md:px-4 pt-2 md:pt-3 pb-3 md:pb-4 flex-1 flex flex-col">
@@ -296,12 +332,17 @@ function CameraTile() {
 /* ───────────────────── Solar tile ──────────────────────── */
 
 function SolarTile() {
-  // FieldSolarCard already brings its own chrome — wrap so it fills the
-  // bento cell without a double-card frame.
+  // FieldSolarCard already brings its own chrome. Wrapped in an anchor so
+  // a click on the card body deep-links to the same section on the home
+  // page; the card is read-only so no internal click conflicts.
   return (
-    <div className="h-full min-h-[360px] md:min-h-[558px] [&>div]:h-full">
+    <a
+      href="/#now"
+      aria-label="Open Field Live on the full site"
+      className="block h-full min-h-[360px] md:min-h-[558px] [&>div]:h-full hover:scale-[1.005] transition-transform duration-300"
+    >
       <FieldSolarCard />
-    </div>
+    </a>
   )
 }
 
@@ -309,9 +350,13 @@ function SolarTile() {
 
 function HealthTile() {
   return (
-    <div className="h-full min-h-[260px] md:min-h-[270px] [&>div]:h-full">
+    <a
+      href="/#now"
+      aria-label="Open Field Live on the full site"
+      className="block h-full min-h-[260px] md:min-h-[270px] [&>div]:h-full hover:scale-[1.005] transition-transform duration-300"
+    >
       <FieldHealthCard />
-    </div>
+    </a>
   )
 }
 
@@ -332,6 +377,7 @@ function ExperienceTile() {
     <Tile
       label="Experience"
       accent={{ light: '#0f9d4f', dark: 'rgb(74 222 128 / 0.9)' }}
+      deepLink="/#experience"
       className="min-h-[200px] md:min-h-[280px]"
     >
       <div className="px-5 md:px-6 pt-3 pb-4 md:pb-5 flex-1 flex flex-col">
@@ -342,7 +388,7 @@ function ExperienceTile() {
               href={e.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="group flex items-baseline justify-between gap-3 py-1.5 border-b last:border-b-0"
+              className="relative z-10 group flex items-baseline justify-between gap-3 py-1.5 border-b last:border-b-0"
               style={{ borderColor: palette.hairline }}
             >
               <div className="flex items-baseline gap-2 min-w-0 flex-1">
@@ -405,6 +451,7 @@ function ProjectsTile() {
     <Tile
       label="Projects"
       accent={{ light: '#b45309', dark: 'rgba(252, 211, 77, 0.9)' }}
+      deepLink="/#projects"
       className="min-h-[180px] md:min-h-[210px]"
     >
       <div className="px-5 md:px-6 pt-3 pb-4 md:pb-5 flex-1 flex flex-col">
@@ -415,7 +462,7 @@ function ProjectsTile() {
               href={p.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="group flex items-center gap-3 py-1"
+              className="relative z-10 group flex items-center gap-3 py-1"
             >
               <div
                 className="w-9 h-9 rounded-lg overflow-hidden flex-shrink-0"
@@ -463,7 +510,7 @@ function ProjectsTile() {
           href="https://www.hatchingpoint.com/"
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-2 pt-2 inline-flex items-center gap-1 text-[11px] tracking-tight border-t hover:opacity-100 opacity-70 transition-opacity"
+          className="relative z-10 mt-2 pt-2 inline-flex items-center gap-1 text-[11px] tracking-tight border-t hover:opacity-100 opacity-70 transition-opacity"
           style={{ color: palette.mutedText, borderColor: palette.hairline }}
         >
           More on the App Store
@@ -520,29 +567,52 @@ function MarathonTile() {
 
   return (
     <Tile
-      label="NYC Marathon · Nov 2026"
+      label="2026 TCS NYC Marathon"
       accent={{ light: '#c2410c', dark: '#ffb84d' }}
+      deepLink="/#marathon"
       className="min-h-[180px] md:min-h-[210px]"
     >
       <div className="px-5 md:px-6 pt-3 pb-4 md:pb-5 flex-1 flex flex-col">
-        <div className="flex items-baseline gap-2 mb-1">
+        {/* Header row: TCS NYC Marathon official logo + days countdown.
+            White-bg chip preserves the official mark's contrast in both
+            light and dark themes. */}
+        <div className="flex items-center gap-3 mb-2">
           <div
-            className="text-[40px] md:text-[48px] font-semibold leading-none tracking-tight tabular-nums"
+            className="flex items-center justify-center rounded-lg flex-shrink-0 px-2 py-1.5"
             style={{
-              backgroundImage: palette.headlineGradient,
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
+              background: '#fff',
+              boxShadow: isLight
+                ? '0 1px 2px rgba(28,26,28,0.08), 0 0 0 1px rgba(0,0,0,0.04)'
+                : '0 1px 2px rgba(0,0,0,0.4), 0 0 0 1px rgba(0,0,0,0.2)',
             }}
           >
-            {days ?? '—'}
+            <Image
+              src="/images/tcs-marathon-logo.png"
+              alt="2026 TCS New York City Marathon"
+              width={92}
+              height={42}
+              className="h-9 md:h-10 w-auto object-contain"
+            />
           </div>
-          <div className="text-[15px] md:text-[16px] font-medium tracking-tight" style={{ color: palette.mutedText }}>
-            days out
+          <div className="flex-1 flex items-baseline gap-1.5 justify-end">
+            <div
+              className="text-[34px] md:text-[40px] font-semibold leading-none tracking-tight tabular-nums"
+              style={{
+                backgroundImage: palette.headlineGradient,
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}
+            >
+              {days ?? '—'}
+            </div>
+            <div className="text-[12px] md:text-[13px] font-medium tracking-tight" style={{ color: palette.mutedText }}>
+              days
+            </div>
           </div>
         </div>
-        <div className="text-[12px] tracking-tight" style={{ color: palette.bodyText }}>
-          Running for Team for Kids · NYRR youth programs
+        <div className="text-[11.5px] tracking-tight" style={{ color: palette.bodyText }}>
+          Running for Team for Kids · NYRR
         </div>
 
         <div className="mt-auto pt-3">
@@ -568,7 +638,7 @@ function MarathonTile() {
               href="https://donations.nyrr.org/donations/new?fundraiser=624830c3c37aaaa441f8"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[11px] font-semibold tracking-tight px-2.5 py-1 rounded-md hover:opacity-80 transition-opacity"
+              className="relative z-10 text-[11px] font-semibold tracking-tight px-2.5 py-1 rounded-md hover:opacity-80 transition-opacity"
               style={{
                 background: 'linear-gradient(180deg, #E8642C, #d05722)',
                 color: '#fff',
@@ -631,6 +701,7 @@ function ContactTile() {
   return (
     <Tile
       label="Contact"
+      deepLink="/#contact"
       className="min-h-[180px] md:min-h-[210px]"
     >
       <div className="px-5 md:px-6 pt-3 pb-4 md:pb-5 flex-1 flex flex-col">
@@ -641,7 +712,7 @@ function ContactTile() {
               href={c.href}
               target={c.href.startsWith('mailto:') ? undefined : '_blank'}
               rel={c.href.startsWith('mailto:') ? undefined : 'noopener noreferrer'}
-              className="flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl transition-all hover:scale-[1.02]"
+              className="relative z-10 flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl transition-all hover:scale-[1.02]"
               style={{
                 background: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)',
                 border: palette.cardBorder,

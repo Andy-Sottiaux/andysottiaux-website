@@ -51,7 +51,7 @@ export default function Marathon() {
 
   return (
     <>
-      <div className="mt-8 sm:mt-12 bg-[#E8642C] rounded-2xl overflow-hidden">
+      <div id="marathon" className="mt-8 sm:mt-12 bg-[#E8642C] rounded-2xl overflow-hidden scroll-mt-24">
         <div className="flex flex-col md:flex-row">
           {/* Left: Logo on white background */}
           <div className="bg-white flex items-center justify-center p-6 md:px-10 md:py-8 md:w-56 flex-shrink-0">
