@@ -20,23 +20,28 @@ export default function Hero() {
         <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold mb-4 sm:mb-6 text-white drop-shadow-lg">
           Andy Sottiaux
         </h1>
-        <p className="text-lg sm:text-xl md:text-2xl text-white/90 mb-6 sm:mb-8 drop-shadow-md">
-          Aerospace Hardware | Production Software | Hardware to Code
+        <p className="text-lg sm:text-xl md:text-2xl text-white/90 mb-2 drop-shadow-md">
+          Aerospace Hardware · Production Software
+        </p>
+        {/* Connective tagline — captures the hardware↔software bridge identity. */}
+        <p className="italic text-sm sm:text-base text-white/70 mb-6 sm:mb-8 drop-shadow-md tracking-wide">
+          Hardware up to its API. Code down to the silicon.
         </p>
         <p className="text-base sm:text-lg text-white/80 max-w-2xl mx-auto mb-8 sm:mb-12 drop-shadow-md px-2">
           Engineer & Founder building UAV systems at AVX Aircraft and shipping production apps at HatchingPoint.
           Bridging aerospace hardware, embedded systems, and full-stack software with a practical, fail fast mentality.
         </p>
         <div className="flex gap-3 sm:gap-4 justify-center flex-wrap">
+          {/* Direct mailto — no scroll-to-footer round trip. */}
           <a
-            href="#contact"
-            className="px-6 sm:px-8 py-3 bg-white text-gray-900 rounded-lg hover:bg-gray-100 transition-all font-medium shadow-lg text-sm sm:text-base"
+            href="mailto:andrewsottiaux@gmail.com"
+            className="px-6 sm:px-8 py-3 bg-white text-gray-900 rounded-2xl hover:bg-gray-100 transition-all font-medium shadow-lg text-sm sm:text-base"
           >
             Get in Touch
           </a>
           <a
             href="#projects"
-            className="px-6 sm:px-8 py-3 border-2 border-white text-white rounded-lg hover:bg-white hover:text-gray-900 transition-all font-medium shadow-lg backdrop-blur-sm text-sm sm:text-base"
+            className="px-6 sm:px-8 py-3 border-2 border-white text-white rounded-2xl hover:bg-white hover:text-gray-900 transition-all font-medium shadow-lg backdrop-blur-sm text-sm sm:text-base"
           >
             View Projects
           </a>

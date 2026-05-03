@@ -1,4 +1,22 @@
-const experiences: { title: string; company: string; companyUrl?: string; period: string; description: string; achievements: string[]; logo?: string; focus?: string[] }[] = [
+import Image from 'next/image'
+import SectionHeader from './SectionHeader'
+import { slug } from '@/lib/slug'
+
+// Skills are folded into Experience entries — shown in context of "where
+// I used them" rather than as a free-floating chip cloud. The standalone
+// Skills section was 6 categories × ~8 chips ≈ 48 tags; visitors read
+// roughly 10 of those. In-context skills are more credible and trim the
+// page rhythm down by one section.
+const experiences: {
+  title: string
+  company: string
+  companyUrl?: string
+  period: string
+  description: string
+  achievements: string[]
+  logo?: string
+  skills?: string[]
+}[] = [
   {
     title: 'Senior Engineer-Program Manager I',
     company: 'AVX AIRCRAFT COMPANY',
@@ -6,14 +24,14 @@ const experiences: { title: string; company: string; companyUrl?: string; period
     period: 'Sep 2023 - Present',
     description: 'Leading UAV and autonomy development efforts, coordinating mechanical, electrical, and software integration.',
     achievements: [
-      'Designed, manufactured, and tested complete rotor systems\u2014including blades, hubs, grips, and fixtures for subscale and coaxial UAV platforms',
+      'Designed, manufactured, and tested complete rotor systems—including blades, hubs, grips, and fixtures for subscale and coaxial UAV platforms',
       'Built and managed the CubePilot/CubeNode flight-control architecture, integrating sensors, actuators, ESCs, and communication networks',
       'Developed full-stack test stand software for data acquisition, controls, and real-time telemetry to validate rotor and subsystem performance',
       'Implemented ROS2-based autonomy scaffolding to support navigation, perception, and health-monitoring prototypes across multiple platforms',
       'Drove cross-functional execution - design, fabrication, integration, troubleshooting, and test, maintaining program schedule, risks, and deliverables',
     ],
     logo: '/images/avx.png',
-    focus: ['UAV Systems', 'Autonomy', 'Rotor Design'],
+    skills: ['UAV Systems', 'ROS2', 'CubePilot', 'Rotor Design', 'Autonomy', 'Computer Vision', 'Real-time Telemetry', 'Program Management'],
   },
   {
     title: 'Founder / Engineer',
@@ -27,6 +45,7 @@ const experiences: { title: string; company: string; companyUrl?: string; period
       'Architected back-end systems with MongoDB and Supabase, ensuring robust data modeling and real-time data flows',
     ],
     logo: '/images/hatchingpoint-logo.jpeg',
+    skills: ['Swift', 'SwiftUI', 'iOS', 'NFC', 'StoreKit', 'React', 'TypeScript', 'MongoDB', 'Supabase', 'Node.js'],
   },
   {
     title: 'Rotor Systems Design Engineer',
@@ -41,7 +60,7 @@ const experiences: { title: string; company: string; companyUrl?: string; period
       'Pioneered advancements in helicopter systems using CAD, GD&T, and 3D printing techniques, leading supplier meetings to define project specifications',
     ],
     logo: '/images/bell.svg',
-    focus: ['Rotorcraft Engineering', 'Manufacturing', 'Design'],
+    skills: ['SOLIDWORKS', 'CAD', 'GD&T', 'FEA', '3D Printing', 'Rotorcraft Engineering', 'Manufacturing'],
   },
   {
     title: 'Project Manager',
@@ -55,6 +74,7 @@ const experiences: { title: string; company: string; companyUrl?: string; period
       'Investigated concerns, implemented corrective action and communicated with customers to maximize satisfaction',
     ],
     logo: '/images/texasairsystems-logo.jpeg',
+    skills: ['Project Management', 'HVAC Systems', 'Cross-functional Teams', 'Customer Relations'],
   },
 ]
 
@@ -62,28 +82,30 @@ export default function Experience() {
   return (
     <section id="experience" className="py-16 sm:py-24 md:py-32 px-4 sm:px-6 bg-white dark:bg-gray-900">
       <div className="max-w-6xl mx-auto">
-        {/* Section Header */}
-        <div className="text-center mb-10 sm:mb-16">
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground mb-4">Experience</h2>
-          <div className="w-20 h-1 bg-foreground mx-auto"></div>
-        </div>
+        <SectionHeader
+          eyebrow="Section 03 · Experience"
+          title="Experience"
+          description="Aerospace, robotics, and product engineering — across rotor systems, UAV autonomy, and mobile/web apps."
+        />
 
         {/* Experience Timeline */}
         <div className="space-y-6 sm:space-y-8">
-          {experiences.map((exp, index) => (
+          {experiences.map((exp) => (
             <div
-              key={index}
-              className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-5 sm:p-6 md:p-8 hover:shadow-xl dark:hover:shadow-gray-900/50 transition-all duration-300 hover:border-gray-300 dark:hover:border-gray-600"
+              key={exp.company}
+              id={`exp-${slug(exp.company)}`}
+              className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-5 sm:p-6 md:p-8 hover:shadow-xl dark:hover:shadow-gray-900/50 transition-all duration-300 hover:border-gray-300 dark:hover:border-gray-600 scroll-mt-24"
             >
               <div className="flex flex-col md:flex-row md:items-start md:justify-between mb-4">
                 <div className="flex items-start gap-4 flex-1">
                   {exp.logo && (
-                    <div className="hidden sm:flex items-center justify-center bg-gray-50 dark:bg-gray-700 rounded-xl p-3 h-16 w-24 flex-shrink-0">
-                      <img
+                    <div className="hidden sm:flex items-center justify-center bg-gray-50 dark:bg-gray-700 rounded-2xl p-3 h-16 w-24 flex-shrink-0">
+                      <Image
                         src={exp.logo}
                         alt={`${exp.company} logo`}
+                        width={96}
+                        height={64}
                         className="max-h-full max-w-full object-contain dark:brightness-110"
-                        loading="lazy"
                       />
                     </div>
                   )}
@@ -125,11 +147,11 @@ export default function Experience() {
                   </li>
                 ))}
               </ul>
-              {exp.focus && (
+              {exp.skills && exp.skills.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                  {exp.focus.map((item, i) => (
+                  {exp.skills.map((item) => (
                     <span
-                      key={i}
+                      key={item}
                       className="px-2 sm:px-3 py-1 bg-foreground/5 text-foreground text-xs sm:text-sm rounded-lg font-medium"
                     >
                       {item}

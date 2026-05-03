@@ -3,6 +3,13 @@
 import { useState, useEffect } from 'react'
 import ThemeToggle from './ThemeToggle'
 
+type NavLink = {
+  href: string
+  label: string
+  /** Promote this item with a small green pulsing dot, signalling "live now". */
+  live?: boolean
+}
+
 export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -15,11 +22,13 @@ export default function Header() {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  const navLinks = [
+  // Skills section was folded into Experience entries (skill chips render
+  // in-context per job), so it's removed from the nav. Six items now:
+  // About · ● Now · Experience · Projects · Education · Contact.
+  const navLinks: NavLink[] = [
     { href: '#about', label: 'About' },
-    { href: '#now', label: 'Now' },
+    { href: '#now', label: 'Now', live: true },
     { href: '#experience', label: 'Experience' },
-    { href: '#skills', label: 'Skills' },
     { href: '#projects', label: 'Projects' },
     { href: '#education', label: 'Education' },
     { href: '#contact', label: 'Contact' },
@@ -52,10 +61,11 @@ export default function Header() {
               <a
                 key={link.href}
                 href={link.href}
-                className={`text-sm font-medium hover:opacity-70 transition-all ${
+                className={`inline-flex items-center gap-1.5 text-sm font-medium hover:opacity-70 transition-all ${
                   isScrolled ? 'text-foreground' : 'text-white drop-shadow-md'
                 }`}
               >
+                {link.live && <LiveDot />}
                 {link.label}
               </a>
             ))}
@@ -108,10 +118,11 @@ export default function Header() {
                   key={link.href}
                   href={link.href}
                   onClick={handleNavClick}
-                  className={`text-base font-medium hover:opacity-70 transition-all ${
+                  className={`inline-flex items-center gap-2 text-base font-medium hover:opacity-70 transition-all ${
                     isScrolled ? 'text-foreground' : 'text-white drop-shadow-md'
                   }`}
                 >
+                  {link.live && <LiveDot />}
                   {link.label}
                 </a>
               ))}
@@ -120,5 +131,31 @@ export default function Header() {
         )}
       </nav>
     </header>
+  )
+}
+
+/**
+ * LiveDot — small pulsing green dot, paired with the "Now" nav link to
+ * communicate "this section is currently active / live data inside."
+ * Mirrors the eyebrow indicator used on the CurrentProject section.
+ */
+function LiveDot() {
+  return (
+    <span
+      className="relative inline-flex h-2 w-2 shrink-0"
+      aria-hidden="true"
+    >
+      <span
+        className="absolute inline-flex h-full w-full rounded-full opacity-60 animate-ping"
+        style={{ background: '#30d158' }}
+      />
+      <span
+        className="relative inline-flex h-2 w-2 rounded-full"
+        style={{
+          background: '#30d158',
+          boxShadow: '0 0 6px rgba(48,209,88,0.8)',
+        }}
+      />
+    </span>
   )
 }

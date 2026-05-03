@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useEffect, useState } from 'react'
 
 const FALLBACK_RAISED = 1806
@@ -54,10 +55,12 @@ export default function Marathon() {
         <div className="flex flex-col md:flex-row">
           {/* Left: Logo on white background */}
           <div className="bg-white flex items-center justify-center p-6 md:px-10 md:py-8 md:w-56 flex-shrink-0">
-            <img
+            <Image
               src="/images/tcs-marathon-logo.png"
               alt="2026 TCS New York City Marathon"
-              className="h-24 md:h-32 object-contain"
+              width={180}
+              height={128}
+              className="h-24 md:h-32 w-auto object-contain"
             />
           </div>
 
@@ -145,9 +148,11 @@ export default function Marathon() {
           >
             <p className="text-gray-900 dark:text-gray-100 font-bold text-lg mb-1">Scan to Donate</p>
             <p className="text-gray-500 dark:text-gray-400 text-sm mb-4">Team For Kids</p>
-            <img
+            <Image
               src="/images/nyrr-qr.png"
               alt="Scan to donate to Team For Kids"
+              width={192}
+              height={192}
               className="w-48 h-48 mx-auto rounded-lg"
             />
             <button

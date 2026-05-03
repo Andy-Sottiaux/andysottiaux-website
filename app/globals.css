@@ -5,6 +5,16 @@
 :root {
   --background: #FAFAFA;
   --foreground: #1C1A1C;
+
+  /* Single corner-radius scale. Use these via `rounded-[var(--radius-*)]`
+     where Tailwind's defaults don't match exactly. Most cards land on
+     `rounded-2xl` (16px ≈ --radius-lg). */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-2xl: 32px;
+
   color-scheme: light;
 }
 

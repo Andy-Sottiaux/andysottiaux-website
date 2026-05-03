@@ -14,9 +14,13 @@
  * go2rtc speaks WHEP: POST the SDP offer to /api/webrtc?src=<stream>, get
  * the SDP answer back in the body. No extra JS deps; just the browser's
  * native RTCPeerConnection. We auto-retry every 30 s on failure.
+ *
+ * Theme: the live video itself has no palette, but the connecting shimmer
+ * and offline placeholder both adapt. The red LIVE badge is constant.
  */
 
 import { useEffect, useRef, useState } from 'react'
+import { useCayleyTheme } from './cayleyTheme'
 
 // Default points at the Funnel hostname; override with NEXT_PUBLIC_V3_FEED_URL
 // (e.g. http://localhost:1984 for local dev against a port-forwarded board).
@@ -26,6 +30,9 @@ const STREAM_NAME = 'cayley'
 type FeedState = 'idle' | 'connecting' | 'live' | 'offline'
 
 export default function CayleyCameraFeed() {
+  const palette = useCayleyTheme()
+  const isLight = palette.mode === 'light'
+
   const videoRef = useRef<HTMLVideoElement>(null)
   const pcRef = useRef<RTCPeerConnection | null>(null)
   const retryRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -159,7 +166,7 @@ export default function CayleyCameraFeed() {
   }, [])
 
   return (
-    <div className="relative w-full h-full overflow-hidden rounded-2xl">
+    <div className="relative w-full h-full overflow-hidden rounded-[16px]">
       {/* Video — always mounted, even before live, so srcObject swap is instant */}
       <video
         ref={videoRef}
@@ -177,23 +184,25 @@ export default function CayleyCameraFeed() {
 
       {/* Connecting shimmer */}
       {(state === 'connecting' || state === 'idle') && (
-        <FeedShimmer label="connecting…" />
+        <FeedShimmer label="connecting…" isLight={isLight} />
       )}
 
       {/* Offline placeholder */}
       {state === 'offline' && (
-        <FeedOffline countdown={retryCountdown} />
+        <FeedOffline countdown={retryCountdown} isLight={isLight} />
       )}
 
       {/* Live indicator */}
       {state === 'live' && (
-        <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-widest"
-             style={{
-               background: 'rgba(0,0,0,0.6)',
-               color: '#fff',
-               backdropFilter: 'blur(8px)',
-               WebkitBackdropFilter: 'blur(8px)',
-             }}>
+        <div
+          className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-widest"
+          style={{
+            background: 'rgba(0,0,0,0.6)',
+            color: '#fff',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+          }}
+        >
           <span className="w-1.5 h-1.5 rounded-full" style={{
             background: '#ff453a',
             boxShadow: '0 0 6px #ff453a',
@@ -221,40 +230,55 @@ export default function CayleyCameraFeed() {
   )
 }
 
-function FeedShimmer({ label }: { label: string }) {
+function FeedShimmer({ label, isLight }: { label: string; isLight: boolean }) {
   return (
     <div
       className="absolute inset-0 flex items-center justify-center"
       style={{
-        background:
-          'linear-gradient(105deg, #0a0a0c 25%, #16161a 50%, #0a0a0c 75%)',
+        background: isLight
+          ? 'linear-gradient(105deg, #ececef 25%, #f6f6f8 50%, #ececef 75%)'
+          : 'linear-gradient(105deg, #0a0a0c 25%, #16161a 50%, #0a0a0c 75%)',
         backgroundSize: '200% 100%',
         animation: 'cayShimmer 2.4s linear infinite',
       }}
     >
       <div className="flex flex-col items-center gap-3">
-        <CameraGlyph />
-        <div className="text-[11px] uppercase tracking-[0.2em] text-white/50 font-medium">{label}</div>
+        <CameraGlyph isLight={isLight} />
+        <div
+          className="text-[11px] uppercase tracking-[0.2em] font-medium"
+          style={{ color: isLight ? 'rgba(0,0,0,0.45)' : 'rgba(255,255,255,0.5)' }}
+        >
+          {label}
+        </div>
       </div>
     </div>
   )
 }
 
-function FeedOffline({ countdown }: { countdown: number }) {
+function FeedOffline({ countdown, isLight }: { countdown: number; isLight: boolean }) {
   return (
     <div
       className="absolute inset-0 flex items-center justify-center"
       style={{
-        background:
-          'radial-gradient(ellipse 60% 50% at 50% 50%, rgba(10,132,255,0.06), transparent 70%), #08080a',
+        background: isLight
+          ? 'radial-gradient(ellipse 60% 50% at 50% 50%, rgba(10,132,255,0.05), transparent 70%), #f0f0f3'
+          : 'radial-gradient(ellipse 60% 50% at 50% 50%, rgba(10,132,255,0.06), transparent 70%), #08080a',
       }}
     >
       <div className="flex flex-col items-center gap-3 px-6 text-center">
         <div style={{ animation: 'cayPlaceholderPulse 2.8s cubic-bezier(0.4,0,0.6,1) infinite' }}>
-          <CameraGlyph dim />
+          <CameraGlyph dim isLight={isLight} />
         </div>
-        <div className="text-[13px] font-medium text-white/80 tracking-tight">Camera offline</div>
-        <div className="text-[11px] text-white/40 tracking-wide">
+        <div
+          className="text-[13px] font-medium tracking-tight"
+          style={{ color: isLight ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.8)' }}
+        >
+          Camera offline
+        </div>
+        <div
+          className="text-[11px] tracking-wide"
+          style={{ color: isLight ? 'rgba(0,0,0,0.4)' : 'rgba(255,255,255,0.4)' }}
+        >
           {countdown > 0 ? `Retrying in ${countdown}s` : 'Reconnecting…'}
         </div>
       </div>
@@ -262,8 +286,11 @@ function FeedOffline({ countdown }: { countdown: number }) {
   )
 }
 
-function CameraGlyph({ dim = false }: { dim?: boolean }) {
+function CameraGlyph({ dim = false, isLight = false }: { dim?: boolean; isLight?: boolean }) {
   // A simple, dignified camera silhouette — better than a spinner.
+  const color = isLight
+    ? (dim ? 'rgba(0,0,0,0.32)' : 'rgba(0,0,0,0.5)')
+    : (dim ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.55)')
   return (
     <svg
       width="56"
@@ -274,7 +301,7 @@ function CameraGlyph({ dim = false }: { dim?: boolean }) {
       strokeWidth="1.2"
       strokeLinecap="round"
       strokeLinejoin="round"
-      style={{ color: dim ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.55)' }}
+      style={{ color }}
     >
       <path d="M3 7h3l2-2h8l2 2h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z" />
       <circle cx="12" cy="13" r="4" />

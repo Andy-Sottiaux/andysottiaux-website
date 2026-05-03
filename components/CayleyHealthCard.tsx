@@ -9,9 +9,13 @@
  *
  * Health JSON shape (varies slightly by version; we read both old/new keys):
  *   { ok, uptime_s, services: [{ name, status, ... }], services_down, ... }
+ *
+ * Theme: pulls chrome / typography colors from useCayleyTheme(); the
+ * online/offline accent (emerald/red) stays constant in both themes.
  */
 
 import { useEffect, useRef, useState } from 'react'
+import { useCayleyTheme } from './cayleyTheme'
 
 const HEALTH_URL = process.env.NEXT_PUBLIC_V3_HEALTH_URL || 'https://cayley-v3-cam-1.tailc7d6b6.ts.net/api/health'
 
@@ -65,6 +69,9 @@ function fmtAge(ms: number): string {
 }
 
 export default function CayleyHealthCard() {
+  const palette = useCayleyTheme()
+  const isLight = palette.mode === 'light'
+
   const [digest, setDigest] = useState<HealthDigest | null>(null)
   const [, forceTick] = useState(0) // re-render every 30s for "X min ago"
   const lastOkRef = useRef<HealthDigest | null>(null)
@@ -130,32 +137,45 @@ export default function CayleyHealthCard() {
   const online = digest != null && digest.ok
   const lastOk = lastOkRef.current
 
+  // Headline gradient swaps on offline so "Offline" reads softer than the
+  // primary headline color.
+  const onlineHeadline = palette.headlineGradient
+  const offlineHeadline = isLight
+    ? 'linear-gradient(180deg, #b2261d 0%, #6e6e73 100%)'
+    : 'linear-gradient(180deg, #ffb0aa 0%, #6e6e73 100%)'
+
+  // Secondary value color (Uptime / Services / RTT etc).
+  const valueColor = isLight ? '#1c1a1c' : '#fff'
+
   return (
     <div
-      className="relative rounded-3xl p-7 md:p-8 h-full flex flex-col overflow-hidden"
+      className="relative rounded-2xl p-7 md:p-8 h-full flex flex-col overflow-hidden"
       style={{
-        background:
-          'linear-gradient(180deg, rgba(20,20,24,0.85) 0%, rgba(10,10,12,0.85) 100%)',
-        border: '1px solid rgba(255,255,255,0.08)',
+        background: palette.cardBackground,
+        border: palette.cardBorder,
         backdropFilter: 'blur(24px)',
         WebkitBackdropFilter: 'blur(24px)',
-        boxShadow: '0 30px 80px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)',
+        boxShadow: palette.cardShadow,
       }}
       role="region"
       aria-label="Board health"
     >
-      {/* Subtle ambient glow tinted by state */}
+      {/* Subtle ambient glow tinted by state — slightly more present in
+          light mode (rgba(48,209,88,0.10) vs 0.18) so it still reads. */}
       <div
         className="pointer-events-none absolute -top-20 -right-20 w-56 h-56 rounded-full"
         style={{
           background: online
-            ? 'radial-gradient(circle, rgba(48,209,88,0.18), transparent 70%)'
-            : 'radial-gradient(circle, rgba(255,69,58,0.12), transparent 70%)',
+            ? `radial-gradient(circle, rgba(48,209,88,${isLight ? 0.12 : 0.18}), transparent 70%)`
+            : `radial-gradient(circle, rgba(255,69,58,${isLight ? 0.08 : 0.12}), transparent 70%)`,
           transition: 'background 0.8s ease',
         }}
       />
 
-      <div className="text-emerald-400/90 text-[10.5px] font-semibold uppercase tracking-[0.22em] mb-5">
+      <div
+        className="text-[10.5px] font-semibold uppercase tracking-[0.22em] mb-5"
+        style={{ color: isLight ? '#0f9d4f' : 'rgba(74, 222, 128, 0.9)' }}
+      >
         Health
       </div>
 
@@ -180,9 +200,7 @@ export default function CayleyHealthCard() {
         <div
           className="text-[34px] sm:text-[40px] font-semibold leading-none tracking-tight"
           style={{
-            background: online
-              ? 'linear-gradient(180deg, #fff 0%, #b0b0b8 100%)'
-              : 'linear-gradient(180deg, #ffb0aa 0%, #6e6e73 100%)',
+            background: online ? onlineHeadline : offlineHeadline,
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
@@ -194,28 +212,60 @@ export default function CayleyHealthCard() {
 
       <dl className="grid grid-cols-2 gap-x-6 gap-y-4 mt-auto">
         <div>
-          <dt className="text-[10px] uppercase tracking-[0.18em] text-white/40 font-medium">Uptime</dt>
-          <dd className="text-[20px] sm:text-[22px] font-semibold tracking-tight tabular-nums text-white mt-1">
+          <dt
+            className="text-[10px] uppercase tracking-[0.18em] font-medium"
+            style={{ color: palette.mutedText }}
+          >
+            Uptime
+          </dt>
+          <dd
+            className="text-[20px] sm:text-[22px] font-semibold tracking-tight tabular-nums mt-1"
+            style={{ color: valueColor }}
+          >
             {digest ? fmtUptime(digest.uptimeSec) : (lastOk ? fmtUptime(lastOk.uptimeSec) : '—')}
           </dd>
         </div>
         <div>
-          <dt className="text-[10px] uppercase tracking-[0.18em] text-white/40 font-medium">Services</dt>
-          <dd className="text-[20px] sm:text-[22px] font-semibold tracking-tight tabular-nums text-white mt-1">
+          <dt
+            className="text-[10px] uppercase tracking-[0.18em] font-medium"
+            style={{ color: palette.mutedText }}
+          >
+            Services
+          </dt>
+          <dd
+            className="text-[20px] sm:text-[22px] font-semibold tracking-tight tabular-nums mt-1"
+            style={{ color: valueColor }}
+          >
             {digest
               ? `${digest.servicesUp}/${digest.servicesTotal}`
               : (lastOk ? `${lastOk.servicesUp}/${lastOk.servicesTotal}` : '—')}
           </dd>
         </div>
         <div>
-          <dt className="text-[10px] uppercase tracking-[0.18em] text-white/40 font-medium">Round-trip</dt>
-          <dd className="text-[20px] sm:text-[22px] font-semibold tracking-tight tabular-nums text-white mt-1">
+          <dt
+            className="text-[10px] uppercase tracking-[0.18em] font-medium"
+            style={{ color: palette.mutedText }}
+          >
+            Round-trip
+          </dt>
+          <dd
+            className="text-[20px] sm:text-[22px] font-semibold tracking-tight tabular-nums mt-1"
+            style={{ color: valueColor }}
+          >
             {digest ? `${digest.rttMs} ms` : (online ? '—' : '—')}
           </dd>
         </div>
         <div>
-          <dt className="text-[10px] uppercase tracking-[0.18em] text-white/40 font-medium">Last seen</dt>
-          <dd className="text-[20px] sm:text-[22px] font-semibold tracking-tight text-white mt-1">
+          <dt
+            className="text-[10px] uppercase tracking-[0.18em] font-medium"
+            style={{ color: palette.mutedText }}
+          >
+            Last seen
+          </dt>
+          <dd
+            className="text-[20px] sm:text-[22px] font-semibold tracking-tight mt-1"
+            style={{ color: valueColor }}
+          >
             {digest ? 'just now' : (lastOk ? fmtAge(Date.now() - lastOk.fetchedAt) : '—')}
           </dd>
         </div>

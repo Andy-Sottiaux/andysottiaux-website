@@ -1,3 +1,5 @@
+import Image from 'next/image'
+
 export default function Footer() {
   return (
     <footer id="contact" className="py-12 sm:py-16 px-4 sm:px-6 bg-[#1C1A1C] dark:bg-gray-800 text-white">
@@ -63,11 +65,13 @@ export default function Footer() {
             <p className="text-xs sm:text-sm text-gray-300 dark:text-gray-400">
               © {new Date().getFullYear()} Andy Sottiaux. All rights reserved.
             </p>
-            <img
+            <Image
               src="/images/chinchilla-white.png"
               alt=""
+              aria-hidden="true"
+              width={40}
+              height={40}
               className="w-8 h-8 sm:w-10 sm:h-10 opacity-80 hover:opacity-100 hover:scale-110 transition-all duration-300"
-              title="🐭"
             />
           </div>
           <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 sm:mt-2">

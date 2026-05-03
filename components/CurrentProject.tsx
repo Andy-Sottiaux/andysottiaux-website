@@ -7,40 +7,60 @@
  * matter, is it alive right now". Three live cards (Solar · Camera ·
  * Health) drive the message. The full product tour lives at /cayley.
  *
- * Visual language: dark, cinematic, Apple-product-page. Generous vertical
- * rhythm. Big gradient typography. Soft cyan/amber accents matched to
- * telemetry. No marketing prose; the live data does the talking.
+ * Visual language: cinematic, Apple-product-page. Generous vertical
+ * rhythm. Big gradient typography. Soft cyan/amber/emerald accents matched
+ * to telemetry. No marketing prose; the live data does the talking.
+ *
+ * Theme: dark mode is the original navy → near-black gradient with
+ * white-glass cards. Light mode is a calm bone-on-cream gradient with
+ * white-glass cards on warm/cool ambient glows. Live-data accent colors
+ * (emerald/cyan/amber) stay constant across themes.
  */
 
 import { useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import CayleyHealthCard from './CayleyHealthCard'
 import CayleySolarCard from './CayleySolarCard'
+import { CayleyThemeProvider, useCayleyTheme } from './cayleyTheme'
+import { useReducedMotion } from '@/lib/useReducedMotion'
 
 // Dynamic import — WebRTC + RTCPeerConnection are browser-only and the
 // component pulls roughly nothing on the server, so SSR-skip it.
 const CayleyCameraFeed = dynamic(() => import('./CayleyCameraFeed'), {
   ssr: false,
-  loading: () => (
+  loading: () => <CameraLoadingShimmer />,
+})
+
+function CameraLoadingShimmer() {
+  // Mode-aware skeleton so the placeholder doesn't fight the theme around it.
+  const { mode } = useCayleyTheme()
+  return (
     <div
       className="absolute inset-0 rounded-2xl"
       style={{
         background:
-          'linear-gradient(105deg, #0a0a0c 25%, #16161a 50%, #0a0a0c 75%)',
+          mode === 'dark'
+            ? 'linear-gradient(105deg, #0a0a0c 25%, #16161a 50%, #0a0a0c 75%)'
+            : 'linear-gradient(105deg, #ececef 25%, #f6f6f8 50%, #ececef 75%)',
         backgroundSize: '200% 100%',
         animation: 'cayShimmer 2.4s linear infinite',
       }}
     />
-  ),
-})
+  )
+}
 
 // IntersectionObserver-based scroll reveal. Mirrors CayleyPlatform.tsx so
 // the home section feels like a sibling of the deep tour without copying
-// its weight.
+// its weight. Reduced-motion users get the final state immediately.
 function useReveal() {
   const ref = useRef<HTMLDivElement>(null)
   const [shown, setShown] = useState(false)
+  const reduced = useReducedMotion()
   useEffect(() => {
+    if (reduced) {
+      setShown(true)
+      return
+    }
     const el = ref.current
     if (!el) return
     const io = new IntersectionObserver(
@@ -51,12 +71,12 @@ function useReveal() {
     )
     io.observe(el)
     return () => io.disconnect()
-  }, [])
-  return { ref, shown }
+  }, [reduced])
+  return { ref, shown, reduced }
 }
 
 function Reveal({ children, delay = 0, className = '' }: { children: React.ReactNode; delay?: number; className?: string }) {
-  const { ref, shown } = useReveal()
+  const { ref, shown, reduced } = useReveal()
   return (
     <div
       ref={ref}
@@ -64,8 +84,10 @@ function Reveal({ children, delay = 0, className = '' }: { children: React.React
       style={{
         opacity: shown ? 1 : 0,
         transform: shown ? 'translate3d(0,0,0)' : 'translate3d(0, 28px, 0)',
-        transition: 'opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1), transform 0.9s cubic-bezier(0.16, 1, 0.3, 1)',
-        transitionDelay: `${delay}s`,
+        transition: reduced
+          ? 'none'
+          : 'opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1), transform 0.9s cubic-bezier(0.16, 1, 0.3, 1)',
+        transitionDelay: reduced ? '0s' : `${delay}s`,
       }}
     >
       {children}
@@ -75,17 +97,23 @@ function Reveal({ children, delay = 0, className = '' }: { children: React.React
 
 export default function CurrentProject() {
   return (
+    <CayleyThemeProvider>
+      <CurrentProjectInner />
+    </CayleyThemeProvider>
+  )
+}
+
+function CurrentProjectInner() {
+  const palette = useCayleyTheme()
+  const isLight = palette.mode === 'light'
+
+  return (
     <section
       id="now"
       className="relative overflow-hidden"
       style={{
-        // Full-bleed gradient — deep navy fading to near-black, with a
-        // single ambient accent up top to draw the eye to the title.
-        background:
-          'radial-gradient(ellipse 80% 50% at 50% 0%, rgba(48,209,88,0.06), transparent 60%),' +
-          'radial-gradient(ellipse 80% 60% at 50% 100%, rgba(10,132,255,0.05), transparent 60%),' +
-          'linear-gradient(180deg, #06070a 0%, #050608 60%, #07080b 100%)',
-        color: '#fff',
+        background: palette.sectionBackground,
+        color: isLight ? '#1c1a1c' : '#fff',
         fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
       }}
     >
@@ -93,7 +121,10 @@ export default function CurrentProject() {
 
         {/* Eyebrow + title */}
         <Reveal>
-          <div className="flex items-center gap-2.5 text-emerald-400 text-[11px] font-semibold uppercase tracking-[0.22em] mb-6">
+          <div
+            className="flex items-center gap-2.5 text-[11px] font-semibold uppercase tracking-[0.22em] mb-6"
+            style={{ color: isLight ? '#0f9d4f' : 'rgb(74 222 128 / 0.9)' /* emerald-400/90 */ }}
+          >
             <span
               className="w-1.5 h-1.5 rounded-full"
               style={{
@@ -112,7 +143,7 @@ export default function CurrentProject() {
             className="font-semibold leading-[1.02] tracking-tight max-w-4xl"
             style={{
               fontSize: 'clamp(40px, 7vw, 88px)',
-              background: 'linear-gradient(180deg, #fff 0%, #b0b0b8 100%)',
+              background: palette.headlineGradient,
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               backgroundClip: 'text',
@@ -123,7 +154,10 @@ export default function CurrentProject() {
         </Reveal>
 
         <Reveal delay={0.1}>
-          <p className="text-[17px] sm:text-[19px] text-white/55 mt-6 max-w-2xl leading-snug tracking-tight">
+          <p
+            className="text-[17px] sm:text-[19px] mt-6 max-w-2xl leading-snug tracking-tight"
+            style={{ color: palette.bodyText }}
+          >
             A solar-powered Linux board running a 5&nbsp;MP camera, an on-chip neural engine,
             and a public API. Built end-to-end. Live, right now.
           </p>
@@ -155,7 +189,10 @@ export default function CurrentProject() {
         {/* Topology line — minimal, elegant. Only shown on sm+ so the
             mobile layout stays tight. */}
         <Reveal delay={0.25}>
-          <div className="hidden sm:flex items-center justify-center gap-3 mt-10 text-[12px] text-white/35 font-medium tracking-wide">
+          <div
+            className="hidden sm:flex items-center justify-center gap-3 mt-10 text-[12px] font-medium tracking-wide"
+            style={{ color: palette.fadedText }}
+          >
             <TopologyDot label="board" />
             <TopologyLine />
             <TopologyDot label="tailnet" />
@@ -171,9 +208,11 @@ export default function CurrentProject() {
               href="/cayley"
               className="group inline-flex items-center gap-2 px-6 py-3.5 rounded-full text-[14px] font-semibold transition-all"
               style={{
-                background: 'rgba(255,255,255,0.95)',
-                color: '#000',
-                boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+                background: isLight ? '#1c1a1c' : 'rgba(255,255,255,0.95)',
+                color: isLight ? '#fff' : '#000',
+                boxShadow: isLight
+                  ? '0 8px 24px rgba(28,26,28,0.18)'
+                  : '0 8px 24px rgba(0,0,0,0.25)',
               }}
             >
               Read the full story
@@ -191,10 +230,11 @@ export default function CurrentProject() {
               href="https://github.com/Andy-Sottiaux/SolarCamera"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-5 py-3.5 rounded-full text-[14px] font-medium transition-all text-white/80 hover:text-white"
+              className="inline-flex items-center gap-2 px-5 py-3.5 rounded-full text-[14px] font-medium transition-all"
               style={{
-                background: 'rgba(255,255,255,0.05)',
-                border: '1px solid rgba(255,255,255,0.12)',
+                background: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)',
+                border: isLight ? '1px solid rgba(0,0,0,0.1)' : '1px solid rgba(255,255,255,0.12)',
+                color: isLight ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.8)',
               }}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -220,21 +260,26 @@ function CameraCardShell() {
   // Card chrome around the camera component itself. Keeps the visual
   // weight matched to the side cards while letting the video bleed to
   // the rounded edge.
+  const palette = useCayleyTheme()
+  const isLight = palette.mode === 'light'
+
   return (
     <div
-      className="relative rounded-3xl h-full flex flex-col overflow-hidden"
+      className="relative rounded-2xl h-full flex flex-col overflow-hidden"
       style={{
-        background:
-          'linear-gradient(180deg, rgba(20,20,24,0.85) 0%, rgba(10,10,12,0.85) 100%)',
-        border: '1px solid rgba(255,255,255,0.08)',
+        background: palette.cardBackground,
+        border: palette.cardBorder,
         backdropFilter: 'blur(24px)',
         WebkitBackdropFilter: 'blur(24px)',
-        boxShadow: '0 30px 80px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)',
+        boxShadow: palette.cardShadow,
       }}
     >
       {/* Header strip */}
       <div className="px-7 md:px-8 pt-7 md:pt-8 pb-5">
-        <div className="text-cyan-300/90 text-[10.5px] font-semibold uppercase tracking-[0.22em]">
+        <div
+          className="text-[10.5px] font-semibold uppercase tracking-[0.22em]"
+          style={{ color: isLight ? '#0a8aa8' : 'rgba(103, 232, 249, 0.9)' /* cyan-300/90 */ }}
+        >
           Camera
         </div>
       </div>
@@ -242,11 +287,13 @@ function CameraCardShell() {
       {/* Video — 16:9, fills width */}
       <div className="relative px-3 sm:px-4">
         <div
-          className="relative w-full overflow-hidden rounded-2xl"
+          className="relative w-full overflow-hidden rounded-[16px]"
           style={{
             aspectRatio: '16 / 9',
-            background: '#000',
-            boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+            background: isLight ? '#0a0a0c' : '#000',
+            boxShadow: isLight
+              ? '0 4px 12px rgba(28,26,28,0.12)'
+              : '0 8px 24px rgba(0,0,0,0.4)',
           }}
         >
           <CayleyCameraFeed />
@@ -255,7 +302,10 @@ function CameraCardShell() {
 
       {/* Footer copy */}
       <div className="px-7 md:px-8 pt-5 pb-7 md:pb-8 mt-auto">
-        <div className="text-[13px] text-white/55 tracking-tight leading-snug">
+        <div
+          className="text-[13px] tracking-tight leading-snug"
+          style={{ color: palette.bodyText }}
+        >
           5&nbsp;MP H.265 over WebRTC. Streamed from the board over Tailscale Funnel — no port forwarding, public HTTPS.
         </div>
       </div>
@@ -264,25 +314,32 @@ function CameraCardShell() {
 }
 
 function TopologyDot({ label, emphasis = false }: { label: string; emphasis?: boolean }) {
+  const palette = useCayleyTheme()
   return (
     <span className="inline-flex items-center gap-2">
       <span
         className="w-1.5 h-1.5 rounded-full"
         style={{
-          background: emphasis ? '#30d158' : 'rgba(255,255,255,0.4)',
+          background: emphasis ? '#30d158' : palette.mutedText,
           boxShadow: emphasis ? '0 0 8px #30d158' : 'none',
         }}
       />
-      <span style={{ color: emphasis ? 'rgba(255,255,255,0.8)' : undefined }}>{label}</span>
+      <span style={{ color: emphasis ? (palette.mode === 'light' ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.8)') : undefined }}>
+        {label}
+      </span>
     </span>
   )
 }
 
 function TopologyLine() {
+  const palette = useCayleyTheme()
+  const stops = palette.mode === 'light'
+    ? 'linear-gradient(90deg, rgba(0,0,0,0.06), rgba(0,0,0,0.18), rgba(0,0,0,0.06))'
+    : 'linear-gradient(90deg, rgba(255,255,255,0.08), rgba(255,255,255,0.25), rgba(255,255,255,0.08))'
   return (
     <span
       className="inline-block w-12"
-      style={{ height: 1, background: 'linear-gradient(90deg, rgba(255,255,255,0.08), rgba(255,255,255,0.25), rgba(255,255,255,0.08))' }}
+      style={{ height: 1, background: stops }}
       aria-hidden="true"
     />
   )

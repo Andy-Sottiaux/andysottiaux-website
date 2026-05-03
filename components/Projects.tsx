@@ -1,6 +1,9 @@
 'use client'
 
 import dynamic from 'next/dynamic'
+import Image from 'next/image'
+import SectionHeader from './SectionHeader'
+import { slug } from '@/lib/slug'
 
 const STLViewer = dynamic(() => import('./STLViewer'), { ssr: false })
 
@@ -89,29 +92,30 @@ export default function Projects() {
   return (
     <section id="projects" className="py-16 sm:py-24 md:py-32 px-4 sm:px-6 bg-white dark:bg-gray-900">
       <div className="max-w-6xl mx-auto">
-        {/* Section Header */}
-        <div className="text-center mb-10 sm:mb-16">
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground mb-4">Featured Projects</h2>
-          <div className="w-20 h-1 bg-foreground mx-auto"></div>
-          <p className="text-gray-600 dark:text-gray-400 mt-4 text-base sm:text-lg">Robotics, computer vision, mobile applications, 3D printing, and CAD</p>
-          <p className="text-gray-400 dark:text-gray-500 mt-3 text-xs sm:text-sm italic max-w-2xl mx-auto">
-            Due to the proprietary nature of aerospace programs, specific project details cannot be publicly disclosed. Happy to discuss my experience in appropriate contexts.
-          </p>
-        </div>
+        <SectionHeader
+          eyebrow="Section 04 · Projects"
+          title="Featured Projects"
+          description="Robotics, computer vision, mobile applications, 3D printing, and CAD."
+        />
 
-        {/* Projects Grid */}
+        {/* Projects Grid — hover is border + shadow only. Earlier
+            `hover:-translate-y-2` produced a wave-of-jumping-cards as the
+            mouse drifted across an 8-up grid; subtler is more confident. */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
-          {projects.map((project, index) => (
+          {projects.map((project) => (
             <div
-              key={index}
-              className="group bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 p-5 sm:p-6 md:p-8 rounded-2xl hover:shadow-2xl dark:hover:shadow-gray-900/50 transition-all duration-300 hover:border-foreground hover:-translate-y-2"
+              key={project.title}
+              id={`proj-${slug(project.title)}`}
+              className="group bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 p-5 sm:p-6 md:p-8 rounded-2xl hover:shadow-2xl dark:hover:shadow-gray-900/50 transition-all duration-300 hover:border-foreground scroll-mt-24"
             >
               <div className="flex items-center justify-center mb-4 sm:mb-6">
-                <div className={`rounded-2xl overflow-hidden shadow-lg ring-4 ring-gray-100 dark:ring-gray-700 group-hover:ring-foreground/20 transition-all bg-white dark:bg-gray-700 w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center`}>
+                <div className="rounded-2xl overflow-hidden shadow-lg ring-4 ring-gray-100 dark:ring-gray-700 group-hover:ring-foreground/20 transition-all bg-white dark:bg-gray-700 w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center">
                   {project.icon ? (
-                    <img
+                    <Image
                       src={project.icon}
                       alt={`${project.title} icon`}
+                      width={96}
+                      height={96}
                       className={`w-full h-full ${project.title === 'WYZECAR' ? 'object-contain p-1' : 'object-cover'}`}
                     />
                   ) : (
@@ -135,9 +139,9 @@ export default function Projects() {
               <p className="text-gray-600 dark:text-gray-300 mb-4 sm:mb-6 leading-relaxed text-center text-sm sm:text-base">{project.description}</p>
 
               <div className="flex flex-wrap gap-1.5 sm:gap-2 mb-4 sm:mb-6 justify-center">
-                {project.tech.map((tech, i) => (
+                {project.tech.map((tech) => (
                   <span
-                    key={i}
+                    key={tech}
                     className="px-2 sm:px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-medium"
                   >
                     {tech}
@@ -175,7 +179,10 @@ export default function Projects() {
         </div>
 
         {/* Featured Design */}
-        <div className="mt-8 sm:mt-12 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-2xl p-6 sm:p-8 md:p-10 hover:shadow-2xl dark:hover:shadow-gray-900/50 transition-all duration-300 hover:border-foreground">
+        <div
+          id={`proj-${slug(featuredDesign.title)}`}
+          className="mt-8 sm:mt-12 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-2xl p-6 sm:p-8 md:p-10 hover:shadow-2xl dark:hover:shadow-gray-900/50 transition-all duration-300 hover:border-foreground scroll-mt-24"
+        >
           <div className="flex flex-col md:flex-row gap-6 md:gap-10 items-center">
             <div className="w-full md:w-1/2 h-64 sm:h-80 rounded-2xl overflow-hidden shadow-lg ring-4 ring-gray-100 dark:ring-gray-700 bg-white dark:bg-gray-700">
               <STLViewer urls={featuredDesign.stlUrls} />
@@ -185,9 +192,9 @@ export default function Projects() {
               <p className="text-gray-600 dark:text-gray-300 mb-6 leading-relaxed text-sm sm:text-base">{featuredDesign.description}</p>
 
               <div className="flex flex-wrap gap-1.5 sm:gap-2 mb-6 justify-center md:justify-start">
-                {featuredDesign.tech.map((tech, i) => (
+                {featuredDesign.tech.map((tech) => (
                   <span
-                    key={i}
+                    key={tech}
                     className="px-2 sm:px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-medium"
                   >
                     {tech}
@@ -196,9 +203,9 @@ export default function Projects() {
               </div>
 
               <div className="flex gap-2 justify-center md:justify-start flex-wrap">
-                {featuredDesign.downloads.map((dl, i) => (
+                {featuredDesign.downloads.map((dl) => (
                   <a
-                    key={i}
+                    key={dl.href}
                     href={dl.href}
                     download
                     className="px-4 py-2 bg-foreground text-background rounded-lg text-sm font-medium hover:opacity-80 transition-all"

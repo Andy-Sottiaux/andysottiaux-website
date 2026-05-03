@@ -1,12 +1,20 @@
 'use client'
 
+import Image from 'next/image'
 import { useEffect, useState, useRef } from 'react'
+import { useReducedMotion } from '@/lib/useReducedMotion'
 
 export default function ScrollChinchilla() {
   const [isVisible, setIsVisible] = useState(false)
   const canTrigger = useRef(true)
+  const reduced = useReducedMotion()
 
   useEffect(() => {
+    // Reduced-motion users opt out of the slide-in mascot — it's pure
+    // delight, not navigation, so skipping it leaves nothing meaningful
+    // behind.
+    if (reduced) return
+
     const handleScroll = () => {
       const scrollPercent = (window.scrollY / (document.documentElement.scrollHeight - window.innerHeight)) * 100
 
@@ -29,7 +37,9 @@ export default function ScrollChinchilla() {
 
     window.addEventListener('scroll', handleScroll)
     return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
+  }, [reduced])
+
+  if (reduced) return null
 
   return (
     <div
@@ -38,9 +48,12 @@ export default function ScrollChinchilla() {
       }`}
     >
       <div className="relative">
-        <img
+        <Image
           src="/images/chinchilla-black.png"
           alt=""
+          aria-hidden="true"
+          width={96}
+          height={96}
           className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 drop-shadow-lg dark:invert"
         />
         <div className={`absolute -top-8 right-0 sm:-left-16 bg-white dark:bg-gray-800 rounded-lg px-3 py-1 shadow-lg text-sm whitespace-nowrap transition-opacity duration-300 ${

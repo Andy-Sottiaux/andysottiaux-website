@@ -6,9 +6,13 @@
  * Polls /api/solar every 30s. Builds a rolling client-side ring buffer of
  * solar power readings across the user's session — clearly labelled
  * "session" so it's not misread as a 24h history.
+ *
+ * Theme: card chrome / typography swap via useCayleyTheme(); the warm
+ * amber sparkline + green→cyan SOC gradient stay constant in both themes.
  */
 
 import { useEffect, useRef, useState } from 'react'
+import { useCayleyTheme } from './cayleyTheme'
 
 const SOLAR_URL = process.env.NEXT_PUBLIC_V3_SOLAR_URL || 'https://cayley-v3-cam-1.tailc7d6b6.ts.net/api/solar'
 
@@ -52,6 +56,9 @@ function calcSOC(bv: number, loadA = 0, chargeA = 0): number {
 const SPARK_MAX = 60 // 60 samples × 30s ≈ 30 minutes of session history
 
 export default function CayleySolarCard() {
+  const palette = useCayleyTheme()
+  const isLight = palette.mode === 'light'
+
   const [solar, setSolar] = useState<Solar | null>(null)
   const [state, setState] = useState<CardState>('loading')
   const [spark, setSpark] = useState<number[]>([])
@@ -99,17 +106,17 @@ export default function CayleySolarCard() {
 
   const soc = solar ? calcSOC(solar.battery_voltage, solar.load_current, solar.charging_current) : null
   const live = state === 'live' && solar != null
+  const valueColor = isLight ? '#1c1a1c' : '#fff'
 
   return (
     <div
-      className="relative rounded-3xl p-7 md:p-8 h-full flex flex-col overflow-hidden"
+      className="relative rounded-2xl p-7 md:p-8 h-full flex flex-col overflow-hidden"
       style={{
-        background:
-          'linear-gradient(180deg, rgba(20,20,24,0.85) 0%, rgba(10,10,12,0.85) 100%)',
-        border: '1px solid rgba(255,255,255,0.08)',
+        background: palette.cardBackground,
+        border: palette.cardBorder,
         backdropFilter: 'blur(24px)',
         WebkitBackdropFilter: 'blur(24px)',
-        boxShadow: '0 30px 80px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)',
+        boxShadow: palette.cardShadow,
       }}
       role="region"
       aria-label="Solar power and battery"
@@ -118,11 +125,14 @@ export default function CayleySolarCard() {
       <div
         className="pointer-events-none absolute -top-20 -left-20 w-56 h-56 rounded-full"
         style={{
-          background: 'radial-gradient(circle, rgba(255,159,10,0.16), transparent 70%)',
+          background: `radial-gradient(circle, rgba(255,159,10,${isLight ? 0.1 : 0.16}), transparent 70%)`,
         }}
       />
 
-      <div className="text-amber-300/90 text-[10.5px] font-semibold uppercase tracking-[0.22em] mb-5">
+      <div
+        className="text-[10.5px] font-semibold uppercase tracking-[0.22em] mb-5"
+        style={{ color: isLight ? '#b45309' : 'rgba(252, 211, 77, 0.9)' /* amber-300/90 */ }}
+      >
         Solar
       </div>
 
@@ -131,7 +141,7 @@ export default function CayleySolarCard() {
         <div
           className="text-[56px] sm:text-[68px] font-semibold leading-none tracking-tight tabular-nums"
           style={{
-            background: 'linear-gradient(180deg, #fff 0%, #b0b0b8 100%)',
+            background: palette.headlineGradient,
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
@@ -139,13 +149,21 @@ export default function CayleySolarCard() {
         >
           {live ? solar.battery_voltage.toFixed(2) : '—'}
         </div>
-        <div className="text-[20px] sm:text-[24px] font-medium text-white/40 tracking-tight">V</div>
+        <div
+          className="text-[20px] sm:text-[24px] font-medium tracking-tight"
+          style={{ color: palette.mutedText }}
+        >
+          V
+        </div>
       </div>
-      <div className="text-[13px] text-white/50 tracking-tight mb-6">
+      <div
+        className="text-[13px] tracking-tight mb-6"
+        style={{ color: palette.bodyText }}
+      >
         {live ? (
           <>
-            Battery <span className="text-white/80 tabular-nums">{soc}%</span>
-            <span className="text-white/30 mx-2">·</span>
+            Battery <span className="tabular-nums" style={{ color: valueColor, opacity: 0.85 }}>{soc}%</span>
+            <span className="mx-2" style={{ color: palette.fadedText }}>·</span>
             <span className="capitalize">{solar.charge_state}</span>
           </>
         ) : (
@@ -159,7 +177,7 @@ export default function CayleySolarCard() {
       <div className="relative mb-7">
         <div
           className="h-2.5 w-full rounded-full overflow-hidden"
-          style={{ background: 'rgba(255,255,255,0.06)' }}
+          style={{ background: palette.trackBackground }}
         >
           <div
             className="h-full rounded-full"
@@ -176,45 +194,78 @@ export default function CayleySolarCard() {
       {/* Two secondary stats */}
       <div className="grid grid-cols-2 gap-6 mb-5">
         <div>
-          <div className="text-[10px] uppercase tracking-[0.18em] text-white/40 font-medium">Solar in</div>
-          <div className="text-[26px] sm:text-[28px] font-semibold tracking-tight tabular-nums mt-1"
-            style={{ color: live && solar.solar_power > 0 ? '#ffb84d' : 'rgba(255,255,255,0.85)' }}>
+          <div
+            className="text-[10px] uppercase tracking-[0.18em] font-medium"
+            style={{ color: palette.mutedText }}
+          >
+            Solar in
+          </div>
+          <div
+            className="text-[26px] sm:text-[28px] font-semibold tracking-tight tabular-nums mt-1"
+            style={{
+              color: live && solar.solar_power > 0
+                ? (isLight ? '#c2410c' : '#ffb84d')
+                : valueColor,
+            }}
+          >
             {live ? Math.round(solar.solar_power) : '—'}
-            <span className="text-[14px] font-medium text-white/40 ml-1">W</span>
+            <span className="text-[14px] font-medium ml-1" style={{ color: palette.mutedText }}>W</span>
           </div>
         </div>
         <div>
-          <div className="text-[10px] uppercase tracking-[0.18em] text-white/40 font-medium">Yield today</div>
-          <div className="text-[26px] sm:text-[28px] font-semibold tracking-tight tabular-nums mt-1 text-white">
+          <div
+            className="text-[10px] uppercase tracking-[0.18em] font-medium"
+            style={{ color: palette.mutedText }}
+          >
+            Yield today
+          </div>
+          <div
+            className="text-[26px] sm:text-[28px] font-semibold tracking-tight tabular-nums mt-1"
+            style={{ color: valueColor }}
+          >
             {live ? solar.yield_today : '—'}
-            <span className="text-[14px] font-medium text-white/40 ml-1">Wh</span>
+            <span className="text-[14px] font-medium ml-1" style={{ color: palette.mutedText }}>Wh</span>
           </div>
         </div>
       </div>
 
       {/* Session sparkline */}
-      <div className="mt-auto pt-4 border-t border-white/[0.06]">
+      <div
+        className="mt-auto pt-4 border-t"
+        style={{ borderColor: palette.hairline }}
+      >
         <div className="flex items-center justify-between mb-2">
-          <div className="text-[10px] uppercase tracking-[0.18em] text-white/40 font-medium">
+          <div
+            className="text-[10px] uppercase tracking-[0.18em] font-medium"
+            style={{ color: palette.mutedText }}
+          >
             Solar input
           </div>
-          <div className="text-[10px] tracking-wide text-white/30">session</div>
+          <div
+            className="text-[10px] tracking-wide"
+            style={{ color: palette.fadedText }}
+          >
+            session
+          </div>
         </div>
-        <Sparkline data={spark} />
+        <Sparkline data={spark} isLight={isLight} />
       </div>
     </div>
   )
 }
 
-function Sparkline({ data }: { data: number[] }) {
+function Sparkline({ data, isLight }: { data: number[]; isLight: boolean }) {
   // SVG sparkline. We always render a 36px-tall strip; if no data yet,
   // render a faint baseline so the layout doesn't shift.
   const W = 280
   const H = 36
+  const strokeColor = isLight ? '#c2410c' : '#ffb84d'
+  const baselineColor = isLight ? 'rgba(0,0,0,0.18)' : 'rgba(255,255,255,0.12)'
+
   if (data.length < 2) {
     return (
       <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="w-full h-9">
-        <line x1="0" y1={H - 1} x2={W} y2={H - 1} stroke="rgba(255,255,255,0.12)" strokeWidth="1" />
+        <line x1="0" y1={H - 1} x2={W} y2={H - 1} stroke={baselineColor} strokeWidth="1" />
       </svg>
     )
   }
@@ -230,15 +281,15 @@ function Sparkline({ data }: { data: number[] }) {
     <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="w-full h-9" aria-hidden="true">
       <defs>
         <linearGradient id="solarSparkArea" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="rgba(255,184,77,0.4)" />
-          <stop offset="100%" stopColor="rgba(255,184,77,0)" />
+          <stop offset="0%" stopColor={isLight ? 'rgba(194,65,12,0.30)' : 'rgba(255,184,77,0.4)'} />
+          <stop offset="100%" stopColor={isLight ? 'rgba(194,65,12,0)' : 'rgba(255,184,77,0)'} />
         </linearGradient>
       </defs>
       <polygon points={areaPoints} fill="url(#solarSparkArea)" />
       <polyline
         points={points}
         fill="none"
-        stroke="#ffb84d"
+        stroke={strokeColor}
         strokeWidth="1.5"
         strokeLinecap="round"
         strokeLinejoin="round"
