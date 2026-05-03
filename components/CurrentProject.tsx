@@ -142,7 +142,10 @@ function CurrentProjectInner() {
             className="font-semibold leading-[1.02] tracking-tight max-w-4xl"
             style={{
               fontSize: 'clamp(40px, 7vw, 88px)',
-              background: palette.headlineGradient,
+              // backgroundImage longhand: `background:` shorthand would
+              // reset background-clip back to its default and the gradient
+              // would render as a solid block.
+              backgroundImage: palette.headlineGradient,
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               backgroundClip: 'text',

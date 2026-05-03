@@ -223,7 +223,11 @@ export default function FieldHealthCard() {
         <div
           className="text-[34px] sm:text-[40px] font-semibold leading-none tracking-tight"
           style={{
-            background: headlineGradient,
+            // backgroundImage (longhand) — using `background:` shorthand
+            // resets background-clip back to its default, leaving the
+            // gradient painted as a solid block instead of clipping to
+            // the glyphs (renders as a white rectangle on dark mode).
+            backgroundImage: headlineGradient,
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',

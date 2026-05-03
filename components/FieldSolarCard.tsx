@@ -152,7 +152,10 @@ export default function FieldSolarCard() {
         <div
           className="text-[56px] sm:text-[68px] font-semibold leading-none tracking-tight tabular-nums"
           style={{
-            background: palette.headlineGradient,
+            // backgroundImage longhand — `background:` shorthand resets
+            // background-clip back to default and the gradient renders as
+            // a solid block instead of clipping to the glyphs.
+            backgroundImage: palette.headlineGradient,
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
