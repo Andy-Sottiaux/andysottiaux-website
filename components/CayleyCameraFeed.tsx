@@ -6,7 +6,7 @@
  * unreachable.
  *
  * Data path:
- *   browser ──WHEP──> https://cayley-v3-cam.tailc7d6b6.ts.net/api/webrtc?src=cayley
+ *   browser ──WHEP──> https://cayley-v3-cam-1.tailc7d6b6.ts.net/api/webrtc?src=cayley
  *                            │
  *                            ▼ (Tailscale Funnel proxies "/" to 127.0.0.1:1984)
  *                       go2rtc ──RTSP──> rkipc (5MP H.265)
@@ -20,7 +20,7 @@ import { useEffect, useRef, useState } from 'react'
 
 // Default points at the Funnel hostname; override with NEXT_PUBLIC_V3_FEED_URL
 // (e.g. http://localhost:1984 for local dev against a port-forwarded board).
-const FEED_BASE = (process.env.NEXT_PUBLIC_V3_FEED_URL || 'https://cayley-v3-cam.tailc7d6b6.ts.net').replace(/\/$/, '')
+const FEED_BASE = (process.env.NEXT_PUBLIC_V3_FEED_URL || 'https://cayley-v3-cam-1.tailc7d6b6.ts.net').replace(/\/$/, '')
 const STREAM_NAME = 'cayley'
 
 type FeedState = 'idle' | 'connecting' | 'live' | 'offline'

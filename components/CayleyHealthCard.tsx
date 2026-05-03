@@ -13,7 +13,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 
-const HEALTH_URL = process.env.NEXT_PUBLIC_V3_HEALTH_URL || 'https://cayley-v3-cam.tailc7d6b6.ts.net/api/health'
+const HEALTH_URL = process.env.NEXT_PUBLIC_V3_HEALTH_URL || 'https://cayley-v3-cam-1.tailc7d6b6.ts.net/api/health'
 
 // Defensive: the cayley_app /api/health JSON shape has evolved. Accept a
 // few field-name variants without exploding.

@@ -14,10 +14,10 @@ import dynamic from 'next/dynamic'
 
 const BoardViewer = dynamic(() => import('./BoardViewer'), { ssr: false })
 
-const HEALTH_URL = 'https://cayley-v3-cam.tailc7d6b6.ts.net/api/health'
-const SOLAR_URL = 'https://cayley-v3-cam.tailc7d6b6.ts.net/api/solar'
-const DETECTIONS_URL = 'https://cayley-v3-cam.tailc7d6b6.ts.net/api/detections'
-const CAMERA_URL = 'https://cayley-v3-cam.tailc7d6b6.ts.net/'
+const HEALTH_URL = 'https://cayley-v3-cam-1.tailc7d6b6.ts.net/api/health'
+const SOLAR_URL = 'https://cayley-v3-cam-1.tailc7d6b6.ts.net/api/solar'
+const DETECTIONS_URL = 'https://cayley-v3-cam-1.tailc7d6b6.ts.net/api/detections'
+const CAMERA_URL = 'https://cayley-v3-cam-1.tailc7d6b6.ts.net/'
 
 type Health = {
   ok: boolean
@@ -165,7 +165,7 @@ export default function CayleyPlatform() {
       detail: 'go2rtc bridges the camera to WebRTC; cayley-record writes 15-min MP4 segments; cayley-detect-loop runs YOLOv5s on the NPU; cayley-victron decodes Bluetooth solar telemetry; cayley-solar-api serves the public HTTP. All supervised, all OOM-protected.' },
     { t: 't ≈ 75 s', title: 'Online and serving',
       summary: 'Tailscale Funnel certifies. Public APIs respond. Heartbeat pulses.',
-      detail: 'A DERP relay handshake, a Let’s-Encrypt certificate via SNI, a kernel heartbeat double-blink. The board is now reachable from anywhere on the internet at https://cayley-v3-cam.tailc7d6b6.ts.net.' },
+      detail: 'A DERP relay handshake, a Let’s-Encrypt certificate via SNI, a kernel heartbeat double-blink. The board is now reachable from anywhere on the internet at https://cayley-v3-cam-1.tailc7d6b6.ts.net.' },
   ], [])
 
   // Architecture as components / pipeline (educational, not defensive)

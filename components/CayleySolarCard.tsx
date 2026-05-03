@@ -10,7 +10,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 
-const SOLAR_URL = process.env.NEXT_PUBLIC_V3_SOLAR_URL || 'https://cayley-v3-cam.tailc7d6b6.ts.net/api/solar'
+const SOLAR_URL = process.env.NEXT_PUBLIC_V3_SOLAR_URL || 'https://cayley-v3-cam-1.tailc7d6b6.ts.net/api/solar'
 
 type Solar = {
   battery_voltage: number
