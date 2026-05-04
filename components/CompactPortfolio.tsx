@@ -344,7 +344,7 @@ function Tile({
   return (
     <div
       data-peek-target="true"
-      className={`group relative rounded-2xl overflow-hidden h-full flex flex-col ${className}`}
+      className={`group relative z-[1] rounded-2xl overflow-hidden h-full flex flex-col ${className}`}
       style={{
         background: palette.cardBackground,
         border: palette.cardBorder,
@@ -417,12 +417,11 @@ function IdentityTile({ onOpen }: { onOpen?: () => void }) {
       modalLabel="Open About"
       className="min-h-[170px] md:min-h-0"
     >
-      <div className="flex-1 flex flex-col px-5 md:px-6 py-5">
-        {/* Hero portrait — much bigger now. Square with a subtle ring + an
-            ambient color glow that picks up the ambient palette accent. */}
-        <div className="flex justify-center mb-4">
+      <div className="flex-1 flex flex-col px-5 md:px-6 py-5 md:py-6">
+        {/* Hero portrait — square card with a subtle ring + soft drop. */}
+        <div className="flex justify-center">
           <div
-            className="relative w-[120px] h-[120px] md:w-[140px] md:h-[140px] rounded-2xl overflow-hidden"
+            className="relative w-[108px] h-[108px] md:w-[116px] md:h-[116px] rounded-2xl overflow-hidden"
             style={{
               boxShadow: isLight
                 ? '0 12px 32px rgba(28,26,28,0.18), 0 0 0 1px rgba(0,0,0,0.05)'
@@ -433,7 +432,7 @@ function IdentityTile({ onOpen }: { onOpen?: () => void }) {
               src="/images/profile.jpg"
               alt="Andy Sottiaux"
               fill
-              sizes="(max-width: 768px) 120px, 140px"
+              sizes="(max-width: 768px) 108px, 116px"
               className="object-cover"
               priority
             />
@@ -441,7 +440,7 @@ function IdentityTile({ onOpen }: { onOpen?: () => void }) {
         </div>
 
         <div
-          className="text-center text-[20px] md:text-[22px] font-semibold leading-tight tracking-tight"
+          className="text-center text-[20px] md:text-[22px] font-semibold leading-tight tracking-tight mt-4"
           style={{
             backgroundImage: palette.headlineGradient,
             WebkitBackgroundClip: 'text',
@@ -452,7 +451,7 @@ function IdentityTile({ onOpen }: { onOpen?: () => void }) {
           Andy Sottiaux
         </div>
         <div
-          className="text-center text-[11.5px] md:text-[12px] uppercase tracking-[0.16em] mt-1"
+          className="text-center text-[10.5px] md:text-[11px] uppercase tracking-[0.18em] mt-1.5"
           style={{ color: palette.mutedText }}
         >
           Dallas, TX
@@ -463,18 +462,6 @@ function IdentityTile({ onOpen }: { onOpen?: () => void }) {
           style={{ color: palette.bodyText }}
         >
           Aerospace hardware · Production software
-        </div>
-
-        {/* Compact bio — fills the space between the subtitle and the
-            action pill. Mirrors the Hero copy so the site reads in one
-            consistent voice; the full 3-paragraph version lives behind
-            the About modal. */}
-        <div
-          className="text-center text-[12px] md:text-[12.5px] leading-relaxed tracking-tight mt-3 px-2"
-          style={{ color: palette.mutedText }}
-        >
-          Engineer &amp; founder building UAV systems at AVX Aircraft and
-          shipping production iOS apps at HatchingPoint.
         </div>
 
         <div className="mt-auto pt-4 flex justify-center">
@@ -612,7 +599,7 @@ function EducationTile() {
 
   return (
     <div
-      className="relative rounded-2xl h-full min-h-[260px] md:min-h-0 flex flex-col p-5 md:p-6 overflow-hidden"
+      className="relative z-[1] rounded-2xl h-full min-h-[260px] md:min-h-0 flex flex-col p-5 md:p-6 overflow-hidden"
       style={{
         background: palette.cardBackground,
         border: palette.cardBorder,
@@ -701,133 +688,23 @@ function EducationTile() {
   )
 }
 
-/** Replaces CameraTile (wide hero) when the board is offline. Designed
- *  as a magazine spread: dominant gradient headline, a single restrained
- *  subtitle, a horizontal lineup of real product icons that serve as the
- *  visual proof, and a quiet shipping pulse in the corner. The previous
- *  three-mini-card "domain stacks" version read as a developer dashboard;
- *  this one reads as a portfolio. */
+/** Replaces CameraTile (wide hero) when the board is offline. A magazine
+ *  spread — gradient headline, restrained subtitle, and a single quiet
+ *  hero element: a slow-rotating engineering-blueprint rotor that bleeds
+ *  off the right edge. One focal element (instead of a busy icon row)
+ *  reads as confident industrial design, not a developer dashboard. */
 function BuildingTile() {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
 
-  // Real product/work icons that anchor the abstraction. Mix of iOS
-  // (existing icon files) and a custom outline rotor for the aerospace
-  // side so the row covers all three domains. Hover lifts each chip
-  // a hair so the row feels touchable, not decorative.
-  const lineup: { id: string; label: string; render?: React.ReactNode; img?: string; round?: boolean }[] = [
-    {
-      id: 'rotor',
-      label: 'Rotor systems',
-      render: (
-        <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-          {/* abstract rotor — 3 blades around a central hub */}
-          <circle cx="16" cy="16" r="2.5" />
-          <path d="M16 13.5L16 5  M19 14L26 8.5  M19.5 17L26.5 22  M14 19L9 26  M12.5 17L5 21  M13 14L7 9" />
-          <circle cx="16" cy="16" r="11" opacity="0.18" strokeDasharray="2 3" />
-        </svg>
-      ),
-    },
-    {
-      id: 'edge',
-      label: 'Edge AI',
-      render: (
-        <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-          {/* camera body + solar panel grid below */}
-          <rect x="6" y="9" width="20" height="11" rx="1.6" />
-          <circle cx="16" cy="14.5" r="3" />
-          <path d="M9 24h14M9 26.5h14" opacity="0.55" />
-          <path d="M11 9V7h10v2" />
-        </svg>
-      ),
-    },
-    { id: 'wyzecar', label: 'WYZECAR', img: '/images/wyzecar.png', round: true },
-    { id: 'rotdot', label: 'Rot Dot', img: '/images/rotdot-icon.png' },
-    { id: 'record', label: 'Record+Transcribe', img: '/images/recordtranscribe-icon.png' },
-    { id: 'airmd', label: 'AirMD+', img: '/images/airmd-icon.jpg' },
-  ]
-
-  // Single accent (cyan) — restrained palette, theme-aware. The previous
-  // three-color treatment fought itself; one accent reads as composed.
+  // Single accent (cyan) — restrained palette, theme-aware.
   const accent = isLight ? '#0a8aa8' : '#67e8f9'
-
-  // Three domains. Each carries its own color, an outline glyph, a single
-  // currently-building line, and a status chip. Status chips animate (the
-  // cyan "live" one pulses) so the tile reads as motion at idle.
-  const stacks: {
-    domain: string
-    label: string
-    glyph: React.ReactNode
-    line: string
-    status: 'live' | 'shipping' | 'design'
-    // hue used for accents (icon stroke, dot, divider hover)
-    light: string
-    dark: string
-  }[] = [
-    {
-      domain: 'Aerospace',
-      label: 'AVX · UAV systems',
-      glyph: (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="2" />
-          <path d="M12 4v6M12 14v6M4 12h6M14 12h6" />
-          <path d="M5 5l3.5 3.5M15.5 15.5L19 19M5 19l3.5-3.5M15.5 8.5L19 5" />
-        </svg>
-      ),
-      line: 'Rotor systems · autonomy stack',
-      status: 'design',
-      light: '#0f9d4f',
-      dark: '#5eead4',
-    },
-    {
-      domain: 'Embedded',
-      label: 'Edge · solar · BLE',
-      glyph: (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="6" y="6" width="12" height="12" rx="1.5" />
-          <path d="M9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3" />
-          <circle cx="12" cy="12" r="2" />
-        </svg>
-      ),
-      line: 'Solar field cam · public API',
-      status: 'live',
-      light: '#0a8aa8',
-      dark: '#67e8f9',
-    },
-    {
-      domain: 'iOS',
-      label: 'HatchingPoint · 10+ apps',
-      glyph: (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="6" y="2" width="12" height="20" rx="2.5" />
-          <path d="M11 18h2" />
-          <path d="M9 6h6M9 9h6M9 12h3" />
-        </svg>
-      ),
-      line: 'Rot Dot · Record+Transcribe',
-      status: 'shipping',
-      light: '#b45309',
-      dark: '#fcd34d',
-    },
-  ]
-
-  const statusLabel: Record<typeof stacks[number]['status'], string> = {
-    live: 'Live',
-    shipping: 'Shipping',
-    design: 'In design',
-  }
-  const statusColor = (s: typeof stacks[number]['status']) => {
-    if (s === 'live') return { light: '#0a8aa8', dark: '#67e8f9' }
-    if (s === 'shipping') return { light: '#0f9d4f', dark: '#86efac' }
-    return { light: '#7c4dcc', dark: '#c084fc' }
-  }
-
-  // suppress unused warnings — kept for future variants
-  void stacks; void statusLabel; void statusColor
+  const accentSoft = isLight ? 'rgba(10,138,168,0.45)' : 'rgba(103,232,249,0.55)'
+  const accentFaint = isLight ? 'rgba(10,138,168,0.18)' : 'rgba(103,232,249,0.22)'
 
   return (
     <div
-      className="relative rounded-2xl h-full min-h-[170px] md:min-h-0 flex flex-col p-6 md:p-7 overflow-hidden"
+      className="relative z-[1] rounded-2xl h-full min-h-[170px] md:min-h-0 flex flex-col p-6 md:p-7 overflow-hidden"
       style={{
         background: palette.cardBackground,
         border: palette.cardBorder,
@@ -911,67 +788,129 @@ function BuildingTile() {
         Aircraft to the App Store.
       </p>
 
-      {/* Lineup — real product / domain icons in a thin row at the bottom,
-          fading in left-to-right with a small staggered reveal. The visual
-          payoff. */}
-      <div className="relative mt-auto pt-5">
-        <div
-          className="flex items-center gap-2 sm:gap-2.5 overflow-hidden"
-          style={{
-            // very subtle horizontal mask so the row feels like it could
-            // continue beyond the visible edge — implies "more"
-            WebkitMaskImage:
-              'linear-gradient(90deg, transparent 0, #000 8px, #000 calc(100% - 28px), transparent)',
-            maskImage:
-              'linear-gradient(90deg, transparent 0, #000 8px, #000 calc(100% - 28px), transparent)',
-          }}
+      {/* Engineering-blueprint rotor — anchored bottom-right, bleeds past
+          the card edge. One slow-rotating element instead of a busy icon
+          row. Reinforces "Rotor design" without competing with the type. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute"
+        style={{
+          right: '-22%',
+          bottom: '-32%',
+          width: 'min(78%, 360px)',
+          aspectRatio: '1 / 1',
+          opacity: isLight ? 0.85 : 0.95,
+          // soft mask so the rotor fades into the card edge rather than
+          // hard-clipping at overflow:hidden
+          WebkitMaskImage:
+            'radial-gradient(circle at 60% 60%, #000 55%, transparent 85%)',
+          maskImage:
+            'radial-gradient(circle at 60% 60%, #000 55%, transparent 85%)',
+        }}
+      >
+        <svg
+          viewBox="0 0 200 200"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          className="w-full h-full"
         >
-          {lineup.map((it, i) => (
-            <div
-              key={it.id}
-              className="group relative flex items-center gap-2 flex-shrink-0"
-              style={{
-                animation: `fldBuildReveal 0.7s cubic-bezier(0.16,1,0.3,1) ${0.05 + i * 0.06}s both`,
-              }}
-            >
-              <div
-                className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-[10px] overflow-hidden flex items-center justify-center transition-transform duration-300 group-hover:-translate-y-0.5"
-                style={{
-                  background: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)',
-                  border: `1px solid ${isLight ? 'rgba(0,0,0,0.07)' : 'rgba(255,255,255,0.08)'}`,
-                  color: accent,
-                }}
-                title={it.label}
-                aria-label={it.label}
-              >
-                {it.img ? (
-                  <Image
-                    src={it.img}
-                    alt=""
-                    width={40}
-                    height={40}
-                    className={`w-full h-full ${it.round ? 'object-contain p-0.5' : 'object-cover'}`}
-                  />
-                ) : (
-                  <span className="w-5 h-5 sm:w-[22px] sm:h-[22px] block">{it.render}</span>
-                )}
-              </div>
-            </div>
-          ))}
-          {/* trailing "+more" pip */}
-          <div
-            className="flex-shrink-0 inline-flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-[10px] text-[10px] font-semibold tracking-wide"
+          {/* dotted concentric measurement circles — engineering datum */}
+          <circle cx="100" cy="100" r="92" stroke={accentFaint} strokeWidth="0.6" strokeDasharray="1 4" />
+          <circle cx="100" cy="100" r="74" stroke={accentFaint} strokeWidth="0.6" strokeDasharray="1 4" />
+          <circle cx="100" cy="100" r="50" stroke={accentFaint} strokeWidth="0.6" strokeDasharray="2 5" />
+          {/* crosshair datum */}
+          <line x1="6" y1="100" x2="194" y2="100" stroke={accentFaint} strokeWidth="0.5" strokeDasharray="3 4" />
+          <line x1="100" y1="6" x2="100" y2="194" stroke={accentFaint} strokeWidth="0.5" strokeDasharray="3 4" />
+
+          {/* rotating rotor assembly — 4-blade with hub */}
+          <g
             style={{
-              background: 'transparent',
-              border: `1px dashed ${isLight ? 'rgba(0,0,0,0.18)' : 'rgba(255,255,255,0.18)'}`,
-              color: palette.mutedText,
-              animation: `fldBuildReveal 0.7s cubic-bezier(0.16,1,0.3,1) ${0.05 + lineup.length * 0.06}s both`,
+              transformOrigin: '100px 100px',
+              animation: 'fldRotorSpin 48s linear infinite',
             }}
-            aria-label="More projects"
           >
-            +
-          </div>
-        </div>
+            {/* swept-disc envelope */}
+            <circle cx="100" cy="100" r="86" stroke={accentSoft} strokeWidth="0.8" opacity="0.4" />
+
+            {/* 4 blades — leading edge solid, trailing edge thinner, with
+                a chord-line down the middle and tapered tip caps */}
+            {[0, 90, 180, 270].map((deg) => (
+              <g key={deg} transform={`rotate(${deg} 100 100)`}>
+                <path
+                  d="M100 100 L96 32 Q100 22 104 32 Z"
+                  stroke={accent}
+                  strokeWidth="1.1"
+                  strokeLinejoin="round"
+                  fill="none"
+                />
+                {/* chord line — feathered */}
+                <line
+                  x1="100"
+                  y1="100"
+                  x2="100"
+                  y2="30"
+                  stroke={accentSoft}
+                  strokeWidth="0.5"
+                  strokeDasharray="2 3"
+                />
+                {/* tip cap */}
+                <circle cx="100" cy="28" r="2.2" stroke={accent} strokeWidth="0.9" fill="none" />
+              </g>
+            ))}
+
+            {/* central hub — concentric machined detail */}
+            <circle cx="100" cy="100" r="14" stroke={accent} strokeWidth="1.2" fill="none" />
+            <circle cx="100" cy="100" r="9" stroke={accentSoft} strokeWidth="0.8" fill="none" />
+            <circle cx="100" cy="100" r="3.5" fill={accent} opacity="0.9" />
+            {/* hub bolt circle */}
+            {[0, 60, 120, 180, 240, 300].map((deg) => {
+              const rad = (deg * Math.PI) / 180
+              const x = 100 + Math.cos(rad) * 11.5
+              const y = 100 + Math.sin(rad) * 11.5
+              return <circle key={deg} cx={x} cy={y} r="0.9" fill={accentSoft} />
+            })}
+          </g>
+
+          {/* fixed dimension callout — small Ø annotation on the
+              measurement circle; gives it the "drawing" feel */}
+          <g opacity="0.5">
+            <line x1="14" y1="100" x2="22" y2="100" stroke={accentSoft} strokeWidth="0.5" />
+            <text
+              x="13"
+              y="96"
+              fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
+              fontSize="6"
+              fill={accentSoft}
+              textAnchor="end"
+            >
+              Ø184
+            </text>
+          </g>
+        </svg>
+      </div>
+
+      {/* tiny live "design ↻" annotation in the bottom-left so the rotor
+          is read as work-in-progress, not decoration */}
+      <div
+        className="relative mt-auto pt-5 inline-flex items-center gap-1.5 text-[9.5px] font-semibold uppercase tracking-[0.22em]"
+        style={{ color: palette.fadedText }}
+      >
+        <svg
+          width="10"
+          height="10"
+          viewBox="0 0 12 12"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+          style={{ animation: 'fldRotorSpin 6s linear infinite', transformOrigin: 'center' }}
+        >
+          <path d="M10 5a4 4 0 1 1-1.2-2.8" />
+          <path d="M10 1.5V5H6.5" />
+        </svg>
+        Rotor · in design
       </div>
 
       <style jsx global>{`
@@ -979,9 +918,9 @@ function BuildingTile() {
           0%, 100% { opacity: 0.55; transform: scale(1); }
           50%      { opacity: 1;    transform: scale(1.25); }
         }
-        @keyframes fldBuildReveal {
-          from { opacity: 0; transform: translateY(8px); }
-          to   { opacity: 1; transform: translateY(0); }
+        @keyframes fldRotorSpin {
+          from { transform: rotate(0deg); }
+          to   { transform: rotate(360deg); }
         }
       `}</style>
     </div>
@@ -1060,7 +999,7 @@ function MoreProjectsTile({ onOpen }: { onOpen?: (key: ModalKey) => void }) {
 
   return (
     <div
-      className="relative rounded-2xl h-full min-h-[360px] md:min-h-0 flex flex-col overflow-hidden"
+      className="relative z-[1] rounded-2xl h-full min-h-[360px] md:min-h-0 flex flex-col overflow-hidden"
       style={{
         background: palette.cardBackground,
         border: palette.cardBorder,
@@ -1205,12 +1144,18 @@ function MoreProjectsTile({ onOpen }: { onOpen?: (key: ModalKey) => void }) {
             )
           })}
         </div>
-        <div
-          className="mt-2 pt-2 text-[10px] tracking-wide italic border-t"
-          style={{ color: palette.fadedText, borderColor: palette.hairline }}
+        <a
+          href="https://www.hatchingpoint.com/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="relative z-10 mt-2 pt-2 inline-flex items-center gap-1 text-[11px] tracking-tight border-t hover:opacity-100 opacity-70 transition-opacity"
+          style={{ color: palette.mutedText, borderColor: palette.hairline }}
         >
-          Plus the App Store catalog at HatchingPoint.
-        </div>
+          More on the App Store
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </a>
       </div>
     </div>
   )
@@ -1326,16 +1271,6 @@ function ExperienceTile({ onOpen }: { onOpen?: () => void }) {
                   </div>
 
                   <div className="flex items-baseline gap-2 min-w-0 flex-1">
-                    {e.current && (
-                      <span
-                        className="inline-block h-1.5 w-1.5 rounded-full flex-shrink-0"
-                        style={{
-                          background: '#30d158',
-                          boxShadow: '0 0 6px rgba(48,209,88,0.7)',
-                        }}
-                        aria-hidden="true"
-                      />
-                    )}
                     <span
                       className="text-[13px] md:text-[14px] font-semibold tracking-tight truncate"
                       style={{ color: isLight ? '#1c1a1c' : '#fff' }}
@@ -1506,7 +1441,7 @@ function MarathonTile({ onOpen }: { onOpen?: () => void }) {
 
   return (
     <div
-      className="relative rounded-2xl h-full min-h-[180px] md:min-h-0 overflow-hidden group"
+      className="relative z-[1] rounded-2xl h-full min-h-[180px] md:min-h-0 overflow-hidden group"
       data-peek-target="true"
       role="region"
       aria-label="2026 TCS NYC Marathon"
@@ -1543,44 +1478,42 @@ function MarathonTile({ onOpen }: { onOpen?: () => void }) {
         }}
       />
 
-      <div className="relative z-10 px-5 md:px-6 pt-4 pb-4 md:pb-5 h-full flex flex-col">
-        {/* Top row: BIG TCS NYC Marathon logo on a white chip + small year
-            chip. Logo anchors the brand identity at full visual weight. */}
-        <div className="flex items-center gap-2.5 mb-3">
-          <div
-            className="flex items-center justify-center rounded-xl flex-shrink-0 px-3 py-2"
-            style={{
-              background: '#fff',
-              boxShadow: '0 6px 18px rgba(0,0,0,0.18)',
-            }}
-          >
-            <Image
-              src="/images/tcs-marathon-logo.png"
-              alt="2026 TCS New York City Marathon"
-              width={120}
-              height={56}
-              className="h-11 md:h-12 w-auto object-contain"
-            />
-          </div>
-          <div className="flex-1" />
-          <div
-            className="text-[10px] font-bold uppercase tracking-[0.2em] px-2 py-1 rounded-full"
-            style={{
-              background: isLight ? 'rgba(232,100,44,0.10)' : 'rgba(232,100,44,0.18)',
-              color: isLight ? '#c63d1f' : '#ff8a4a',
-              border: isLight ? '1px solid rgba(232,100,44,0.25)' : '1px solid rgba(232,100,44,0.35)',
-            }}
-          >
-            Nov 1, 2026
-          </div>
+      <div className="relative z-10 px-5 md:px-6 pt-4 pb-4 md:pb-5 h-full grid gap-3 md:gap-4 grid-cols-[1fr_auto] grid-rows-[auto_1fr_auto] items-start">
+        {/* Top-left: TCS logo on white chip */}
+        <div
+          className="flex items-center justify-center rounded-xl px-3 py-2 self-start"
+          style={{
+            background: '#fff',
+            boxShadow: '0 6px 18px rgba(0,0,0,0.18)',
+          }}
+        >
+          <Image
+            src="/images/tcs-marathon-logo.png"
+            alt="2026 TCS New York City Marathon"
+            width={120}
+            height={56}
+            className="h-10 md:h-11 w-auto object-contain"
+          />
         </div>
 
-        {/* Hero countdown — theme-aware text + pulsing TCS-orange dot. */}
-        <div className="flex items-end gap-3 mb-2">
+        {/* Top-right: date chip aligned with logo row */}
+        <div
+          className="text-[10px] font-bold uppercase tracking-[0.2em] px-2 py-1 rounded-full justify-self-end self-start"
+          style={{
+            background: isLight ? 'rgba(232,100,44,0.10)' : 'rgba(232,100,44,0.18)',
+            color: isLight ? '#c63d1f' : '#ff8a4a',
+            border: isLight ? '1px solid rgba(232,100,44,0.25)' : '1px solid rgba(232,100,44,0.35)',
+          }}
+        >
+          Nov 1, 2026
+        </div>
+
+        {/* Mid-left: countdown + cause line */}
+        <div className="flex flex-col">
           <div className="flex items-baseline gap-2">
             <span
               aria-hidden="true"
-              className="inline-block w-2 h-2 rounded-full"
+              className="inline-block w-2 h-2 rounded-full self-center"
               style={{
                 background: '#E8642C',
                 boxShadow: '0 0 10px rgba(232,100,44,0.7)',
@@ -1588,7 +1521,7 @@ function MarathonTile({ onOpen }: { onOpen?: () => void }) {
               }}
             />
             <div
-              className="text-[44px] md:text-[56px] font-bold leading-none tracking-tight tabular-nums"
+              className="text-[40px] md:text-[52px] font-bold leading-none tracking-tight tabular-nums"
               style={{ color: numberColor }}
             >
               {days ?? '—'}
@@ -1600,13 +1533,57 @@ function MarathonTile({ onOpen }: { onOpen?: () => void }) {
               Days
             </div>
           </div>
-        </div>
-        <div className="text-[11.5px] md:text-[12px] tracking-tight" style={{ color: subtleText }}>
-          Running for <span className="font-semibold" style={{ color: numberColor }}>Team for Kids</span> · NYRR
+          <div className="text-[11.5px] md:text-[12px] tracking-tight mt-2" style={{ color: subtleText }}>
+            Running for <span className="font-semibold" style={{ color: numberColor }}>Team for Kids</span> · NYRR
+          </div>
         </div>
 
-        {/* Progress + donate row */}
-        <div className="mt-auto pt-3">
+        {/* Mid-right: physical QR code chip — scanner reticle around a white
+            tile holding the live NYRR donation QR. The QR is the donate
+            button: tap on desktop, scan on mobile. */}
+        <a
+          href="https://donations.nyrr.org/donations/new?fundraiser=624830c3c37aaaa441f8"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Scan or tap to donate"
+          className="relative z-10 row-span-2 self-start group"
+        >
+          <div
+            className="relative rounded-xl p-2 transition-transform duration-300 group-hover:-translate-y-0.5"
+            style={{
+              width: 104,
+              height: 104,
+              background: '#fff',
+              boxShadow:
+                '0 0 0 1.5px rgba(232,100,44,0.55), 0 8px 22px rgba(232,100,44,0.22), inset 0 1px 0 rgba(255,255,255,0.6)',
+            }}
+          >
+            <Image
+              src="/images/nyrr-qr.png"
+              alt="Donation QR code"
+              fill
+              className="object-contain p-2"
+              sizes="104px"
+            />
+            {/* Scanner reticle corners — purely decorative */}
+            <span aria-hidden="true" className="absolute -top-[3px] -left-[3px] w-3 h-3 border-t-2 border-l-2 rounded-tl-md" style={{ borderColor: '#E8642C' }} />
+            <span aria-hidden="true" className="absolute -top-[3px] -right-[3px] w-3 h-3 border-t-2 border-r-2 rounded-tr-md" style={{ borderColor: '#E8642C' }} />
+            <span aria-hidden="true" className="absolute -bottom-[3px] -left-[3px] w-3 h-3 border-b-2 border-l-2 rounded-bl-md" style={{ borderColor: '#E8642C' }} />
+            <span aria-hidden="true" className="absolute -bottom-[3px] -right-[3px] w-3 h-3 border-b-2 border-r-2 rounded-br-md" style={{ borderColor: '#E8642C' }} />
+          </div>
+          <div
+            className="mt-1.5 text-[9.5px] font-bold uppercase tracking-[0.2em] text-center inline-flex items-center justify-center gap-1 w-full"
+            style={{ color: isLight ? '#c63d1f' : '#ff8a4a' }}
+          >
+            Scan · Donate
+            <svg className="w-2.5 h-2.5 transition-transform duration-300 group-hover:translate-x-0.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
+        </a>
+
+        {/* Bottom-left (spans full bottom row): progress bar + amounts */}
+        <div className="col-span-2 self-end">
           <div className="h-2.5 w-full rounded-full overflow-hidden" style={{ background: palette.trackBackground }}>
             <div
               className="h-full rounded-full relative overflow-hidden"
@@ -1628,29 +1605,16 @@ function MarathonTile({ onOpen }: { onOpen?: () => void }) {
               />
             </div>
           </div>
-          <div className="flex items-center justify-between mt-2.5">
+          <div className="flex items-baseline justify-between mt-2">
             <div className="text-[13px] font-bold tabular-nums tracking-tight" style={{ color: numberColor }}>
               ${raised.toLocaleString()}
               <span className="font-medium ml-1" style={{ color: subtleText }}>
                 / ${goal.toLocaleString()}
               </span>
             </div>
-            <a
-              href="https://donations.nyrr.org/donations/new?fundraiser=624830c3c37aaaa441f8"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="relative z-10 inline-flex items-center gap-1.5 text-[12px] font-bold tracking-tight px-3.5 py-1.5 rounded-full hover:scale-[1.04] transition-transform"
-              style={{
-                background: 'linear-gradient(180deg, #E8642C, #d05722)',
-                color: '#fff',
-                boxShadow: '0 4px 12px rgba(232,100,44,0.32)',
-              }}
-            >
-              Donate
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-              </svg>
-            </a>
+            <div className="text-[10.5px] font-semibold uppercase tracking-[0.18em]" style={{ color: subtleText }}>
+              {pct}% funded
+            </div>
           </div>
         </div>
       </div>
@@ -1702,10 +1666,20 @@ const CONTACTS = [
   {
     label: 'HatchingPoint',
     href: 'https://www.hatchingpoint.com/',
+    // Real company mark, rendered in the same monochrome (white in dark
+    // mode, near-black in light) as the inline SVGs above so the chip row
+    // reads as a unified set instead of one logo punching out.
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-      </svg>
+      <Image
+        src="/images/hatchingpoint-logo.jpeg"
+        alt=""
+        width={20}
+        height={20}
+        className="w-full h-full object-contain"
+        // brightness(0) flattens to pure black; in dark mode the chip's
+        // currentColor is white so we additionally invert. The chip-level
+        // override (in ContactTile) toggles invert per palette.
+      />
     ),
   },
 ]
@@ -1724,23 +1698,42 @@ function ContactTile({ onOpen }: { onOpen?: () => void }) {
     >
       <div className="px-5 md:px-6 pt-3 pb-4 md:pb-5 flex-1 flex flex-col">
         <div className="grid grid-cols-2 gap-2 flex-1">
-          {CONTACTS.map((c) => (
-            <a
-              key={c.label}
-              href={c.href}
-              target={c.href.startsWith('mailto:') ? undefined : '_blank'}
-              rel={c.href.startsWith('mailto:') ? undefined : 'noopener noreferrer'}
-              className="relative z-10 flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl transition-all hover:scale-[1.02]"
-              style={{
-                background: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)',
-                border: palette.cardBorder,
-                color: isLight ? '#1c1a1c' : '#fff',
-              }}
-            >
-              <div className="w-4 h-4 opacity-90">{c.icon}</div>
-              <div className="text-[10.5px] font-semibold tracking-tight">{c.label}</div>
-            </a>
-          ))}
+          {CONTACTS.map((c) => {
+            // The HatchingPoint chip uses the real company logo (a JPEG).
+            // Flatten it to match the other monochrome SVG icons in the
+            // grid so the row reads as one cohesive set.
+            const isImgLogo = c.label === 'HatchingPoint'
+            return (
+              <a
+                key={c.label}
+                href={c.href}
+                target={c.href.startsWith('mailto:') ? undefined : '_blank'}
+                rel={c.href.startsWith('mailto:') ? undefined : 'noopener noreferrer'}
+                className="relative z-10 flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl transition-all hover:scale-[1.02]"
+                style={{
+                  background: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)',
+                  border: palette.cardBorder,
+                  color: isLight ? '#1c1a1c' : '#fff',
+                }}
+              >
+                <div
+                  className="w-4 h-4 opacity-90"
+                  style={
+                    isImgLogo
+                      ? {
+                          filter: isLight
+                            ? 'brightness(0) saturate(0)'
+                            : 'brightness(0) saturate(0) invert(1)',
+                        }
+                      : undefined
+                  }
+                >
+                  {c.icon}
+                </div>
+                <div className="text-[10.5px] font-semibold tracking-tight">{c.label}</div>
+              </a>
+            )
+          })}
         </div>
         <div
           className="mt-3 text-[10px] tracking-wide text-center"
