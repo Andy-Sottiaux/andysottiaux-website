@@ -82,7 +82,7 @@ function CompactInner({ initialBoardLive }: { initialBoardLive: boolean }) {
 
   return (
     <main
-      className="relative min-h-screen w-full flex flex-col"
+      className="relative w-full flex flex-col min-h-screen md:h-[100dvh] md:overflow-hidden"
       style={{
         background: palette.sectionBackground,
         color: isLight ? '#1c1a1c' : '#fff',
@@ -90,13 +90,17 @@ function CompactInner({ initialBoardLive }: { initialBoardLive: boolean }) {
           '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
       }}
     >
-      {/* Site is dark-only — no theme toggle, no header. The bento itself
-          is the page identity. */}
+      {/* Site is dark-only — no theme toggle, no header. The bento IS the
+          page.
 
-      {/* Bento — vertically centers on tall viewports, fills naturally on
-          short ones. */}
-      <div className="flex-1 flex items-center justify-center px-4 sm:px-6 md:px-8 py-3 sm:py-4 md:py-5">
-        <div className="w-full max-w-[1380px] mx-auto">
+          Desktop / laptop: bento fills the viewport exactly. `md:h-[100dvh]`
+          on <main> + `overflow-hidden` + a flex column that hands the
+          remaining height down to the grid. Tile min-heights are zeroed on
+          md+, the grid uses `1fr` rows, so cards auto-size to fit without
+          ever scrolling.
+          Mobile: keeps `min-h-screen` and natural vertical scrolling. */}
+      <div className="flex-1 flex flex-col px-4 sm:px-6 md:px-8 py-3 sm:py-4 md:py-5 md:min-h-0">
+        <div className="w-full max-w-[1380px] mx-auto md:flex-1 md:flex md:flex-col md:min-h-0">
           <Bento boardLive={boardLive} onOpen={setOpenModal} />
         </div>
       </div>
@@ -186,10 +190,9 @@ function Bento({
 }) {
   return (
     <div
-      className="grid gap-3 md:gap-4 mt-4 md:mt-5"
+      className="grid gap-3 md:gap-4 mt-4 md:mt-0 md:flex-1 md:min-h-0 [grid-auto-rows:auto] md:[grid-auto-rows:minmax(0,1fr)]"
       style={{
         gridTemplateColumns: 'repeat(12, minmax(0, 1fr))',
-        gridAutoRows: 'minmax(0, auto)',
       }}
     >
       {/* Row 1: identity (3 cols) · camera-or-building (6 cols) · solar-or-stats (3 cols, spans 2 rows) */}
@@ -412,7 +415,7 @@ function IdentityTile({ onOpen }: { onOpen?: () => void }) {
       deepLink="/#about"
       onOpen={onOpen}
       modalLabel="Open About"
-      className="min-h-[170px] md:min-h-[270px]"
+      className="min-h-[170px] md:min-h-0"
     >
       <div className="flex-1 flex flex-col px-5 md:px-6 py-5">
         {/* Hero portrait — much bigger now. Square with a subtle ring + an
@@ -509,7 +512,7 @@ function CameraTile({ onOpen }: { onOpen?: () => void }) {
       deepLink="/#now"
       onOpen={onOpen}
       modalLabel="Open Field Live"
-      className="min-h-[170px] md:min-h-[270px]"
+      className="min-h-[170px] md:min-h-0"
     >
       <div className="px-3 md:px-4 pt-2 md:pt-3 pb-3 md:pb-4 flex-1 flex flex-col">
         <div
@@ -548,7 +551,7 @@ function SolarTile({ onOpen }: { onOpen?: () => void }) {
         onClick={onOpen}
         aria-haspopup="dialog"
         aria-label="Open Field Live"
-        className="block w-full h-full min-h-[360px] md:min-h-[558px] [&>div]:h-full hover:scale-[1.005] transition-transform duration-300 text-left"
+        className="block w-full h-full min-h-[360px] md:min-h-0 [&>div]:h-full hover:scale-[1.005] transition-transform duration-300 text-left"
       >
         <FieldSolarCard />
       </button>
@@ -558,7 +561,7 @@ function SolarTile({ onOpen }: { onOpen?: () => void }) {
     <a
       href="/#now"
       aria-label="Open Field Live on the full site"
-      className="block h-full min-h-[360px] md:min-h-[558px] [&>div]:h-full hover:scale-[1.005] transition-transform duration-300"
+      className="block h-full min-h-[360px] md:min-h-0 [&>div]:h-full hover:scale-[1.005] transition-transform duration-300"
     >
       <FieldSolarCard />
     </a>
@@ -575,7 +578,7 @@ function HealthTile({ onOpen }: { onOpen?: () => void }) {
         onClick={onOpen}
         aria-haspopup="dialog"
         aria-label="Open Field Live"
-        className="block w-full h-full min-h-[260px] md:min-h-[270px] [&>div]:h-full hover:scale-[1.005] transition-transform duration-300 text-left"
+        className="block w-full h-full min-h-[260px] md:min-h-0 [&>div]:h-full hover:scale-[1.005] transition-transform duration-300 text-left"
       >
         <FieldHealthCard />
       </button>
@@ -585,7 +588,7 @@ function HealthTile({ onOpen }: { onOpen?: () => void }) {
     <a
       href="/#now"
       aria-label="Open Field Live on the full site"
-      className="block h-full min-h-[260px] md:min-h-[270px] [&>div]:h-full hover:scale-[1.005] transition-transform duration-300"
+      className="block h-full min-h-[260px] md:min-h-0 [&>div]:h-full hover:scale-[1.005] transition-transform duration-300"
     >
       <FieldHealthCard />
     </a>
@@ -609,7 +612,7 @@ function EducationTile() {
 
   return (
     <div
-      className="relative rounded-2xl h-full min-h-[260px] md:min-h-[270px] flex flex-col p-5 md:p-6 overflow-hidden"
+      className="relative rounded-2xl h-full min-h-[260px] md:min-h-0 flex flex-col p-5 md:p-6 overflow-hidden"
       style={{
         background: palette.cardBackground,
         border: palette.cardBorder,
@@ -824,7 +827,7 @@ function BuildingTile() {
 
   return (
     <div
-      className="relative rounded-2xl h-full min-h-[170px] md:min-h-[270px] flex flex-col p-6 md:p-7 overflow-hidden"
+      className="relative rounded-2xl h-full min-h-[170px] md:min-h-0 flex flex-col p-6 md:p-7 overflow-hidden"
       style={{
         background: palette.cardBackground,
         border: palette.cardBorder,
@@ -1057,7 +1060,7 @@ function MoreProjectsTile({ onOpen }: { onOpen?: (key: ModalKey) => void }) {
 
   return (
     <div
-      className="relative rounded-2xl h-full min-h-[360px] md:min-h-[558px] flex flex-col overflow-hidden"
+      className="relative rounded-2xl h-full min-h-[360px] md:min-h-0 flex flex-col overflow-hidden"
       style={{
         background: palette.cardBackground,
         border: palette.cardBorder,
@@ -1277,7 +1280,7 @@ function ExperienceTile({ onOpen }: { onOpen?: () => void }) {
       deepLink="/#experience"
       onOpen={onOpen}
       modalLabel="Open Experience"
-      className="min-h-[200px] md:min-h-[280px]"
+      className="min-h-[200px] md:min-h-0"
     >
       <div className="px-5 md:px-6 pt-3 pb-4 md:pb-5 flex-1 flex flex-col">
         <div className="space-y-2 md:space-y-2.5">
@@ -1381,7 +1384,7 @@ function ProjectsTile({ onOpen }: { onOpen?: () => void }) {
       deepLink="/#projects"
       onOpen={onOpen}
       modalLabel="Open Projects"
-      className="min-h-[180px] md:min-h-[210px]"
+      className="min-h-[180px] md:min-h-0"
     >
       <div className="px-5 md:px-6 pt-3 pb-4 md:pb-5 flex-1 flex flex-col">
         <div className="space-y-2 md:space-y-2.5 flex-1">
@@ -1503,7 +1506,7 @@ function MarathonTile({ onOpen }: { onOpen?: () => void }) {
 
   return (
     <div
-      className="relative rounded-2xl h-full min-h-[180px] md:min-h-[210px] overflow-hidden group"
+      className="relative rounded-2xl h-full min-h-[180px] md:min-h-0 overflow-hidden group"
       data-peek-target="true"
       role="region"
       aria-label="2026 TCS NYC Marathon"
@@ -1717,7 +1720,7 @@ function ContactTile({ onOpen }: { onOpen?: () => void }) {
       deepLink="/#contact"
       onOpen={onOpen}
       modalLabel="Open Contact"
-      className="min-h-[180px] md:min-h-[210px]"
+      className="min-h-[180px] md:min-h-0"
     >
       <div className="px-5 md:px-6 pt-3 pb-4 md:pb-5 flex-1 flex flex-col">
         <div className="grid grid-cols-2 gap-2 flex-1">
