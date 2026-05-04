@@ -36,7 +36,6 @@ import dynamic from 'next/dynamic'
 import FieldSolarCard from './FieldSolarCard'
 import FieldHealthCard from './FieldHealthCard'
 import { FieldThemeProvider, useFieldTheme } from './fieldTheme'
-import ThemeToggle from './ThemeToggle'
 import Modal from './Modal'
 import {
   AboutModalContent,
@@ -90,16 +89,12 @@ function CompactInner({ initialBoardLive }: { initialBoardLive: boolean }) {
           '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
       }}
     >
-      {/* Floating theme toggle in the top-right; the bento itself is the
-          page identity, no need for a name nav bar above it. */}
-      <div className="absolute top-3 right-3 sm:top-4 sm:right-4 z-20">
-        <ThemeToggle />
-      </div>
+      {/* Site is dark-only — no theme toggle, no header. The bento itself
+          is the page identity. */}
 
       {/* Bento — vertically centers on tall viewports, fills naturally on
-          short ones. Top padding leaves clearance for the floating theme
-          toggle on mobile so it doesn't overlap the first tile. */}
-      <div className="flex-1 flex items-center justify-center px-4 sm:px-6 md:px-8 pt-12 sm:pt-14 pb-6 md:pb-8">
+          short ones. */}
+      <div className="flex-1 flex items-center justify-center px-4 sm:px-6 md:px-8 pt-6 sm:pt-8 pb-6 md:pb-8">
         <div className="w-full max-w-[1380px] mx-auto">
           <Bento boardLive={boardLive} onOpen={setOpenModal} />
         </div>
@@ -197,12 +192,14 @@ function Bento({
         />
       </div>
 
-      {/* Tall tile (col 10–12, rows 1–2): Solar when live, Education when stale */}
+      {/* Tall tile (col 10–12, rows 1–2): Solar when live, MoreProjects
+          when stale. The tall slot has room for many projects, so the
+          long-tail of iOS apps lives here when the live data is down. */}
       <div className="col-span-12 md:col-span-3 md:row-span-2">
         <CrossfadeTile
           showLive={boardLive}
           live={<SolarTile onOpen={() => onOpen('live')} />}
-          fallback={<EducationTile />}
+          fallback={<MoreProjectsTile />}
         />
       </div>
 
@@ -210,11 +207,15 @@ function Bento({
       <div className="col-span-12 md:col-span-5">
         <ExperienceTile onOpen={() => onOpen('experience')} />
       </div>
+      {/* Mid tile (col 6–9, row 2, single-row): Health when live, Education
+          when stale. Single-row slot is roughly square — fits the Texas
+          Tech mark + degree info comfortably without forcing long
+          vertical run. */}
       <div className="col-span-12 md:col-span-4">
         <CrossfadeTile
           showLive={boardLive}
           live={<HealthTile onOpen={() => onOpen('live')} />}
-          fallback={<MoreProjectsTile />}
+          fallback={<EducationTile />}
         />
       </div>
 
@@ -584,13 +585,16 @@ function HealthTile({ onOpen }: { onOpen?: () => void }) {
 /** Education fallback for the tall right-column slot. Replaces SolarTile
  *  when the board is offline. Texas Tech mark + degree info — concrete,
  *  visual, and personal. */
+/** Replaces HealthTile (mid-row, 4 cols × 1 row, ~square slot) when the
+ *  board is offline. Texas Tech mark + degree info in a horizontal layout
+ *  so it fits a square slot without forcing a tall vertical run. */
 function EducationTile() {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
 
   return (
     <div
-      className="relative rounded-2xl h-full min-h-[360px] md:min-h-[558px] flex flex-col p-7 md:p-8 overflow-hidden"
+      className="relative rounded-2xl h-full min-h-[260px] md:min-h-[270px] flex flex-col p-5 md:p-6 overflow-hidden"
       style={{
         background: palette.cardBackground,
         border: palette.cardBorder,
@@ -601,9 +605,10 @@ function EducationTile() {
       role="region"
       aria-label="Education"
     >
-      {/* Texas Tech red ambient glow — recognisable without screaming. */}
+      {/* Texas Tech red ambient glow */}
       <div
-        className="pointer-events-none absolute -top-24 -right-20 w-64 h-64 rounded-full"
+        aria-hidden="true"
+        className="pointer-events-none absolute -top-20 -right-16 w-56 h-56 rounded-full"
         style={{
           background: isLight
             ? 'radial-gradient(circle, rgba(204,0,0,0.08), transparent 70%)'
@@ -611,37 +616,38 @@ function EducationTile() {
         }}
       />
       <div
-        className="text-[10.5px] font-semibold uppercase tracking-[0.22em]"
+        className="text-[10px] font-semibold uppercase tracking-[0.22em]"
         style={{ color: isLight ? '#cc0000' : '#ff7a7a' }}
       >
         Education
       </div>
 
-      <div className="flex-1 flex flex-col items-center justify-center gap-6 py-4">
-        {/* Texas Tech logo as the visual anchor. */}
+      {/* Horizontal layout — logo on the left, text on the right. Fits a
+          square slot far better than the previous vertically stacked one. */}
+      <div className="relative flex-1 flex items-center gap-4 md:gap-5">
         <div
-          className="flex items-center justify-center rounded-2xl flex-shrink-0 p-4"
+          className="flex items-center justify-center rounded-xl flex-shrink-0 p-2.5"
           style={{
             background: isLight ? '#fff' : 'rgba(255,255,255,0.96)',
             boxShadow: isLight
-              ? '0 8px 24px rgba(28,26,28,0.10), 0 0 0 1px rgba(0,0,0,0.04)'
-              : '0 12px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(0,0,0,0.15)',
-            width: '120px',
-            height: '120px',
+              ? '0 6px 18px rgba(28,26,28,0.10), 0 0 0 1px rgba(0,0,0,0.04)'
+              : '0 10px 24px rgba(0,0,0,0.4), 0 0 0 1px rgba(0,0,0,0.15)',
+            width: '88px',
+            height: '88px',
           }}
         >
           <Image
             src="/images/texas-tech-logo.png"
             alt="Texas Tech University"
-            width={96}
-            height={96}
+            width={72}
+            height={72}
             className="w-full h-full object-contain"
           />
         </div>
 
-        <div className="text-center">
+        <div className="flex-1 min-w-0">
           <div
-            className="text-[18px] md:text-[20px] font-semibold tracking-tight leading-tight"
+            className="text-[15px] md:text-[16px] font-semibold tracking-tight leading-tight"
             style={{
               backgroundImage: palette.headlineGradient,
               WebkitBackgroundClip: 'text',
@@ -652,13 +658,13 @@ function EducationTile() {
             B.S. Mechanical Engineering
           </div>
           <div
-            className="text-[12.5px] tracking-tight mt-1"
+            className="text-[12px] tracking-tight mt-1"
             style={{ color: palette.bodyText }}
           >
             Texas Tech University · 2016
           </div>
           <div
-            className="text-[11.5px] tracking-tight mt-2 italic"
+            className="text-[11px] tracking-tight mt-1 italic"
             style={{ color: palette.mutedText }}
           >
             Minor in Mathematics
@@ -667,7 +673,7 @@ function EducationTile() {
       </div>
 
       <div
-        className="text-[10.5px] uppercase tracking-[0.18em] font-medium mt-auto text-center pt-4 border-t"
+        className="text-[10px] uppercase tracking-[0.18em] font-medium mt-auto text-center pt-3 border-t"
         style={{ color: palette.fadedText, borderColor: palette.hairline }}
       >
         Study abroad · Seville, Spain
@@ -676,13 +682,55 @@ function EducationTile() {
   )
 }
 
-/** Replaces CameraTile (wide hero) when the board is offline. Three
- *  domain stacks side-by-side instead of a vertical bullet list — uses
- *  the wide slot's full real estate and reads as a "stacks I work in"
- *  overview rather than a TODO list. */
+/** Replaces CameraTile (wide hero) when the board is offline. Designed
+ *  as a magazine spread: dominant gradient headline, a single restrained
+ *  subtitle, a horizontal lineup of real product icons that serve as the
+ *  visual proof, and a quiet shipping pulse in the corner. The previous
+ *  three-mini-card "domain stacks" version read as a developer dashboard;
+ *  this one reads as a portfolio. */
 function BuildingTile() {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
+
+  // Real product/work icons that anchor the abstraction. Mix of iOS
+  // (existing icon files) and a custom outline rotor for the aerospace
+  // side so the row covers all three domains. Hover lifts each chip
+  // a hair so the row feels touchable, not decorative.
+  const lineup: { id: string; label: string; render?: React.ReactNode; img?: string; round?: boolean }[] = [
+    {
+      id: 'rotor',
+      label: 'Rotor systems',
+      render: (
+        <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+          {/* abstract rotor — 3 blades around a central hub */}
+          <circle cx="16" cy="16" r="2.5" />
+          <path d="M16 13.5L16 5  M19 14L26 8.5  M19.5 17L26.5 22  M14 19L9 26  M12.5 17L5 21  M13 14L7 9" />
+          <circle cx="16" cy="16" r="11" opacity="0.18" strokeDasharray="2 3" />
+        </svg>
+      ),
+    },
+    {
+      id: 'edge',
+      label: 'Edge AI',
+      render: (
+        <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+          {/* camera body + solar panel grid below */}
+          <rect x="6" y="9" width="20" height="11" rx="1.6" />
+          <circle cx="16" cy="14.5" r="3" />
+          <path d="M9 24h14M9 26.5h14" opacity="0.55" />
+          <path d="M11 9V7h10v2" />
+        </svg>
+      ),
+    },
+    { id: 'wyzecar', label: 'WYZECAR', img: '/images/wyzecar.png', round: true },
+    { id: 'rotdot', label: 'Rot Dot', img: '/images/rotdot-icon.png' },
+    { id: 'record', label: 'Record+Transcribe', img: '/images/recordtranscribe-icon.png' },
+    { id: 'airmd', label: 'AirMD+', img: '/images/airmd-icon.jpg' },
+  ]
+
+  // Single accent (cyan) — restrained palette, theme-aware. The previous
+  // three-color treatment fought itself; one accent reads as composed.
+  const accent = isLight ? '#0a8aa8' : '#67e8f9'
 
   // Three domains. Each carries its own color, an outline glyph, a single
   // currently-building line, and a status chip. Status chips animate (the
@@ -755,6 +803,9 @@ function BuildingTile() {
     return { light: '#7c4dcc', dark: '#c084fc' }
   }
 
+  // suppress unused warnings — kept for future variants
+  void stacks; void statusLabel; void statusColor
+
   return (
     <div
       className="relative rounded-2xl h-full min-h-[170px] md:min-h-[270px] flex flex-col p-6 md:p-7 overflow-hidden"
@@ -768,21 +819,11 @@ function BuildingTile() {
       role="region"
       aria-label="Currently building"
     >
-      {/* Triple-hue ambient — each stack's color glows at its corner so
-          the eye can already track which column belongs to which domain
-          before reading the labels. */}
+      {/* Single soft accent halo — bottom-left so it weights the type
+          column visually without competing with the icon row. */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -top-24 -left-12 w-64 h-64 rounded-full"
-        style={{
-          background: isLight
-            ? 'radial-gradient(circle, rgba(15,157,79,0.10), transparent 70%)'
-            : 'radial-gradient(circle, rgba(94,234,212,0.12), transparent 70%)',
-        }}
-      />
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute top-10 left-1/2 -translate-x-1/2 w-72 h-56 rounded-full"
+        className="pointer-events-none absolute -bottom-32 -left-16 w-[28rem] h-72 rounded-full"
         style={{
           background: isLight
             ? 'radial-gradient(circle, rgba(10,138,168,0.10), transparent 70%)'
@@ -791,130 +832,126 @@ function BuildingTile() {
       />
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -bottom-24 -right-12 w-64 h-64 rounded-full"
+        className="pointer-events-none absolute -top-24 -right-16 w-72 h-56 rounded-full"
         style={{
           background: isLight
-            ? 'radial-gradient(circle, rgba(180,83,9,0.10), transparent 70%)'
-            : 'radial-gradient(circle, rgba(252,211,77,0.12), transparent 70%)',
+            ? 'radial-gradient(circle, rgba(252,211,77,0.06), transparent 70%)'
+            : 'radial-gradient(circle, rgba(252,211,77,0.10), transparent 70%)',
         }}
       />
 
-      {/* Header row — eyebrow + animated build dot. */}
-      <div className="relative flex items-center justify-between mb-1">
+      {/* Eyebrow row — eyebrow + small "always shipping" pulse */}
+      <div className="relative flex items-center justify-between mb-3">
         <div
-          className="text-[10px] font-semibold uppercase tracking-[0.22em]"
-          style={{ color: isLight ? '#0a8aa8' : 'rgba(103, 232, 249, 0.9)' }}
-        >
-          Currently Building
-        </div>
-        <div
-          className="inline-flex items-center gap-1.5 text-[9.5px] uppercase font-semibold tracking-[0.2em]"
-          style={{ color: palette.fadedText }}
+          className="inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.22em]"
+          style={{ color: accent }}
         >
           <span
             aria-hidden="true"
             className="inline-block w-1.5 h-1.5 rounded-full"
             style={{
-              background: isLight ? '#0a8aa8' : '#67e8f9',
-              boxShadow: isLight
-                ? '0 0 6px rgba(10,138,168,0.6)'
-                : '0 0 8px rgba(103,232,249,0.7)',
+              background: accent,
+              boxShadow: `0 0 8px ${accent}`,
               animation: 'fldBuildPulse 2.4s ease-in-out infinite',
             }}
           />
-          <span>3 stacks · always on</span>
+          Currently Building
+        </div>
+        <div
+          className="inline-flex items-center gap-1.5 text-[9.5px] font-semibold uppercase tracking-[0.2em]"
+          style={{ color: palette.fadedText }}
+        >
+          Always shipping
         </div>
       </div>
 
-      <div
-        className="relative text-[16px] md:text-[18px] font-semibold leading-tight tracking-tight mb-4"
+      {/* Hero gradient typography — three crisp fragments. Reads as a
+          rhythm: hardware · embedded · iOS, in the language of artifacts
+          rather than category labels. */}
+      <h3
+        className="relative font-semibold leading-[1.05] tracking-tight"
         style={{
+          fontSize: 'clamp(22px, 3.4vw, 34px)',
           backgroundImage: palette.headlineGradient,
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
           backgroundClip: 'text',
         }}
       >
-        At the seam of hardware and software.
-      </div>
+        Rotor blades. Edge devices.
+        <br className="hidden sm:inline" />
+        <span className="sm:ml-0"> iOS apps.</span>
+      </h3>
 
-      {/* Three domain stacks, side-by-side. Each is a mini-card inside the
-          tile with hover lift + accent halo. */}
-      <div className="relative flex-1 grid grid-cols-3 gap-2.5 md:gap-3 min-h-0">
-        {stacks.map((s) => {
-          const accent = isLight ? s.light : s.dark
-          const sc = statusColor(s.status)
-          const sColor = isLight ? sc.light : sc.dark
-          return (
+      <p
+        className="relative text-[12.5px] md:text-[13px] leading-snug tracking-tight mt-2.5 max-w-[36ch]"
+        style={{ color: palette.bodyText }}
+      >
+        Building hardware and software at production scale — from AVX
+        Aircraft to the App Store.
+      </p>
+
+      {/* Lineup — real product / domain icons in a thin row at the bottom,
+          fading in left-to-right with a small staggered reveal. The visual
+          payoff. */}
+      <div className="relative mt-auto pt-5">
+        <div
+          className="flex items-center gap-2 sm:gap-2.5 overflow-hidden"
+          style={{
+            // very subtle horizontal mask so the row feels like it could
+            // continue beyond the visible edge — implies "more"
+            WebkitMaskImage:
+              'linear-gradient(90deg, transparent 0, #000 8px, #000 calc(100% - 28px), transparent)',
+            maskImage:
+              'linear-gradient(90deg, transparent 0, #000 8px, #000 calc(100% - 28px), transparent)',
+          }}
+        >
+          {lineup.map((it, i) => (
             <div
-              key={s.domain}
-              className="relative rounded-xl flex flex-col p-3 md:p-3.5 transition-all duration-300 hover:translate-y-[-1px]"
+              key={it.id}
+              className="group relative flex items-center gap-2 flex-shrink-0"
               style={{
-                background: isLight ? 'rgba(0,0,0,0.025)' : 'rgba(255,255,255,0.04)',
-                border: `1px solid ${isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.07)'}`,
-                boxShadow: isLight
-                  ? `inset 0 0 0 0 rgba(0,0,0,0)`
-                  : `inset 0 0 0 0 rgba(0,0,0,0)`,
+                animation: `fldBuildReveal 0.7s cubic-bezier(0.16,1,0.3,1) ${0.05 + i * 0.06}s both`,
               }}
             >
-              {/* Domain icon + label */}
-              <div className="flex items-center gap-2 mb-2">
-                <span
-                  aria-hidden="true"
-                  className="w-5 h-5 flex-shrink-0"
-                  style={{ color: accent }}
-                >
-                  {s.glyph}
-                </span>
-                <span
-                  className="text-[11px] font-bold uppercase tracking-[0.16em] truncate"
-                  style={{ color: accent }}
-                >
-                  {s.domain}
-                </span>
-              </div>
-
-              {/* Currently-building line */}
               <div
-                className="text-[12.5px] md:text-[13px] font-semibold leading-snug tracking-tight"
-                style={{ color: isLight ? '#1c1a1c' : '#fff' }}
+                className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-[10px] overflow-hidden flex items-center justify-center transition-transform duration-300 group-hover:-translate-y-0.5"
+                style={{
+                  background: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)',
+                  border: `1px solid ${isLight ? 'rgba(0,0,0,0.07)' : 'rgba(255,255,255,0.08)'}`,
+                  color: accent,
+                }}
+                title={it.label}
+                aria-label={it.label}
               >
-                {s.line}
-              </div>
-              <div
-                className="text-[10.5px] tracking-tight mt-1"
-                style={{ color: palette.mutedText }}
-              >
-                {s.label}
-              </div>
-
-              {/* Status chip pinned to the bottom */}
-              <div className="mt-auto pt-2.5">
-                <span
-                  className="inline-flex items-center gap-1.5 text-[9.5px] uppercase font-bold tracking-[0.16em] px-1.5 py-0.5 rounded"
-                  style={{
-                    color: sColor,
-                    background: isLight ? `${sColor}14` : `${sColor}22`,
-                    border: `1px solid ${sColor}33`,
-                  }}
-                >
-                  <span
-                    aria-hidden="true"
-                    className="inline-block w-1 h-1 rounded-full"
-                    style={{
-                      background: sColor,
-                      boxShadow: s.status === 'live' ? `0 0 6px ${sColor}` : 'none',
-                      animation: s.status === 'live'
-                        ? 'fldBuildPulse 1.8s ease-in-out infinite'
-                        : 'none',
-                    }}
+                {it.img ? (
+                  <Image
+                    src={it.img}
+                    alt=""
+                    width={40}
+                    height={40}
+                    className={`w-full h-full ${it.round ? 'object-contain p-0.5' : 'object-cover'}`}
                   />
-                  {statusLabel[s.status]}
-                </span>
+                ) : (
+                  <span className="w-5 h-5 sm:w-[22px] sm:h-[22px] block">{it.render}</span>
+                )}
               </div>
             </div>
-          )
-        })}
+          ))}
+          {/* trailing "+more" pip */}
+          <div
+            className="flex-shrink-0 inline-flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-[10px] text-[10px] font-semibold tracking-wide"
+            style={{
+              background: 'transparent',
+              border: `1px dashed ${isLight ? 'rgba(0,0,0,0.18)' : 'rgba(255,255,255,0.18)'}`,
+              color: palette.mutedText,
+              animation: `fldBuildReveal 0.7s cubic-bezier(0.16,1,0.3,1) ${0.05 + lineup.length * 0.06}s both`,
+            }}
+            aria-label="More projects"
+          >
+            +
+          </div>
+        </div>
       </div>
 
       <style jsx global>{`
@@ -922,38 +959,83 @@ function BuildingTile() {
           0%, 100% { opacity: 0.55; transform: scale(1); }
           50%      { opacity: 1;    transform: scale(1.25); }
         }
+        @keyframes fldBuildReveal {
+          from { opacity: 0; transform: translateY(8px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
       `}</style>
     </div>
   )
 }
 
-/** Replaces HealthTile (mid-row, 4 cols). Three additional projects beyond
- *  ProjectsTile, same row pattern. */
-const MORE_PROJECTS = [
+/** Replaces SolarTile (tall right column, 3 cols × 2 rows) when the
+ *  board is offline. Long-tail iOS catalog + a CAD download to add a
+ *  hardware artifact alongside the apps. Each row is its own external
+ *  link. Icons are ACTUAL App Store icons matched to each app — earlier
+ *  versions had them mismatched. */
+const MORE_PROJECTS: {
+  name: string
+  desc: string
+  icon?: string
+  iconRender?: React.ReactNode
+  href: string
+  download?: boolean
+  note?: string
+}[] = [
   {
     name: 'AirMD+',
-    desc: 'iOS HVAC monitoring · custom hardware',
+    desc: 'HVAC monitoring · iOS + custom hardware',
     icon: '/images/airmd-icon.jpg',
+    href: 'https://www.hatchingpoint.com/airmd',
   },
   {
     name: 'LevelUp+',
-    desc: 'Habit & goal tracker · iOS · streaks',
-    icon: '/images/recordtranscribe-icon.png',
+    desc: 'Personal advancement tracker · iOS',
+    icon: '/images/levelup-icon.jpg',
+    href: 'https://apps.apple.com/us/app/levelup/id6757681084',
   },
   {
     name: 'Caffeine Rhythm',
     desc: 'Caffeine half-life timing · iOS · HealthKit',
-    icon: '/images/rotdot-icon.png',
+    icon: '/images/caffeine-icon.jpg',
+    href: 'https://apps.apple.com/us/app/caffeine-rhythm/id6756790180',
+  },
+  {
+    name: 'DoorDot',
+    desc: 'NFC privacy doorbell · iOS · CloudKit',
+    icon: '/images/doordot-icon.png',
+    href: 'https://apps.apple.com/app/doordot/id6758969043',
+  },
+  {
+    name: 'Travel Agent AI',
+    desc: 'AI trip-planning assistant · iOS',
+    icon: '/images/travelagentai-icon.png',
+    href: 'https://apps.apple.com/us/app/travel-agent-ai/id6758284691',
+  },
+  {
+    name: 'AirPods Pro 3 · Tesla Mount',
+    desc: 'CAD design · STL · free download',
+    iconRender: (
+      <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+        {/* CAD-y wireframe block: a cube with a small earpod silhouette */}
+        <path d="M6 11l10-5 10 5v10l-10 5-10-5z" />
+        <path d="M6 11l10 5 10-5M16 16v10" opacity="0.6" />
+      </svg>
+    ),
+    href: '/files/AirPods Pro 3_Teslav2.STL',
+    download: true,
+    note: 'STL',
   },
 ]
 
 function MoreProjectsTile() {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
+  const accent = isLight ? '#b45309' : 'rgba(252, 211, 77, 0.9)'
 
   return (
     <div
-      className="relative rounded-2xl h-full min-h-[260px] md:min-h-[270px] flex flex-col overflow-hidden"
+      className="relative rounded-2xl h-full min-h-[360px] md:min-h-[558px] flex flex-col overflow-hidden"
       style={{
         background: palette.cardBackground,
         border: palette.cardBorder,
@@ -964,49 +1046,96 @@ function MoreProjectsTile() {
       role="region"
       aria-label="More projects"
     >
+      {/* Warm corner halo to distinguish this fallback from the live solar tile */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -top-24 -right-16 w-64 h-64 rounded-full"
+        style={{
+          background: isLight
+            ? 'radial-gradient(circle, rgba(180,83,9,0.10), transparent 70%)'
+            : 'radial-gradient(circle, rgba(252,211,77,0.14), transparent 70%)',
+        }}
+      />
       <div
         className="px-5 md:px-6 pt-4 md:pt-5 text-[10px] font-semibold uppercase tracking-[0.22em]"
-        style={{ color: isLight ? '#b45309' : 'rgba(252, 211, 77, 0.9)' }}
+        style={{ color: accent }}
       >
         More Projects
       </div>
       <div className="px-5 md:px-6 pt-3 pb-4 md:pb-5 flex-1 flex flex-col">
-        <div className="space-y-2 md:space-y-2.5 flex-1">
+        <div className="space-y-2.5 md:space-y-3 flex-1">
           {MORE_PROJECTS.map((p) => (
-            <div
+            <a
               key={p.name}
-              className="flex items-center gap-3 py-1"
+              href={p.href}
+              {...(p.download
+                ? { download: '' }
+                : { target: '_blank', rel: 'noopener noreferrer' })}
+              className="group relative z-10 flex items-center gap-3 py-1.5 rounded-lg -mx-1 px-1 transition-colors"
             >
               <div
-                className="w-9 h-9 rounded-lg overflow-hidden flex-shrink-0"
+                className="w-10 h-10 rounded-[10px] overflow-hidden flex-shrink-0 flex items-center justify-center"
                 style={{
                   border: palette.cardBorder,
                   background: isLight ? '#fff' : 'rgba(255,255,255,0.04)',
+                  color: accent,
                 }}
               >
-                <Image
-                  src={p.icon}
-                  alt=""
-                  width={36}
-                  height={36}
-                  className="w-full h-full object-cover"
-                />
+                {p.icon ? (
+                  <Image
+                    src={p.icon}
+                    alt=""
+                    width={40}
+                    height={40}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="w-5 h-5 block">{p.iconRender}</span>
+                )}
               </div>
               <div className="flex-1 min-w-0">
-                <div
-                  className="text-[13px] md:text-[14px] font-semibold tracking-tight"
-                  style={{ color: isLight ? '#1c1a1c' : '#fff' }}
-                >
-                  {p.name}
+                <div className="flex items-center gap-2">
+                  <span
+                    className="text-[13px] md:text-[14px] font-semibold tracking-tight truncate"
+                    style={{ color: isLight ? '#1c1a1c' : '#fff' }}
+                  >
+                    {p.name}
+                  </span>
+                  {p.note && (
+                    <span
+                      className="text-[9.5px] font-bold uppercase tracking-[0.16em] px-1.5 py-0.5 rounded flex-shrink-0"
+                      style={{
+                        color: accent,
+                        background: isLight ? `${accent}14` : `${accent}22`,
+                        border: `1px solid ${accent}33`,
+                      }}
+                    >
+                      {p.note}
+                    </span>
+                  )}
                 </div>
                 <div
-                  className="text-[11px] md:text-[12px] tracking-tight truncate"
+                  className="text-[11px] md:text-[12px] tracking-tight truncate mt-0.5"
                   style={{ color: palette.bodyText }}
                 >
                   {p.desc}
                 </div>
               </div>
-            </div>
+              <svg
+                className="w-3.5 h-3.5 flex-shrink-0 opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+                style={{ color: palette.mutedText }}
+              >
+                {p.download ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                )}
+              </svg>
+            </a>
           ))}
         </div>
         <div
@@ -1022,11 +1151,56 @@ function MoreProjectsTile() {
 
 /* ───────────────────── Experience tile ──────────────────────── */
 
-const EXPERIENCE = [
-  { title: 'Senior Engineer', company: 'AVX Aircraft', period: 'Sep 2023 — Present', url: 'https://www.avxaircraft.com/', current: true },
-  { title: 'Founder', company: 'HatchingPoint', period: '2021 — Present', url: 'https://www.hatchingpoint.com' },
-  { title: 'Rotor Systems', company: 'Bell Flight', period: '2020 — 2023', url: 'https://www.bellflight.com' },
-  { title: 'Project Manager', company: 'Texas Air Systems', period: '2016 — 2020', url: 'https://www.texasairsystems.com/' },
+// Per-company logo metadata. `aspect` controls the visible chip shape so
+// wide marks (Bell SVG) don't get squashed into a square; `pad` lets each
+// brand breathe a little against its white plate.
+const EXPERIENCE: {
+  title: string
+  company: string
+  period: string
+  url: string
+  current?: boolean
+  logo: string
+  aspect?: 'square' | 'wide'
+  pad?: 'tight' | 'normal'
+}[] = [
+  {
+    title: 'Senior Engineer',
+    company: 'AVX Aircraft',
+    period: 'Sep 2023 — Present',
+    url: 'https://www.avxaircraft.com/',
+    current: true,
+    logo: '/images/avx.png',
+    aspect: 'wide',
+    pad: 'tight',
+  },
+  {
+    title: 'Founder',
+    company: 'HatchingPoint',
+    period: '2021 — Present',
+    url: 'https://www.hatchingpoint.com',
+    logo: '/images/hatchingpoint-logo.jpeg',
+    aspect: 'square',
+    pad: 'tight',
+  },
+  {
+    title: 'Rotor Systems',
+    company: 'Bell Flight',
+    period: '2020 — 2023',
+    url: 'https://www.bellflight.com',
+    logo: '/images/bell.svg',
+    aspect: 'wide',
+    pad: 'normal',
+  },
+  {
+    title: 'Project Manager',
+    company: 'Texas Air Systems',
+    period: '2016 — 2020',
+    url: 'https://www.texasairsystems.com/',
+    logo: '/images/texasairsystems-logo.jpeg',
+    aspect: 'wide',
+    pad: 'tight',
+  },
 ]
 
 function ExperienceTile({ onOpen }: { onOpen?: () => void }) {
@@ -1044,47 +1218,77 @@ function ExperienceTile({ onOpen }: { onOpen?: () => void }) {
     >
       <div className="px-5 md:px-6 pt-3 pb-4 md:pb-5 flex-1 flex flex-col">
         <div className="space-y-2 md:space-y-2.5">
-          {EXPERIENCE.map((e) => (
-            <a
-              key={e.company}
-              href={e.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="relative z-10 group flex items-baseline justify-between gap-3 py-1.5 border-b last:border-b-0"
-              style={{ borderColor: palette.hairline }}
-            >
-              <div className="flex items-baseline gap-2 min-w-0 flex-1">
-                {e.current && (
-                  <span
-                    className="inline-block h-1.5 w-1.5 rounded-full flex-shrink-0 translate-y-[-1px]"
-                    style={{
-                      background: '#30d158',
-                      boxShadow: '0 0 6px rgba(48,209,88,0.7)',
-                    }}
-                    aria-hidden="true"
-                  />
-                )}
-                <span
-                  className="text-[13px] md:text-[14px] font-semibold tracking-tight truncate"
-                  style={{ color: isLight ? '#1c1a1c' : '#fff' }}
-                >
-                  {e.company}
-                </span>
-                <span
-                  className="text-[12px] md:text-[13px] tracking-tight truncate"
-                  style={{ color: palette.bodyText }}
-                >
-                  {e.title}
-                </span>
-              </div>
-              <span
-                className="text-[11px] md:text-[12px] tabular-nums tracking-tight flex-shrink-0 group-hover:opacity-100 opacity-80 transition-opacity"
-                style={{ color: palette.mutedText }}
+          {EXPERIENCE.map((e) => {
+            const wide = e.aspect === 'wide'
+            const padPx = e.pad === 'tight' ? 4 : 6
+            return (
+              <a
+                key={e.company}
+                href={e.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="relative z-10 group flex items-center justify-between gap-3 py-1.5 border-b last:border-b-0"
+                style={{ borderColor: palette.hairline }}
               >
-                {e.period}
-              </span>
-            </a>
-          ))}
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  {/* Logo chip — white plate so each brand reads true; aspect
+                      varies by mark (square for HatchingPoint, wide for Bell
+                      / AVX / Texas Air). */}
+                  <div
+                    className="flex items-center justify-center rounded-md flex-shrink-0 overflow-hidden"
+                    style={{
+                      width: wide ? 38 : 28,
+                      height: 28,
+                      padding: padPx,
+                      background: '#fff',
+                      boxShadow: isLight
+                        ? '0 1px 2px rgba(28,26,28,0.08), 0 0 0 1px rgba(0,0,0,0.04)'
+                        : '0 1px 2px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,0,0,0.2)',
+                    }}
+                  >
+                    <Image
+                      src={e.logo}
+                      alt={`${e.company} logo`}
+                      width={wide ? 80 : 56}
+                      height={56}
+                      className="max-w-full max-h-full w-auto h-auto object-contain"
+                    />
+                  </div>
+
+                  <div className="flex items-baseline gap-2 min-w-0 flex-1">
+                    {e.current && (
+                      <span
+                        className="inline-block h-1.5 w-1.5 rounded-full flex-shrink-0"
+                        style={{
+                          background: '#30d158',
+                          boxShadow: '0 0 6px rgba(48,209,88,0.7)',
+                        }}
+                        aria-hidden="true"
+                      />
+                    )}
+                    <span
+                      className="text-[13px] md:text-[14px] font-semibold tracking-tight truncate"
+                      style={{ color: isLight ? '#1c1a1c' : '#fff' }}
+                    >
+                      {e.company}
+                    </span>
+                    <span
+                      className="text-[12px] md:text-[13px] tracking-tight truncate"
+                      style={{ color: palette.bodyText }}
+                    >
+                      {e.title}
+                    </span>
+                  </div>
+                </div>
+                <span
+                  className="text-[11px] md:text-[12px] tabular-nums tracking-tight flex-shrink-0 group-hover:opacity-100 opacity-80 transition-opacity"
+                  style={{ color: palette.mutedText }}
+                >
+                  {e.period}
+                </span>
+              </a>
+            )
+          })}
         </div>
       </div>
     </Tile>
@@ -1296,7 +1500,7 @@ function MarathonTile({ onOpen }: { onOpen?: () => void }) {
               border: isLight ? '1px solid rgba(232,100,44,0.25)' : '1px solid rgba(232,100,44,0.35)',
             }}
           >
-            Nov 2026
+            Nov 1, 2026
           </div>
         </div>
 
