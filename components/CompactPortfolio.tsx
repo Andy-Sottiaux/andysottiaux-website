@@ -82,7 +82,7 @@ function CompactInner({ initialBoardLive }: { initialBoardLive: boolean }) {
 
   return (
     <main
-      className="min-h-screen w-full flex flex-col"
+      className="relative min-h-screen w-full flex flex-col"
       style={{
         background: palette.sectionBackground,
         color: isLight ? '#1c1a1c' : '#fff',
@@ -90,12 +90,16 @@ function CompactInner({ initialBoardLive }: { initialBoardLive: boolean }) {
           '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
       }}
     >
-      <CompactHeader boardLive={boardLive} />
+      {/* Floating theme toggle in the top-right; the bento itself is the
+          page identity, no need for a name nav bar above it. */}
+      <div className="absolute top-3 right-3 sm:top-4 sm:right-4 z-20">
+        <ThemeToggle />
+      </div>
 
       {/* Bento — vertically centers on tall viewports, fills naturally on
-          short ones. Uses minmax(0,1fr) so children can shrink below
-          intrinsic content size and the grid honors row heights. */}
-      <div className="flex-1 flex items-center justify-center px-4 sm:px-6 md:px-8 pb-6 md:pb-8">
+          short ones. Top padding leaves clearance for the floating theme
+          toggle on mobile so it doesn't overlap the first tile. */}
+      <div className="flex-1 flex items-center justify-center px-4 sm:px-6 md:px-8 pt-12 sm:pt-14 pb-6 md:pb-8">
         <div className="w-full max-w-[1380px] mx-auto">
           <Bento boardLive={boardLive} onOpen={setOpenModal} />
         </div>
@@ -159,48 +163,8 @@ function CompactInner({ initialBoardLive }: { initialBoardLive: boolean }) {
   )
 }
 
-/* ─────────────────────────── Header ─────────────────────────── */
-
-function CompactHeader({ boardLive }: { boardLive: boolean }) {
-  const palette = useFieldTheme()
-  const isLight = palette.mode === 'light'
-
-  // Tiny field-status hint in the corner — discoverable but unobtrusive.
-  // Color is the only signal at a distance; the tooltip carries the words.
-  const dotColor = boardLive ? '#30d158' : '#8e8e93'
-  const dotGlow = boardLive
-    ? '0 0 8px rgba(48,209,88,0.6)'
-    : '0 0 6px rgba(142,142,147,0.4)'
-
-  return (
-    <header className="w-full px-4 sm:px-6 md:px-8 pt-4 md:pt-5">
-      <div className="max-w-[1380px] mx-auto flex items-center justify-between">
-        <a
-          href="/"
-          className="text-sm font-semibold tracking-tight opacity-80 hover:opacity-100 transition-opacity"
-        >
-          Andy Sottiaux
-        </a>
-        <div className="flex items-center gap-3">
-          <span
-            className="inline-flex items-center gap-1.5 text-[10.5px] tracking-[0.18em] uppercase font-semibold opacity-70 hover:opacity-100 transition-opacity"
-            style={{ color: isLight ? '#1c1a1c' : '#fff' }}
-            title={boardLive ? 'Field online' : 'Field offline'}
-            aria-label={boardLive ? 'Field online' : 'Field offline'}
-          >
-            <span
-              aria-hidden="true"
-              className="inline-block w-1.5 h-1.5 rounded-full"
-              style={{ background: dotColor, boxShadow: dotGlow }}
-            />
-            <span className="hidden sm:inline">{boardLive ? 'Field' : 'Studio'}</span>
-          </span>
-          <ThemeToggle />
-        </div>
-      </div>
-    </header>
-  )
-}
+/* Header removed — bento itself is the page identity. The theme toggle
+   floats in the top-right corner via CompactInner. */
 
 /* ─────────────────────────── Bento ──────────────────────────── */
 
@@ -712,17 +676,84 @@ function EducationTile() {
   )
 }
 
-/** Replaces CameraTile (wide hero). Currently-building summary with a
- *  subtle ambient gradient so it carries visual weight by itself. */
+/** Replaces CameraTile (wide hero) when the board is offline. Three
+ *  domain stacks side-by-side instead of a vertical bullet list — uses
+ *  the wide slot's full real estate and reads as a "stacks I work in"
+ *  overview rather than a TODO list. */
 function BuildingTile() {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
 
-  const items = [
-    { glyph: '◐', text: 'Solar-powered edge-AI systems' },
-    { glyph: '◑', text: 'NFC-based privacy and focus tools' },
-    { glyph: '◒', text: 'UAV autonomy and rotor design' },
+  // Three domains. Each carries its own color, an outline glyph, a single
+  // currently-building line, and a status chip. Status chips animate (the
+  // cyan "live" one pulses) so the tile reads as motion at idle.
+  const stacks: {
+    domain: string
+    label: string
+    glyph: React.ReactNode
+    line: string
+    status: 'live' | 'shipping' | 'design'
+    // hue used for accents (icon stroke, dot, divider hover)
+    light: string
+    dark: string
+  }[] = [
+    {
+      domain: 'Aerospace',
+      label: 'AVX · UAV systems',
+      glyph: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="2" />
+          <path d="M12 4v6M12 14v6M4 12h6M14 12h6" />
+          <path d="M5 5l3.5 3.5M15.5 15.5L19 19M5 19l3.5-3.5M15.5 8.5L19 5" />
+        </svg>
+      ),
+      line: 'Rotor systems · autonomy stack',
+      status: 'design',
+      light: '#0f9d4f',
+      dark: '#5eead4',
+    },
+    {
+      domain: 'Embedded',
+      label: 'Edge · solar · BLE',
+      glyph: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="6" y="6" width="12" height="12" rx="1.5" />
+          <path d="M9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3" />
+          <circle cx="12" cy="12" r="2" />
+        </svg>
+      ),
+      line: 'Solar field cam · public API',
+      status: 'live',
+      light: '#0a8aa8',
+      dark: '#67e8f9',
+    },
+    {
+      domain: 'iOS',
+      label: 'HatchingPoint · 10+ apps',
+      glyph: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="6" y="2" width="12" height="20" rx="2.5" />
+          <path d="M11 18h2" />
+          <path d="M9 6h6M9 9h6M9 12h3" />
+        </svg>
+      ),
+      line: 'Rot Dot · Record+Transcribe',
+      status: 'shipping',
+      light: '#b45309',
+      dark: '#fcd34d',
+    },
   ]
+
+  const statusLabel: Record<typeof stacks[number]['status'], string> = {
+    live: 'Live',
+    shipping: 'Shipping',
+    design: 'In design',
+  }
+  const statusColor = (s: typeof stacks[number]['status']) => {
+    if (s === 'live') return { light: '#0a8aa8', dark: '#67e8f9' }
+    if (s === 'shipping') return { light: '#0f9d4f', dark: '#86efac' }
+    return { light: '#7c4dcc', dark: '#c084fc' }
+  }
 
   return (
     <div
@@ -737,34 +768,66 @@ function BuildingTile() {
       role="region"
       aria-label="Currently building"
     >
-      {/* Ambient diagonal sweep, low opacity. Slow drift instead of pulse,
-          so it reads as "in motion" without being a fidget. */}
+      {/* Triple-hue ambient — each stack's color glows at its corner so
+          the eye can already track which column belongs to which domain
+          before reading the labels. */}
       <div
-        className="pointer-events-none absolute inset-0"
+        aria-hidden="true"
+        className="pointer-events-none absolute -top-24 -left-12 w-64 h-64 rounded-full"
         style={{
           background: isLight
-            ? 'linear-gradient(135deg, rgba(10,138,168,0.06) 0%, transparent 40%, rgba(180,83,9,0.06) 100%)'
-            : 'linear-gradient(135deg, rgba(103,232,249,0.08) 0%, transparent 40%, rgba(252,211,77,0.06) 100%)',
+            ? 'radial-gradient(circle, rgba(15,157,79,0.10), transparent 70%)'
+            : 'radial-gradient(circle, rgba(94,234,212,0.12), transparent 70%)',
         }}
       />
       <div
-        className="pointer-events-none absolute -bottom-20 -left-12 w-72 h-72 rounded-full"
+        aria-hidden="true"
+        className="pointer-events-none absolute top-10 left-1/2 -translate-x-1/2 w-72 h-56 rounded-full"
         style={{
           background: isLight
-            ? 'radial-gradient(circle, rgba(10,138,168,0.08), transparent 70%)'
-            : 'radial-gradient(circle, rgba(103,232,249,0.12), transparent 70%)',
+            ? 'radial-gradient(circle, rgba(10,138,168,0.10), transparent 70%)'
+            : 'radial-gradient(circle, rgba(103,232,249,0.14), transparent 70%)',
+        }}
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -bottom-24 -right-12 w-64 h-64 rounded-full"
+        style={{
+          background: isLight
+            ? 'radial-gradient(circle, rgba(180,83,9,0.10), transparent 70%)'
+            : 'radial-gradient(circle, rgba(252,211,77,0.12), transparent 70%)',
         }}
       />
 
-      <div
-        className="relative text-[10px] font-semibold uppercase tracking-[0.22em]"
-        style={{ color: isLight ? '#0a8aa8' : 'rgba(103, 232, 249, 0.9)' }}
-      >
-        Currently Building
+      {/* Header row — eyebrow + animated build dot. */}
+      <div className="relative flex items-center justify-between mb-1">
+        <div
+          className="text-[10px] font-semibold uppercase tracking-[0.22em]"
+          style={{ color: isLight ? '#0a8aa8' : 'rgba(103, 232, 249, 0.9)' }}
+        >
+          Currently Building
+        </div>
+        <div
+          className="inline-flex items-center gap-1.5 text-[9.5px] uppercase font-semibold tracking-[0.2em]"
+          style={{ color: palette.fadedText }}
+        >
+          <span
+            aria-hidden="true"
+            className="inline-block w-1.5 h-1.5 rounded-full"
+            style={{
+              background: isLight ? '#0a8aa8' : '#67e8f9',
+              boxShadow: isLight
+                ? '0 0 6px rgba(10,138,168,0.6)'
+                : '0 0 8px rgba(103,232,249,0.7)',
+              animation: 'fldBuildPulse 2.4s ease-in-out infinite',
+            }}
+          />
+          <span>3 stacks · always on</span>
+        </div>
       </div>
 
       <div
-        className="relative text-[20px] md:text-[24px] font-semibold leading-tight tracking-tight mt-3 mb-4"
+        className="relative text-[16px] md:text-[18px] font-semibold leading-tight tracking-tight mb-4"
         style={{
           backgroundImage: palette.headlineGradient,
           WebkitBackgroundClip: 'text',
@@ -775,24 +838,91 @@ function BuildingTile() {
         At the seam of hardware and software.
       </div>
 
-      <ul className="relative space-y-2 mt-auto">
-        {items.map((it) => (
-          <li
-            key={it.text}
-            className="flex items-baseline gap-2.5 text-[13px] md:text-[14px] tracking-tight"
-            style={{ color: palette.bodyText }}
-          >
-            <span
-              aria-hidden="true"
-              className="text-[14px] flex-shrink-0"
-              style={{ color: isLight ? '#0a8aa8' : 'rgba(103,232,249,0.85)' }}
+      {/* Three domain stacks, side-by-side. Each is a mini-card inside the
+          tile with hover lift + accent halo. */}
+      <div className="relative flex-1 grid grid-cols-3 gap-2.5 md:gap-3 min-h-0">
+        {stacks.map((s) => {
+          const accent = isLight ? s.light : s.dark
+          const sc = statusColor(s.status)
+          const sColor = isLight ? sc.light : sc.dark
+          return (
+            <div
+              key={s.domain}
+              className="relative rounded-xl flex flex-col p-3 md:p-3.5 transition-all duration-300 hover:translate-y-[-1px]"
+              style={{
+                background: isLight ? 'rgba(0,0,0,0.025)' : 'rgba(255,255,255,0.04)',
+                border: `1px solid ${isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.07)'}`,
+                boxShadow: isLight
+                  ? `inset 0 0 0 0 rgba(0,0,0,0)`
+                  : `inset 0 0 0 0 rgba(0,0,0,0)`,
+              }}
             >
-              {it.glyph}
-            </span>
-            <span>{it.text}</span>
-          </li>
-        ))}
-      </ul>
+              {/* Domain icon + label */}
+              <div className="flex items-center gap-2 mb-2">
+                <span
+                  aria-hidden="true"
+                  className="w-5 h-5 flex-shrink-0"
+                  style={{ color: accent }}
+                >
+                  {s.glyph}
+                </span>
+                <span
+                  className="text-[11px] font-bold uppercase tracking-[0.16em] truncate"
+                  style={{ color: accent }}
+                >
+                  {s.domain}
+                </span>
+              </div>
+
+              {/* Currently-building line */}
+              <div
+                className="text-[12.5px] md:text-[13px] font-semibold leading-snug tracking-tight"
+                style={{ color: isLight ? '#1c1a1c' : '#fff' }}
+              >
+                {s.line}
+              </div>
+              <div
+                className="text-[10.5px] tracking-tight mt-1"
+                style={{ color: palette.mutedText }}
+              >
+                {s.label}
+              </div>
+
+              {/* Status chip pinned to the bottom */}
+              <div className="mt-auto pt-2.5">
+                <span
+                  className="inline-flex items-center gap-1.5 text-[9.5px] uppercase font-bold tracking-[0.16em] px-1.5 py-0.5 rounded"
+                  style={{
+                    color: sColor,
+                    background: isLight ? `${sColor}14` : `${sColor}22`,
+                    border: `1px solid ${sColor}33`,
+                  }}
+                >
+                  <span
+                    aria-hidden="true"
+                    className="inline-block w-1 h-1 rounded-full"
+                    style={{
+                      background: sColor,
+                      boxShadow: s.status === 'live' ? `0 0 6px ${sColor}` : 'none',
+                      animation: s.status === 'live'
+                        ? 'fldBuildPulse 1.8s ease-in-out infinite'
+                        : 'none',
+                    }}
+                  />
+                  {statusLabel[s.status]}
+                </span>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      <style jsx global>{`
+        @keyframes fldBuildPulse {
+          0%, 100% { opacity: 0.55; transform: scale(1); }
+          50%      { opacity: 1;    transform: scale(1.25); }
+        }
+      `}</style>
     </div>
   )
 }
@@ -1133,18 +1263,7 @@ function MarathonTile({ onOpen }: { onOpen?: () => void }) {
         />
       )}
 
-      {/* Faint TCS-orange diagonal chevron stripes — race-bib hint at very
-          low opacity so they're texture, not pattern. */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background: isLight
-            ? 'repeating-linear-gradient(135deg, rgba(232,100,44,0.05) 0 14px, transparent 14px 56px)'
-            : 'repeating-linear-gradient(135deg, rgba(232,100,44,0.10) 0 14px, transparent 14px 56px)',
-        }}
-      />
-      {/* Soft warm corner halo */}
+      {/* Soft warm corner halo (chevron stripes removed per design feedback) */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute -bottom-20 -left-12 w-72 h-72 rounded-full"
