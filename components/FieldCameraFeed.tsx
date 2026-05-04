@@ -29,7 +29,12 @@ import { useEffect, useRef, useState } from 'react'
 import { useFieldTheme } from './fieldTheme'
 
 const SNAPSHOT_URL = '/api/v3/snapshot'
-const POLL_INTERVAL_MS = 2000
+// 500 ms polling pairs with the rkipc sub-stream's GOP=10 (keyframe every
+// ~0.4s at 25 fps) to give roughly real-time feel without flooding Vercel
+// Edge. Each individual snapshot still takes ~1.5–2 s end-to-end through
+// the funnel, but parallel-in-flight requests keep the visible refresh
+// rate effectively snappy. If Vercel Edge cost spikes, raise to 800 ms.
+const POLL_INTERVAL_MS = 500
 const POLL_GRACE_MS = 30_000
 
 type FeedState = 'connecting' | 'live' | 'offline'
