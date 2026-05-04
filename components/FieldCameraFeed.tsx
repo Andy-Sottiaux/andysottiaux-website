@@ -47,6 +47,17 @@ const POLL_INTERVAL_MS = 500
 const FRESH_GRACE_MS = 30_000
 const RECONNECT_DELAY_MS = 200
 
+// Live-edge tracking. Browsers' default <video> MSE behavior buffers
+// 1-3 s ahead for "smooth playback", which means once playback starts
+// you sit perpetually behind live. Every 1 s we check how far behind
+// the live edge we are; if more than LIVE_EDGE_MAX, jump forward.
+// 0.4 s offset matches the rkipc sub-stream's GOP=10 keyframe interval
+// — close enough to live to feel real-time, far enough to absorb a
+// blip without re-buffering.
+const LIVE_EDGE_OFFSET = 0.4
+const LIVE_EDGE_MAX = 1.2
+const LIVE_EDGE_CHECK_MS = 1000
+
 type FeedState = 'connecting' | 'live' | 'offline'
 
 export default function FieldCameraFeed() {
@@ -58,6 +69,7 @@ export default function FieldCameraFeed() {
   const [fallback, setFallback] = useState(false)
 
   const lastOkAtRef = useRef(0)
+  const videoRef = useRef<HTMLVideoElement>(null)
 
   // ── Streaming path ────────────────────────────────────────────────
   // Stream-end (funnel cycling) → reconnect with a new <video>.
@@ -72,6 +84,30 @@ export default function FieldCameraFeed() {
     lastOkAtRef.current = Date.now()
     setState('live')
   }
+
+  // Live-edge tracker. Runs while the streaming path is active. Jumps
+  // currentTime forward whenever the browser has buffered too far ahead
+  // of where we're playing. Without this, MSE happily buffers 1-3 s
+  // and you watch a delayed copy of "live."
+  useEffect(() => {
+    if (fallback) return
+    const video = videoRef.current
+    if (!video) return
+    const id = setInterval(() => {
+      const ranges = video.buffered
+      if (ranges.length === 0 || video.paused) return
+      const liveEdge = ranges.end(ranges.length - 1)
+      const behind = liveEdge - video.currentTime
+      if (behind > LIVE_EDGE_MAX) {
+        try {
+          video.currentTime = Math.max(liveEdge - LIVE_EDGE_OFFSET, video.currentTime)
+        } catch {
+          // Some browsers throw on currentTime set during seek; ignore.
+        }
+      }
+    }, LIVE_EDGE_CHECK_MS)
+    return () => clearInterval(id)
+  }, [fallback, streamGen])
 
   // ── Snapshot fallback ─────────────────────────────────────────────
   const imgRef = useRef<HTMLImageElement>(null)
@@ -171,10 +207,12 @@ export default function FieldCameraFeed() {
       ) : (
         <video
           key={streamGen}
+          ref={videoRef}
           src={FEED_URL}
           autoPlay
           muted
           playsInline
+          preload="none"
           className="absolute inset-0 w-full h-full object-cover"
           style={{
             opacity: state === 'live' ? 1 : 0,
