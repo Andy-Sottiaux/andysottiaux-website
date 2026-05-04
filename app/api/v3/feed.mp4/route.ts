@@ -1,35 +1,34 @@
-import { NextResponse } from 'next/server'
-
 /**
  * Server-side proxy for the live fragmented-MP4 video stream from the
- * field device. Used by the LiveCameraVideo component for sub-second
- * latency playback (vs. the older /api/v3/snapshot poll-and-swap).
+ * field device. Used by FieldCameraFeed for sub-second latency playback.
  *
- * Why fragmented MP4: rkipc HW-encodes H.264 once, go2rtc rewraps the
- * RTSP packets into fmp4 with zero transcoding. Browsers play it
- * natively via the <video> element. CPU cost on the board is the
- * encoder it was already running anyway.
+ * Why Node.js runtime (not Edge): we tested Edge first and it truncated
+ * the response after ~1 KB (just the fmp4 moov box) instead of piping
+ * the continuous binary stream. Node.js runtime forwards `r.body`
+ * (a ReadableStream) cleanly and supports a longer `maxDuration` for
+ * the long-lived response.
  *
- * Streaming, not buffering: we forward the upstream body directly
- * (`new NextResponse(upstream.body, …)`) so frames flow as they arrive.
- * Vercel Edge has a ~25-30 s response cap; the client component
- * detects stream-end and remounts a fresh <video> to reconnect.
+ * Pipeline (zero transcoding anywhere):
+ *   rkipc HW H.264 -> RTSP -> go2rtc rewrap to fmp4 -> us -> <video>
  *
- * Codec: avc1.640028 (H.264 High @ L4.0). Universal browser support —
- * no HEVC compatibility table.
+ * The client component remounts the <video> element when this stream
+ * ends (every ~maxDuration seconds), making the seam invisible.
  */
 
-export const runtime = 'edge'
+import type { NextRequest } from 'next/server'
+
+export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+// Vercel Pro lets us go up to 60s by default (configurable to 800s on
+// higher plans). 50s leaves a safety margin under the platform cap and
+// gives the client a clean reconnect cadence.
+export const maxDuration = 50
 
 const UPSTREAM = process.env.V3_UPSTREAM_HOST || 'https://cayley-v3-cam-1.tailc7d6b6.ts.net'
 const STREAM = process.env.V3_FEED_STREAM || 'cayley-sub'
 
-export async function GET() {
+export async function GET(_req: NextRequest) {
   try {
-    // No client-side timeout: we let the connection live as long as
-    // Vercel Edge will allow it (typically 25–30s on Pro), and the
-    // client reconnects when it sees the stream end.
     const r = await fetch(
       `${UPSTREAM}/api/stream.mp4?src=${encodeURIComponent(STREAM)}`,
       {
@@ -39,19 +38,18 @@ export async function GET() {
     )
 
     if (!r.ok || !r.body) {
-      return new NextResponse(null, { status: 502 })
+      return new Response(null, { status: 502 })
     }
 
-    return new NextResponse(r.body, {
+    return new Response(r.body, {
       status: 200,
       headers: {
         'Content-Type': r.headers.get('content-type') || 'video/mp4',
         'Cache-Control': 'no-store',
-        // Don't let intermediaries buffer
         'X-Accel-Buffering': 'no',
       },
     })
   } catch {
-    return new NextResponse(null, { status: 502 })
+    return new Response(null, { status: 502 })
   }
 }
