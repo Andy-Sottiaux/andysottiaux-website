@@ -154,6 +154,11 @@ function CompactInner({ initialBoardLive }: { initialBoardLive: boolean }) {
       >
         <ContactModalContent />
       </Modal>
+
+      {/* Random chinchilla mascot peeking from behind random tiles. Lives
+          here at the page root so it can target any data-peek-target tile
+          via DOMRect math without coupling to the bento layout. */}
+      <ChinchillaPeek />
     </main>
   )
 }
@@ -326,6 +331,7 @@ function Tile({
 
   return (
     <div
+      data-peek-target="true"
       className={`group relative rounded-2xl overflow-hidden h-full flex flex-col ${className}`}
       style={{
         background: palette.cardBackground,
@@ -602,6 +608,7 @@ function EducationTile() {
         WebkitBackdropFilter: 'blur(24px)',
         boxShadow: palette.cardShadow,
       }}
+      data-peek-target="true"
       role="region"
       aria-label="Education"
     >
@@ -816,6 +823,7 @@ function BuildingTile() {
         WebkitBackdropFilter: 'blur(24px)',
         boxShadow: palette.cardShadow,
       }}
+      data-peek-target="true"
       role="region"
       aria-label="Currently building"
     >
@@ -1043,6 +1051,7 @@ function MoreProjectsTile() {
         WebkitBackdropFilter: 'blur(24px)',
         boxShadow: palette.cardShadow,
       }}
+      data-peek-target="true"
       role="region"
       aria-label="More projects"
     >
@@ -1219,8 +1228,6 @@ function ExperienceTile({ onOpen }: { onOpen?: () => void }) {
       <div className="px-5 md:px-6 pt-3 pb-4 md:pb-5 flex-1 flex flex-col">
         <div className="space-y-2 md:space-y-2.5">
           {EXPERIENCE.map((e) => {
-            const wide = e.aspect === 'wide'
-            const padPx = e.pad === 'tight' ? 4 : 6
             return (
               <a
                 key={e.company}
@@ -1231,15 +1238,16 @@ function ExperienceTile({ onOpen }: { onOpen?: () => void }) {
                 style={{ borderColor: palette.hairline }}
               >
                 <div className="flex items-center gap-3 min-w-0 flex-1">
-                  {/* Logo chip — white plate so each brand reads true; aspect
-                      varies by mark (square for HatchingPoint, wide for Bell
-                      / AVX / Texas Air). */}
+                  {/* Logo chip — uniform 36×36 square plate for every brand
+                      so the column reads as a tidy stack. The mark itself
+                      uses object-contain so wide/tall/square logos all fit
+                      without distortion. */}
                   <div
                     className="flex items-center justify-center rounded-md flex-shrink-0 overflow-hidden"
                     style={{
-                      width: wide ? 38 : 28,
-                      height: 28,
-                      padding: padPx,
+                      width: 36,
+                      height: 36,
+                      padding: 4,
                       background: '#fff',
                       boxShadow: isLight
                         ? '0 1px 2px rgba(28,26,28,0.08), 0 0 0 1px rgba(0,0,0,0.04)'
@@ -1249,7 +1257,7 @@ function ExperienceTile({ onOpen }: { onOpen?: () => void }) {
                     <Image
                       src={e.logo}
                       alt={`${e.company} logo`}
-                      width={wide ? 80 : 56}
+                      width={56}
                       height={56}
                       className="max-w-full max-h-full w-auto h-auto object-contain"
                     />
@@ -1437,6 +1445,7 @@ function MarathonTile({ onOpen }: { onOpen?: () => void }) {
   return (
     <div
       className="relative rounded-2xl h-full min-h-[180px] md:min-h-[210px] overflow-hidden group"
+      data-peek-target="true"
       role="region"
       aria-label="2026 TCS NYC Marathon"
       style={{
@@ -1679,5 +1688,160 @@ function ContactTile({ onOpen }: { onOpen?: () => void }) {
         </div>
       </div>
     </Tile>
+  )
+}
+
+/* ───────────────────── Chinchilla peek ──────────────────────── */
+
+/**
+ * Mascot easter egg — picks a random `[data-peek-target="true"]` tile
+ * every 8–18 s, slides the chinchilla in from one of its edges so it
+ * looks like it's peeking out from behind that tile, holds for ~2.5 s,
+ * then ducks back. Reduced-motion users see nothing. Pointer-events
+ * disabled so it never intercepts clicks.
+ *
+ * Z-index is intentionally low — the tile's opaque glass background
+ * obscures the body of the chinchilla; only the part that escapes the
+ * tile boundary into the gutter is visible, which sells the "peeking"
+ * illusion.
+ */
+type PeekEdge = 'left' | 'right' | 'bottom'
+
+function ChinchillaPeek() {
+  type PeekState = {
+    rect: DOMRect | null
+    edge: PeekEdge
+    /** how visible the chinchilla is, 0 (hidden) → 1 (peeked out) */
+    out: number
+    /** monotonic counter so React re-renders even if values match */
+    seq: number
+  }
+
+  const [pose, setPose] = useState<PeekState>({
+    rect: null,
+    edge: 'right',
+    out: 0,
+    seq: 0,
+  })
+  const cancelledRef = useRef(false)
+
+  useEffect(() => {
+    cancelledRef.current = false
+    let timer: ReturnType<typeof setTimeout> | null = null
+
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (reduced) return
+
+    const cycle = () => {
+      if (cancelledRef.current) return
+      const targets = document.querySelectorAll<HTMLElement>(
+        '[data-peek-target="true"]',
+      )
+      if (targets.length === 0) {
+        timer = setTimeout(cycle, 5000)
+        return
+      }
+      const tile = targets[Math.floor(Math.random() * targets.length)]
+      const rect = tile.getBoundingClientRect()
+      // Skip very small / off-screen tiles.
+      if (rect.width < 80 || rect.height < 80) {
+        timer = setTimeout(cycle, 4000)
+        return
+      }
+      const edges: PeekEdge[] = ['left', 'right', 'bottom']
+      const edge = edges[Math.floor(Math.random() * edges.length)]
+      // Step 1 — peek out
+      setPose((p) => ({ rect, edge, out: 1, seq: p.seq + 1 }))
+      // Step 2 — hide after 2.4–3.6 s
+      timer = setTimeout(
+        () => {
+          if (cancelledRef.current) return
+          setPose((p) => ({ ...p, out: 0 }))
+          // Step 3 — schedule next peek 8–18 s later
+          timer = setTimeout(cycle, 8000 + Math.random() * 10000)
+        },
+        2400 + Math.random() * 1200,
+      )
+    }
+
+    // First peek arrives ~5–9 s after mount so the page has time to settle.
+    timer = setTimeout(cycle, 5000 + Math.random() * 4000)
+    return () => {
+      cancelledRef.current = true
+      if (timer) clearTimeout(timer)
+    }
+  }, [])
+
+  if (!pose.rect) return null
+
+  // Geometry. Tile-edge origin + transform-translate for the slide.
+  const size = 64
+  // How far past the tile edge the chinchilla pokes when fully out.
+  const protrude = 24
+  // Where the chinchilla parks when "in" (mostly hidden by tile bg).
+  const tuck = size - 6 // leave a 6px sliver, enough so the slide reads
+
+  const r = pose.rect
+  let left = 0
+  let top = 0
+  let translate = ''
+  let flipX = 1
+
+  if (pose.edge === 'right') {
+    // Anchored just outside the right edge of the tile, vertically lower-third.
+    left = r.right - tuck
+    top = r.top + r.height * 0.62 - size / 2
+    translate = `translateX(${pose.out ? protrude : 0}px)`
+    // Face the chinchilla looking toward the right (default).
+    flipX = -1
+  } else if (pose.edge === 'left') {
+    left = r.left - (size - tuck)
+    top = r.top + r.height * 0.62 - size / 2
+    translate = `translateX(${pose.out ? -protrude : 0}px)`
+    // Face left.
+    flipX = 1
+  } else {
+    // bottom — peek from under the tile, central horizontal.
+    left = r.left + r.width * 0.5 - size / 2
+    top = r.bottom - tuck
+    translate = `translateY(${pose.out ? protrude : 0}px)`
+  }
+
+  // Tiny tilt while peeking for personality.
+  const rotate = pose.out
+    ? pose.edge === 'right'
+      ? -8
+      : pose.edge === 'left'
+        ? 8
+        : 0
+    : 0
+
+  return (
+    <div
+      aria-hidden="true"
+      className="pointer-events-none fixed"
+      style={{
+        left,
+        top,
+        width: size,
+        height: size,
+        zIndex: 0,
+        transform: `${translate} rotate(${rotate}deg) scaleX(${flipX})`,
+        transformOrigin: 'center',
+        transition:
+          'transform 0.7s cubic-bezier(0.34,1.56,0.64,1), opacity 0.4s linear',
+        opacity: pose.rect ? 1 : 0,
+        // Tiny shadow to ground the chinchilla against the tile edge.
+        filter: 'drop-shadow(0 6px 14px rgba(0,0,0,0.45))',
+      }}
+    >
+      <Image
+        src="/images/chinchilla-white.png"
+        alt=""
+        width={size}
+        height={size}
+        className="w-full h-full"
+      />
+    </div>
   )
 }
