@@ -49,6 +49,63 @@ html {
   animation: ken-burns 25s ease-out forwards;
 }
 
+/* ────────── Mobile-only refinements ──────────
+ * Desktop bento is locked-viewport with hover affordances. On touch
+ * devices, hover never sticks, blurred glass is expensive, and there's
+ * no native confirmation when a tile is pressed. The rules below adjust
+ * only those mobile/touch contexts and leave desktop untouched.
+ */
+
+/* Make hover-revealed chevrons / corner glyphs always visible on touch
+ * devices, otherwise mobile users never see the "tappable" affordance. */
+@media (hover: none) {
+  .group-hover\:opacity-100 { opacity: 1 !important; }
+  /* The bento Tile chrome's expand corner glyph is opacity-0 by default
+   * and only becomes visible via group-hover; keep it visible on touch. */
+  .group .opacity-0.group-hover\:opacity-100 { opacity: 0.6 !important; }
+}
+
+/* Reduce the 24px backdrop-filter blur to 10px on small screens.
+ * Each tile composites its own blurred surface every frame; on mid-range
+ * iOS Safari this is the dominant scroll-jank cost. Tiles all carry
+ * data-peek-target="true", so we target that single attribute. */
+@media (max-width: 767px) {
+  [data-peek-target="true"] {
+    backdrop-filter: blur(10px) !important;
+    -webkit-backdrop-filter: blur(10px) !important;
+  }
+}
+
+/* Tap-active feedback for the whole-tile click target. The Tile button
+ * sits absolutely inside each tile (z-0), so we scale + dim its parent
+ * via :active. Desktop hover continues to drive the existing transform. */
+@media (hover: none) {
+  [data-peek-target="true"]:active {
+    transform: scale(0.985);
+    transition: transform 0.12s ease-out;
+  }
+}
+
+/* Marathon QR shrinks on small screens so the countdown column gets
+ * back ~16px of width. Desktop stays at 104px. */
+.marathon-qr { width: 88px; height: 88px; }
+@media (min-width: 640px) {
+  .marathon-qr { width: 104px; height: 104px; }
+}
+
+/* Honor iOS safe areas on the bento shell. Mobile-only — desktop keeps
+ * its existing px-8/py-5 padding untouched. The class is added alongside
+ * the Tailwind padding classes; the env() values only kick in on devices
+ * that report a non-zero inset (notched iPhones, landscape, etc.). */
+@media (max-width: 767px) {
+  .bento-shell {
+    padding-top: max(0.75rem, env(safe-area-inset-top));
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-ken-burns {
     animation: none;

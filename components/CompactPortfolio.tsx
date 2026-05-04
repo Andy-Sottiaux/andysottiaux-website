@@ -99,7 +99,7 @@ function CompactInner({ initialBoardLive }: { initialBoardLive: boolean }) {
           md+, the grid uses `1fr` rows, so cards auto-size to fit without
           ever scrolling.
           Mobile: keeps `min-h-screen` and natural vertical scrolling. */}
-      <div className="flex-1 flex flex-col px-4 sm:px-6 md:px-8 py-3 sm:py-4 md:py-5 md:min-h-0">
+      <div className="bento-shell flex-1 flex flex-col px-4 sm:px-6 md:px-8 py-3 sm:py-4 md:py-5 md:min-h-0">
         <div className="w-full max-w-[1380px] mx-auto md:flex-1 md:flex md:flex-col md:min-h-0">
           <Bento boardLive={boardLive} onOpen={setOpenModal} />
         </div>
@@ -440,7 +440,7 @@ function IdentityTile({ onOpen }: { onOpen?: () => void }) {
         </div>
 
         <div
-          className="text-center text-[20px] md:text-[22px] font-semibold leading-tight tracking-tight mt-4"
+          className="text-center text-[24px] md:text-[22px] font-semibold leading-tight tracking-tight mt-4"
           style={{
             backgroundImage: palette.headlineGradient,
             WebkitBackgroundClip: 'text',
@@ -1549,10 +1549,8 @@ function MarathonTile({ onOpen }: { onOpen?: () => void }) {
           className="relative z-10 row-span-2 self-start group"
         >
           <div
-            className="relative rounded-xl p-2 transition-transform duration-300 group-hover:-translate-y-0.5"
+            className="marathon-qr relative rounded-xl p-2 transition-transform duration-300 group-hover:-translate-y-0.5"
             style={{
-              width: 104,
-              height: 104,
               background: '#fff',
               boxShadow:
                 '0 0 0 1.5px rgba(232,100,44,0.55), 0 8px 22px rgba(232,100,44,0.22), inset 0 1px 0 rgba(255,255,255,0.6)',
@@ -1563,7 +1561,7 @@ function MarathonTile({ onOpen }: { onOpen?: () => void }) {
               alt="Donation QR code"
               fill
               className="object-contain p-2"
-              sizes="104px"
+              sizes="(max-width: 639px) 88px, 104px"
             />
             {/* Scanner reticle corners — purely decorative */}
             <span aria-hidden="true" className="absolute -top-[3px] -left-[3px] w-3 h-3 border-t-2 border-l-2 rounded-tl-md" style={{ borderColor: '#E8642C' }} />
@@ -1853,6 +1851,22 @@ function ChinchillaPeek() {
         ? 8
         : 0
     : 0
+
+  // Clamp to viewport so the sprite never lands behind the URL bar or
+  // off the right edge on narrow mobile screens. The translate can move
+  // the sprite up to `protrude` past `left`/`top`, so the safe window
+  // shrinks by that amount on each axis.
+  if (typeof window !== 'undefined') {
+    const margin = protrude + 4
+    const vw = window.innerWidth
+    const vh = window.innerHeight
+    const minLeft = margin
+    const maxLeft = vw - size - margin
+    const minTop = margin
+    const maxTop = vh - size - margin
+    if (maxLeft >= minLeft) left = Math.min(Math.max(left, minLeft), maxLeft)
+    if (maxTop >= minTop) top = Math.min(Math.max(top, minTop), maxTop)
+  }
 
   return (
     <div
