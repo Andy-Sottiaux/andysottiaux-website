@@ -1481,7 +1481,7 @@ function MarathonTile({ onOpen }: { onOpen?: () => void }) {
       <div className="relative z-10 px-5 md:px-6 pt-4 pb-4 md:pb-5 h-full grid gap-3 md:gap-4 grid-cols-[1fr_auto] grid-rows-[auto_1fr_auto] items-start">
         {/* Top-left: TCS logo on white chip */}
         <div
-          className="flex items-center justify-center rounded-xl px-3 py-2 self-start"
+          className="inline-flex items-center justify-center rounded-xl px-3 py-2 self-start justify-self-start"
           style={{
             background: '#fff',
             boxShadow: '0 6px 18px rgba(0,0,0,0.18)',
@@ -1492,7 +1492,7 @@ function MarathonTile({ onOpen }: { onOpen?: () => void }) {
             alt="2026 TCS New York City Marathon"
             width={140}
             height={100}
-            className="h-10 md:h-11 w-auto object-contain"
+            className="h-14 md:h-16 w-auto object-contain"
           />
         </div>
 
@@ -1666,19 +1666,21 @@ const CONTACTS = [
   {
     label: 'HatchingPoint',
     href: 'https://www.hatchingpoint.com/',
-    // Real company mark, rendered in the same monochrome (white in dark
-    // mode, near-black in light) as the inline SVGs above so the chip row
-    // reads as a unified set instead of one logo punching out.
     icon: (
-      <Image
-        src="/images/hatchingpoint-logo.jpeg"
-        alt=""
-        width={20}
-        height={20}
-        className="w-full h-full object-contain"
-        // brightness(0) flattens to pure black; in dark mode the chip's
-        // currentColor is white so we additionally invert. The chip-level
-        // override (in ContactTile) toggles invert per palette.
+      <span
+        aria-hidden
+        className="block w-full h-full"
+        style={{
+          backgroundColor: 'currentColor',
+          WebkitMaskImage: 'url(/images/hatchingpoint-mark.png)',
+          maskImage: 'url(/images/hatchingpoint-mark.png)',
+          WebkitMaskSize: 'contain',
+          maskSize: 'contain',
+          WebkitMaskRepeat: 'no-repeat',
+          maskRepeat: 'no-repeat',
+          WebkitMaskPosition: 'center',
+          maskPosition: 'center',
+        }}
       />
     ),
   },
@@ -1698,40 +1700,23 @@ function ContactTile({ onOpen }: { onOpen?: () => void }) {
     >
       <div className="px-5 md:px-6 pt-3 pb-4 md:pb-5 flex-1 flex flex-col">
         <div className="grid grid-cols-2 gap-2 flex-1">
-          {CONTACTS.map((c) => {
-            // The HatchingPoint chip uses the real company logo (a JPEG).
-            // Flatten it to match the other monochrome SVG icons in the
-            // grid so the row reads as one cohesive set.
-            const isImgLogo = c.label === 'HatchingPoint'
-            return (
-              <a
-                key={c.label}
-                href={c.href}
-                target={c.href.startsWith('mailto:') ? undefined : '_blank'}
-                rel={c.href.startsWith('mailto:') ? undefined : 'noopener noreferrer'}
-                className="relative z-10 flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl transition-all hover:scale-[1.02]"
-                style={{
-                  background: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)',
-                  border: palette.cardBorder,
-                  color: isLight ? '#1c1a1c' : '#fff',
-                }}
-              >
-                <div
-                  className="w-4 h-4 opacity-90"
-                  style={
-                    isImgLogo
-                      ? isLight
-                        ? { mixBlendMode: 'multiply' }
-                        : { filter: 'invert(1)', mixBlendMode: 'screen' }
-                      : undefined
-                  }
-                >
-                  {c.icon}
-                </div>
-                <div className="text-[10.5px] font-semibold tracking-tight">{c.label}</div>
-              </a>
-            )
-          })}
+          {CONTACTS.map((c) => (
+            <a
+              key={c.label}
+              href={c.href}
+              target={c.href.startsWith('mailto:') ? undefined : '_blank'}
+              rel={c.href.startsWith('mailto:') ? undefined : 'noopener noreferrer'}
+              className="relative z-10 flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl transition-all hover:scale-[1.02]"
+              style={{
+                background: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)',
+                border: palette.cardBorder,
+                color: isLight ? '#1c1a1c' : '#fff',
+              }}
+            >
+              <div className="w-4 h-4 opacity-90">{c.icon}</div>
+              <div className="text-[10.5px] font-semibold tracking-tight">{c.label}</div>
+            </a>
+          ))}
         </div>
         <div
           className="mt-3 text-[10px] tracking-wide text-center"
