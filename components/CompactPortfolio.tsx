@@ -1490,8 +1490,8 @@ function MarathonTile({ onOpen }: { onOpen?: () => void }) {
           <Image
             src="/images/tcs-marathon-logo.png"
             alt="2026 TCS New York City Marathon"
-            width={120}
-            height={56}
+            width={140}
+            height={100}
             className="h-10 md:h-11 w-auto object-contain"
           />
         </div>
@@ -1720,11 +1720,9 @@ function ContactTile({ onOpen }: { onOpen?: () => void }) {
                   className="w-4 h-4 opacity-90"
                   style={
                     isImgLogo
-                      ? {
-                          filter: isLight
-                            ? 'brightness(0) saturate(0)'
-                            : 'brightness(0) saturate(0) invert(1)',
-                        }
+                      ? isLight
+                        ? { mixBlendMode: 'multiply' }
+                        : { filter: 'invert(1)', mixBlendMode: 'screen' }
                       : undefined
                   }
                 >
