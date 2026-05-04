@@ -1086,12 +1086,6 @@ function ExperienceTile({ onOpen }: { onOpen?: () => void }) {
             </a>
           ))}
         </div>
-        <div
-          className="mt-auto pt-3 text-[10px] tracking-wide italic"
-          style={{ color: palette.fadedText }}
-        >
-          B.S. Mechanical Engineering · Texas Tech, 2016
-        </div>
       </div>
     </Tile>
   )
