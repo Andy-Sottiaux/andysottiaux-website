@@ -1211,7 +1211,7 @@ const EXPERIENCE: {
     period: '2016 — 2020',
     url: 'https://www.texasairsystems.com/',
     logo: '/images/texasairsystems-logo.jpeg',
-    scale: 1.45,
+    scale: 1.0,
   },
 ]
 
