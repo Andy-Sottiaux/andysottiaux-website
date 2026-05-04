@@ -1,43 +1,33 @@
 'use client'
 
 /**
- * FieldCameraFeed — live video from the field device.
+ * FieldCameraFeed — live image from the field device, polled as JPEG
+ * snapshots through a same-origin Edge proxy.
  *
- * Primary path: a fragmented-MP4 H.264 stream proxied through
- * `/api/v3/feed.mp4`. The browser plays it directly via <video>; rkipc
- * HW-encodes once, go2rtc rewraps RTSP→fmp4 with no transcoding, so
- * the board pays essentially zero extra CPU. End-to-end lag is the
- * ~150 ms encoder pipeline plus network — typically under 1 s.
+ * Why snapshot polling instead of streaming:
+ *   We tried fragmented-MP4 streaming through Vercel Edge and it
+ *   doesn't work — Edge truncates long-lived binary pass-through after
+ *   the fmp4 init segment (~100 bytes) because it can't bridge the
+ *   ~400ms keyframe wait that follows. Direct funnel access works but
+ *   leaks the upstream hostname. The proper fix is HLS-via-Edge (each
+ *   segment is a small discrete HTTP request) — separate iteration.
  *
- * Vercel Edge has a ~25–30 s response cap on a streamed body. When
- * the upstream connection ends, the <video> fires `ended`/`stalled`
- * and we remount it to reconnect. The seam is invisible to the user
- * (~100 ms gap) because we keep the previous element painted until
- * the new one decodes its first frame.
- *
- * Fallback path: if the <video> errors three times in a row (e.g. an
- * older browser without the right H.264 profile, or the streaming
- * proxy is down), we transparently switch to the legacy
- * `/api/v3/snapshot` poll-and-swap. Same visual treatment, lower
- * latency, just no buffering. The fallback never re-promotes itself
- * back to streaming during this session — once snapshot mode wins,
- * stick with it for stability.
+ *   For now we poll `/api/v3/snapshot` every 500ms, swap an <img> src.
+ *   With board-side rkipc GOP=10 (keyframe every 0.4s) the visible
+ *   latency is ~1.5s — not sub-second, but smooth and reliable.
  *
  * States:
- *   - 'connecting' : initial — never received a frame yet (shimmer).
- *   - 'live'       : at least one frame arrived recently.
- *   - 'offline'    : > FRESH_GRACE_MS without a successful frame.
+ *   - 'connecting'  : initial — never received a frame yet (shimmer).
+ *   - 'live'        : at least one frame loaded recently.
+ *   - 'offline'     : >POLL_GRACE_MS without a successful frame.
  */
 
 import { useEffect, useRef, useState } from 'react'
 import { useFieldTheme } from './fieldTheme'
 
-const FEED_URL = '/api/v3/feed.mp4'
 const SNAPSHOT_URL = '/api/v3/snapshot'
 const POLL_INTERVAL_MS = 500
-const FRESH_GRACE_MS = 30_000
-const RECONNECT_DELAY_MS = 200
-const FALLBACK_AFTER_FAILURES = 3
+const POLL_GRACE_MS = 30_000
 
 type FeedState = 'connecting' | 'live' | 'offline'
 
@@ -45,48 +35,19 @@ export default function FieldCameraFeed() {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
 
-  const [state, setState] = useState<FeedState>('connecting')
-  const [streamGen, setStreamGen] = useState(0) // bumped to remount <video>
-  const [fallback, setFallback] = useState(false)
-
-  const failureCountRef = useRef(0)
-  const lastOkAtRef = useRef(0)
-
-  // Stream-mode reconnect: when the <video> ends or errors, schedule a
-  // remount. Counts errors so we can fall back to JPEG polling if the
-  // browser can't keep up with fmp4.
-  const handleStreamEnd = () => {
-    // Stream-end (Edge proxy hitting its response cap) is normal — do not
-    // count it against the failure budget.
-    setTimeout(() => setStreamGen((g) => g + 1), RECONNECT_DELAY_MS)
-  }
-  const handleStreamError = () => {
-    failureCountRef.current += 1
-    if (failureCountRef.current >= FALLBACK_AFTER_FAILURES) {
-      setFallback(true)
-      return
-    }
-    setTimeout(() => setStreamGen((g) => g + 1), RECONNECT_DELAY_MS)
-  }
-  const handleStreamPlaying = () => {
-    failureCountRef.current = 0
-    lastOkAtRef.current = Date.now()
-    setState('live')
-  }
-
-  // Snapshot fallback: poll-and-swap.
   const imgRef = useRef<HTMLImageElement>(null)
   const objectUrlRef = useRef<string | null>(null)
+  const [state, setState] = useState<FeedState>('connecting')
 
   useEffect(() => {
-    if (!fallback) return
     let cancelled = false
     let timer: ReturnType<typeof setTimeout> | null = null
+    let lastOkAt = 0
 
-    const swap = (url: string) => {
+    const swap = (objectUrl: string) => {
       const previous = objectUrlRef.current
-      objectUrlRef.current = url
-      if (imgRef.current) imgRef.current.src = url
+      objectUrlRef.current = objectUrl
+      if (imgRef.current) imgRef.current.src = objectUrl
       if (previous) {
         setTimeout(() => {
           try { URL.revokeObjectURL(previous) } catch {}
@@ -105,12 +66,14 @@ export default function FieldCameraFeed() {
         })
         clearTimeout(t)
         if (cancelled) return
+
         if (res.ok) {
           const blob = await res.blob()
           if (cancelled) return
           if (blob.size > 0 && blob.type.startsWith('image/')) {
-            swap(URL.createObjectURL(blob))
-            lastOkAtRef.current = Date.now()
+            const url = URL.createObjectURL(blob)
+            swap(url)
+            lastOkAt = Date.now()
             setState('live')
           } else {
             maybeOffline()
@@ -121,16 +84,18 @@ export default function FieldCameraFeed() {
       } catch {
         if (!cancelled) maybeOffline()
       }
+
       if (!cancelled) timer = setTimeout(tick, POLL_INTERVAL_MS)
     }
 
     const maybeOffline = () => {
-      if (lastOkAtRef.current === 0 || Date.now() - lastOkAtRef.current > FRESH_GRACE_MS) {
+      if (lastOkAt === 0 || Date.now() - lastOkAt > POLL_GRACE_MS) {
         setState('offline')
       }
     }
 
     tick()
+
     return () => {
       cancelled = true
       if (timer) clearTimeout(timer)
@@ -139,60 +104,21 @@ export default function FieldCameraFeed() {
         objectUrlRef.current = null
       }
     }
-  }, [fallback])
-
-  // Watchdog: in stream mode, if we haven't seen a 'playing' event in
-  // FRESH_GRACE_MS, surface the offline placeholder. Doesn't kill the
-  // <video>; if a frame later lands, state flips back to 'live'.
-  useEffect(() => {
-    if (fallback) return
-    const id = setInterval(() => {
-      if (lastOkAtRef.current === 0) return
-      if (Date.now() - lastOkAtRef.current > FRESH_GRACE_MS) {
-        setState('offline')
-      }
-    }, 5000)
-    return () => clearInterval(id)
-  }, [fallback])
+  }, [])
 
   return (
     <div className="relative w-full h-full overflow-hidden rounded-[16px]">
-      {fallback ? (
-        // Snapshot fallback path.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          ref={imgRef}
-          alt="Live camera frame"
-          className="absolute inset-0 w-full h-full object-cover"
-          style={{
-            opacity: state === 'live' ? 1 : 0,
-            transition: 'opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
-            background: '#000',
-          }}
-        />
-      ) : (
-        // Streaming path. `key` bump on streamGen forces a clean remount
-        // when the upstream cycles or errors. autoPlay+muted are required
-        // for autoplay policies; playsInline keeps mobile from going full
-        // screen.
-        <video
-          key={streamGen}
-          src={FEED_URL}
-          autoPlay
-          muted
-          playsInline
-          className="absolute inset-0 w-full h-full object-cover"
-          style={{
-            opacity: state === 'live' ? 1 : 0,
-            transition: 'opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
-            background: '#000',
-          }}
-          onPlaying={handleStreamPlaying}
-          onEnded={handleStreamEnd}
-          onError={handleStreamError}
-          onStalled={handleStreamEnd}
-        />
-      )}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        ref={imgRef}
+        alt="Live camera frame"
+        className="absolute inset-0 w-full h-full object-cover"
+        style={{
+          opacity: state === 'live' ? 1 : 0,
+          transition: 'opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
+          background: '#000',
+        }}
+      />
 
       {state === 'connecting' && (
         <FeedShimmer label="connecting…" isLight={isLight} />
