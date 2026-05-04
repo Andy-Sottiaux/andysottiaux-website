@@ -1,33 +1,51 @@
 'use client'
 
 /**
- * FieldCameraFeed — live image from the field device, polled as JPEG
- * snapshots through a same-origin Edge proxy.
+ * FieldCameraFeed — live video from the field device.
  *
- * Why snapshot polling instead of streaming:
- *   We tried fragmented-MP4 streaming through Vercel Edge and it
- *   doesn't work — Edge truncates long-lived binary pass-through after
- *   the fmp4 init segment (~100 bytes) because it can't bridge the
- *   ~400ms keyframe wait that follows. Direct funnel access works but
- *   leaks the upstream hostname. The proper fix is HLS-via-Edge (each
- *   segment is a small discrete HTTP request) — separate iteration.
+ * Primary path: a fragmented-MP4 H.264 stream served straight from the
+ * device's Tailscale Funnel hostname. rkipc HW-encodes once, go2rtc
+ * rewraps RTSP packets into fmp4 with no transcoding, browser decodes
+ * natively in <video>. End-to-end latency ~400-700 ms, board CPU
+ * cost effectively zero above what the encoder was already burning.
  *
- *   For now we poll `/api/v3/snapshot` every 500ms, swap an <img> src.
- *   With board-side rkipc GOP=10 (keyframe every 0.4s) the visible
- *   latency is ~1.5s — not sub-second, but smooth and reliable.
+ * Why direct from the funnel and not via Vercel Edge: we tested Edge
+ * pass-through and it truncates long-lived binary streams after the
+ * fmp4 init segment (~108 bytes) because it can't bridge the
+ * keyframe-wait quiet period that follows. Edge is great for SSE/text
+ * streaming, not for binary video. The "cost" of going direct is
+ * exposing the funnel hostname in DevTools — acceptable: the same
+ * hostname could be discovered via Tailscale's public DNS anyway, and
+ * the only thing it routes is cayley-app's existing read-only API.
+ *
+ * Fallback path: if the <video> errors (corp networks blocking
+ * .ts.net, ad blockers, browser blocking the funnel cert, an old
+ * browser without H.264 High@4.0 support, etc.) we drop to the
+ * /api/v3/snapshot poll-and-swap path. Same visual treatment, lower
+ * latency floor (~1.5 s) but rock-solid.
+ *
+ * Tailscale Funnel does close long-lived connections at some point;
+ * <video> fires `ended` and we remount with a fresh src.
  *
  * States:
- *   - 'connecting'  : initial — never received a frame yet (shimmer).
- *   - 'live'        : at least one frame loaded recently.
- *   - 'offline'     : >POLL_GRACE_MS without a successful frame.
+ *   - 'connecting' : first paint, no frame yet (shimmer).
+ *   - 'live'       : stream playing OR snapshot lease fresh.
+ *   - 'offline'    : > FRESH_GRACE_MS without a frame.
  */
 
 import { useEffect, useRef, useState } from 'react'
 import { useFieldTheme } from './fieldTheme'
 
+const FUNNEL_HOST =
+  process.env.NEXT_PUBLIC_V3_FUNNEL_HOST ||
+  'https://cayley-v3-cam-1.tailc7d6b6.ts.net'
+const FEED_STREAM = process.env.NEXT_PUBLIC_V3_FEED_STREAM || 'cayley-sub'
+const FEED_URL = `${FUNNEL_HOST}/api/stream.mp4?src=${encodeURIComponent(FEED_STREAM)}`
+
 const SNAPSHOT_URL = '/api/v3/snapshot'
 const POLL_INTERVAL_MS = 500
-const POLL_GRACE_MS = 30_000
+const FRESH_GRACE_MS = 30_000
+const RECONNECT_DELAY_MS = 200
 
 type FeedState = 'connecting' | 'live' | 'offline'
 
@@ -35,19 +53,39 @@ export default function FieldCameraFeed() {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
 
+  const [state, setState] = useState<FeedState>('connecting')
+  const [streamGen, setStreamGen] = useState(0)
+  const [fallback, setFallback] = useState(false)
+
+  const lastOkAtRef = useRef(0)
+
+  // ── Streaming path ────────────────────────────────────────────────
+  // Stream-end (funnel cycling) → reconnect with a new <video>.
+  // Stream-error (network/codec issue) → fall back to snapshots.
+  const onStreamEnd = () => {
+    setTimeout(() => setStreamGen((g) => g + 1), RECONNECT_DELAY_MS)
+  }
+  const onStreamError = () => {
+    setFallback(true)
+  }
+  const onStreamPlaying = () => {
+    lastOkAtRef.current = Date.now()
+    setState('live')
+  }
+
+  // ── Snapshot fallback ─────────────────────────────────────────────
   const imgRef = useRef<HTMLImageElement>(null)
   const objectUrlRef = useRef<string | null>(null)
-  const [state, setState] = useState<FeedState>('connecting')
 
   useEffect(() => {
+    if (!fallback) return
     let cancelled = false
     let timer: ReturnType<typeof setTimeout> | null = null
-    let lastOkAt = 0
 
-    const swap = (objectUrl: string) => {
+    const swap = (url: string) => {
       const previous = objectUrlRef.current
-      objectUrlRef.current = objectUrl
-      if (imgRef.current) imgRef.current.src = objectUrl
+      objectUrlRef.current = url
+      if (imgRef.current) imgRef.current.src = url
       if (previous) {
         setTimeout(() => {
           try { URL.revokeObjectURL(previous) } catch {}
@@ -66,14 +104,12 @@ export default function FieldCameraFeed() {
         })
         clearTimeout(t)
         if (cancelled) return
-
         if (res.ok) {
           const blob = await res.blob()
           if (cancelled) return
           if (blob.size > 0 && blob.type.startsWith('image/')) {
-            const url = URL.createObjectURL(blob)
-            swap(url)
-            lastOkAt = Date.now()
+            swap(URL.createObjectURL(blob))
+            lastOkAtRef.current = Date.now()
             setState('live')
           } else {
             maybeOffline()
@@ -84,18 +120,16 @@ export default function FieldCameraFeed() {
       } catch {
         if (!cancelled) maybeOffline()
       }
-
       if (!cancelled) timer = setTimeout(tick, POLL_INTERVAL_MS)
     }
 
     const maybeOffline = () => {
-      if (lastOkAt === 0 || Date.now() - lastOkAt > POLL_GRACE_MS) {
+      if (lastOkAtRef.current === 0 || Date.now() - lastOkAtRef.current > FRESH_GRACE_MS) {
         setState('offline')
       }
     }
 
     tick()
-
     return () => {
       cancelled = true
       if (timer) clearTimeout(timer)
@@ -104,21 +138,54 @@ export default function FieldCameraFeed() {
         objectUrlRef.current = null
       }
     }
+  }, [fallback])
+
+  // ── Watchdog ──────────────────────────────────────────────────────
+  // If we go FRESH_GRACE_MS without a 'playing' or snapshot success,
+  // surface offline. Doesn't tear down anything; flips back to live as
+  // soon as a frame lands.
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (lastOkAtRef.current === 0) return
+      if (Date.now() - lastOkAtRef.current > FRESH_GRACE_MS) {
+        setState('offline')
+      }
+    }, 5000)
+    return () => clearInterval(id)
   }, [])
 
   return (
     <div className="relative w-full h-full overflow-hidden rounded-[16px]">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        ref={imgRef}
-        alt="Live camera frame"
-        className="absolute inset-0 w-full h-full object-cover"
-        style={{
-          opacity: state === 'live' ? 1 : 0,
-          transition: 'opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
-          background: '#000',
-        }}
-      />
+      {fallback ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          ref={imgRef}
+          alt="Live camera frame"
+          className="absolute inset-0 w-full h-full object-cover"
+          style={{
+            opacity: state === 'live' ? 1 : 0,
+            transition: 'opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
+            background: '#000',
+          }}
+        />
+      ) : (
+        <video
+          key={streamGen}
+          src={FEED_URL}
+          autoPlay
+          muted
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover"
+          style={{
+            opacity: state === 'live' ? 1 : 0,
+            transition: 'opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
+            background: '#000',
+          }}
+          onPlaying={onStreamPlaying}
+          onEnded={onStreamEnd}
+          onError={onStreamError}
+        />
+      )}
 
       {state === 'connecting' && (
         <FeedShimmer label="connecting…" isLight={isLight} />
