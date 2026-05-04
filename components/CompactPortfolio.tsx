@@ -1713,7 +1713,7 @@ function ContactTile({ onOpen }: { onOpen?: () => void }) {
                 color: isLight ? '#1c1a1c' : '#fff',
               }}
             >
-              <div className="w-5 h-5 opacity-90">{c.icon}</div>
+              <div className={`${c.label === 'HatchingPoint' ? 'w-10 h-10' : 'w-5 h-5'} opacity-90`}>{c.icon}</div>
               <div className="text-[12px] font-semibold tracking-tight">{c.label}</div>
             </a>
           ))}
