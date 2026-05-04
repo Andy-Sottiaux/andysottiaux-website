@@ -1672,8 +1672,8 @@ const CONTACTS = [
         className="block w-full h-full"
         style={{
           backgroundColor: 'currentColor',
-          WebkitMaskImage: 'url(/images/hatchingpoint-mark.png?v=2)',
-          maskImage: 'url(/images/hatchingpoint-mark.png?v=2)',
+          WebkitMaskImage: 'url(/images/hatchingpoint-mark.png?v=3)',
+          maskImage: 'url(/images/hatchingpoint-mark.png?v=3)',
           WebkitMaskSize: 'contain',
           maskSize: 'contain',
           WebkitMaskRepeat: 'no-repeat',
