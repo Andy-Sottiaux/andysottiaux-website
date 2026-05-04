@@ -21,6 +21,7 @@ import { useCallback, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useFieldTheme } from './fieldTheme'
 import { useReducedMotion } from '@/lib/useReducedMotion'
+import { haptic } from '@/lib/haptics'
 
 type Props = {
   open: boolean
@@ -181,7 +182,7 @@ export default function Modal({ open, onClose, title, eyebrow, children, size = 
           <button
             ref={closeBtnRef}
             type="button"
-            onClick={onClose}
+            onClick={() => { haptic('tap'); onClose() }}
             aria-label="Close"
             className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center transition-all hover:scale-105"
             style={{

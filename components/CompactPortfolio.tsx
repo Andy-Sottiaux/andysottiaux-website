@@ -48,6 +48,7 @@ import {
   type ModalKey,
 } from './CompactModals'
 import { useBoardLive } from '@/lib/useBoardLive'
+import { haptic } from '@/lib/haptics'
 
 // Same dynamic import the home page uses — the camera feed polls a
 // browser-side proxy, so SSR'ing it is wasted work.
@@ -360,7 +361,7 @@ function Tile({
       {onOpen ? (
         <button
           type="button"
-          onClick={onOpen}
+          onClick={() => { haptic('open'); onOpen() }}
           aria-haspopup="dialog"
           aria-label={modalLabel ?? (label ? `Open ${label}` : 'Open')}
           className="absolute inset-0 z-0 cursor-pointer"
@@ -535,7 +536,7 @@ function SolarTile({ onOpen }: { onOpen?: () => void }) {
     return (
       <button
         type="button"
-        onClick={onOpen}
+        onClick={() => { haptic('open'); onOpen() }}
         aria-haspopup="dialog"
         aria-label="Open Field Live"
         className="block w-full h-full min-h-[360px] md:min-h-0 [&>div]:h-full hover:scale-[1.005] transition-transform duration-300 text-left"
@@ -562,7 +563,7 @@ function HealthTile({ onOpen }: { onOpen?: () => void }) {
     return (
       <button
         type="button"
-        onClick={onOpen}
+        onClick={() => { haptic('open'); onOpen() }}
         aria-haspopup="dialog"
         aria-label="Open Field Live"
         className="block w-full h-full min-h-[260px] md:min-h-0 [&>div]:h-full hover:scale-[1.005] transition-transform duration-300 text-left"
@@ -1120,7 +1121,7 @@ function MoreProjectsTile({ onOpen }: { onOpen?: (key: ModalKey) => void }) {
                 <button
                   type="button"
                   key={p.name}
-                  onClick={() => onOpen?.('airpodsmount')}
+                  onClick={() => { haptic('open'); onOpen?.('airpodsmount') }}
                   className="group relative z-10 flex items-center gap-3 py-1.5 rounded-lg -mx-1 px-1 transition-colors text-left w-full"
                   aria-label={`Open ${p.name}`}
                 >
@@ -1461,7 +1462,7 @@ function MarathonTile({ onOpen }: { onOpen?: () => void }) {
       {onOpen && (
         <button
           type="button"
-          onClick={onOpen}
+          onClick={() => { haptic('open'); onOpen() }}
           aria-label="Open 2026 TCS NYC Marathon"
           className="absolute inset-0 z-0 cursor-pointer"
         />
