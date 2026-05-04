@@ -2,32 +2,27 @@
  * Server-side proxy for the live fragmented-MP4 video stream from the
  * field device. Used by FieldCameraFeed for sub-second latency playback.
  *
- * Why Node.js runtime (not Edge): we tested Edge first and it truncated
- * the response after ~1 KB (just the fmp4 moov box) instead of piping
- * the continuous binary stream. Node.js runtime forwards `r.body`
- * (a ReadableStream) cleanly and supports a longer `maxDuration` for
- * the long-lived response.
- *
  * Pipeline (zero transcoding anywhere):
  *   rkipc HW H.264 -> RTSP -> go2rtc rewrap to fmp4 -> us -> <video>
  *
- * The client component remounts the <video> element when this stream
- * ends (every ~maxDuration seconds), making the seam invisible.
+ * Runtime choice: Edge. Vercel Hobby caps Node.js serverless functions
+ * at 10 s — too short for a continuous stream. Edge runtime allows
+ * streamed responses up to ~25 s on Hobby (longer on Pro). The client
+ * remounts the <video> element when the stream ends, so the cap is a
+ * UX seam (~100 ms gap), not a feature limit.
+ *
+ * Streaming, not buffering: we forward the upstream body directly
+ * (`new Response(upstream.body, …)`) so binary fmp4 frames flow as
+ * they arrive. No `arrayBuffer()` consumption.
  */
 
-import type { NextRequest } from 'next/server'
-
-export const runtime = 'nodejs'
+export const runtime = 'edge'
 export const dynamic = 'force-dynamic'
-// Vercel Pro lets us go up to 60s by default (configurable to 800s on
-// higher plans). 50s leaves a safety margin under the platform cap and
-// gives the client a clean reconnect cadence.
-export const maxDuration = 50
 
 const UPSTREAM = process.env.V3_UPSTREAM_HOST || 'https://cayley-v3-cam-1.tailc7d6b6.ts.net'
 const STREAM = process.env.V3_FEED_STREAM || 'cayley-sub'
 
-export async function GET(_req: NextRequest) {
+export async function GET() {
   try {
     const r = await fetch(
       `${UPSTREAM}/api/stream.mp4?src=${encodeURIComponent(STREAM)}`,
