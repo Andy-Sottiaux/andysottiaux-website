@@ -25,10 +25,26 @@ type Solar = {
   load_current: number
   timestamp: number
   load_on?: boolean
+  // Added 2026-05-04: server reports stale-ness so the UI can show last
+  // known telemetry instead of "no telemetry yet" while the BLE link is
+  // recovering. live=true ⇔ age_seconds <= 90s.
+  age_seconds?: number
+  stale?: boolean
+  live?: boolean
   error?: string
 }
 
-type CardState = 'loading' | 'live' | 'no-telemetry' | 'offline'
+type CardState = 'loading' | 'live' | 'stale' | 'no-telemetry' | 'offline'
+
+function fmtAge(seconds: number): string {
+  const s = Math.max(0, Math.floor(seconds))
+  if (s < 60) return `${s}s ago`
+  const m = Math.floor(s / 60)
+  if (m < 60) return `${m} min ago`
+  const h = Math.floor(m / 60)
+  if (h < 48) return `${h}h ago`
+  return `${Math.floor(h / 24)}d ago`
+}
 
 // 4S LiFePO4 OCV → SOC, with internal-resistance compensation.
 function calcSOC(bv: number, loadA = 0, chargeA = 0): number {
@@ -86,15 +102,21 @@ export default function FieldSolarCard() {
         }
 
         if (data && typeof data.battery_voltage === 'number' && !data.error) {
-          const live = data as Solar
-          setSolar(live)
-          setState('live')
-          const next = [...sparkRef.current, live.solar_power].slice(-SPARK_MAX)
-          sparkRef.current = next
-          setSpark(next)
+          const reading = data as Solar
+          setSolar(reading)
+          // Server now distinguishes live (recent) from stale (cached
+          // last-known). Both render the values; only the badge differs.
+          setState(reading.live === false || reading.stale === true ? 'stale' : 'live')
+          // Don't pad the sparkline with stale repeats — only push when
+          // the data is genuinely new.
+          if (reading.live !== false) {
+            const next = [...sparkRef.current, reading.solar_power].slice(-SPARK_MAX)
+            sparkRef.current = next
+            setSpark(next)
+          }
         } else if (data && (data.error || res.status === 503)) {
-          // Upstream is reachable but reports no telemetry yet (e.g. BMV
-          // out of BLE range). Treat as 'idle / awaiting', not broken.
+          // Upstream is reachable but reports no telemetry yet (BMV never
+          // seen since boot). Treat as 'idle / awaiting', not broken.
           setState('no-telemetry')
         } else if (!res.ok) {
           // Proxy or upstream actively failing (502 / unreachable).
@@ -116,6 +138,9 @@ export default function FieldSolarCard() {
   }, [])
 
   const soc = solar ? calcSOC(solar.battery_voltage, solar.load_current, solar.charging_current) : null
+  // Display values whenever we have a reading at all, fresh or stale.
+  // Only "no-telemetry" / "offline" / "loading" hide the numbers.
+  const hasValues = (state === 'live' || state === 'stale') && solar != null
   const live = state === 'live' && solar != null
   const valueColor = isLight ? '#1c1a1c' : '#fff'
 
@@ -161,7 +186,7 @@ export default function FieldSolarCard() {
             backgroundClip: 'text',
           }}
         >
-          {live ? solar.battery_voltage.toFixed(2) : '—'}
+          {hasValues ? solar.battery_voltage.toFixed(2) : '—'}
         </div>
         <div
           className="text-[20px] sm:text-[24px] font-medium tracking-tight"
@@ -174,12 +199,20 @@ export default function FieldSolarCard() {
         className="text-[13px] tracking-tight mb-6 flex items-center gap-2"
         style={{ color: palette.bodyText, minHeight: '1.25rem' }}
       >
-        {live ? (
+        {hasValues ? (
           <>
             <span>
               Battery <span className="tabular-nums" style={{ color: valueColor, opacity: 0.85 }}>{soc}%</span>
               <span className="mx-2" style={{ color: palette.fadedText }}>·</span>
               <span className="capitalize">{solar.charge_state}</span>
+              {state === 'stale' && solar.age_seconds != null && (
+                <>
+                  <span className="mx-2" style={{ color: palette.fadedText }}>·</span>
+                  <span style={{ color: isLight ? '#b45309' : '#fcd34d' }}>
+                    last seen {fmtAge(solar.age_seconds)}
+                  </span>
+                </>
+              )}
             </span>
           </>
         ) : state === 'loading' ? (
@@ -215,7 +248,7 @@ export default function FieldSolarCard() {
           <div
             className="h-full rounded-full"
             style={{
-              width: live ? `${Math.max(0, Math.min(100, soc ?? 0))}%` : '0%',
+              width: hasValues ? `${Math.max(0, Math.min(100, soc ?? 0))}%` : '0%',
               background: 'linear-gradient(90deg, #30d158 0%, #06d6f4 100%)',
               boxShadow: '0 0 12px rgba(6,214,244,0.4)',
               transition: 'width 0.9s cubic-bezier(0.16, 1, 0.3, 1)',
@@ -236,12 +269,13 @@ export default function FieldSolarCard() {
           <div
             className="text-[26px] sm:text-[28px] font-semibold tracking-tight tabular-nums mt-1"
             style={{
-              color: live && solar.solar_power > 0
+              color: hasValues && solar.solar_power > 0
                 ? (isLight ? '#c2410c' : '#ffb84d')
                 : valueColor,
+              opacity: state === 'stale' ? 0.7 : 1,
             }}
           >
-            {live ? Math.round(solar.solar_power) : '—'}
+            {hasValues ? Math.round(solar.solar_power) : '—'}
             <span className="text-[14px] font-medium ml-1" style={{ color: palette.mutedText }}>W</span>
           </div>
         </div>
@@ -254,9 +288,9 @@ export default function FieldSolarCard() {
           </div>
           <div
             className="text-[26px] sm:text-[28px] font-semibold tracking-tight tabular-nums mt-1"
-            style={{ color: valueColor }}
+            style={{ color: valueColor, opacity: state === 'stale' ? 0.7 : 1 }}
           >
-            {live ? solar.yield_today : '—'}
+            {hasValues ? solar.yield_today : '—'}
             <span className="text-[14px] font-medium ml-1" style={{ color: palette.mutedText }}>Wh</span>
           </div>
         </div>

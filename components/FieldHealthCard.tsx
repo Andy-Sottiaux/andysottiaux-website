@@ -27,6 +27,16 @@ type ServiceLoose = {
   status?: string
   OK?: boolean
   ok?: boolean
+  detail?: string
+}
+
+type SystemLoose = {
+  loadavg?: { '1m'?: number; '5m'?: number; '15m'?: number }
+  mem?: { free_kb?: number; avail_kb?: number; cma_free_kb?: number; total_kb?: number }
+  cpu_temp_c?: number
+  victron_advert_age_s?: number
+  victron_hearing?: boolean
+  tailscale_kicks_4h?: number
 }
 
 type HealthLoose = {
@@ -35,6 +45,7 @@ type HealthLoose = {
   service_count?: number
   services?: ServiceLoose[]
   services_down?: string[] | null
+  system?: SystemLoose
 }
 
 type HealthDigest = {
@@ -42,8 +53,10 @@ type HealthDigest = {
   uptimeSec: number
   servicesUp: number
   servicesTotal: number
+  servicesDown: string[]
   rttMs: number
   fetchedAt: number
+  system?: SystemLoose
 }
 
 function fmtUptime(s: number): string {
@@ -106,23 +119,29 @@ export default function FieldHealthCard() {
       // failure) at least once, so the UI can stop saying "Connecting".
       setPhase('resolved')
 
-      if (ok && parsed && parsed.ok !== false && !('error' in (parsed as object))) {
+      if (ok && parsed && !('error' in (parsed as object))) {
         const services = parsed.services ?? []
         const total = parsed.service_count ?? services.length
-        const down = parsed.services_down?.length ?? services.filter((s) => {
+        const downList = parsed.services_down ?? services.filter((s) => {
           if (typeof s.OK === 'boolean') return !s.OK
           if (typeof s.ok === 'boolean') return !s.ok
           if (typeof s.status === 'string') return s.status !== 'running'
           return false
-        }).length
+        }).map((s) => s.name ?? s.Name ?? '?')
+        const down = downList?.length ?? 0
         const up = Math.max(0, total - down)
+        // The board considers "ok" = critical-subsystems fresh. Detector
+        // and recorder being down is informational, not failure — but
+        // we still surface count + names in the UI.
         const next: HealthDigest = {
           ok: parsed.ok ?? (down === 0),
           uptimeSec: parsed.uptime_s ?? 0,
           servicesUp: up,
           servicesTotal: total,
+          servicesDown: downList ?? [],
           rttMs,
           fetchedAt: Date.now(),
+          system: parsed.system,
         }
         setDigest(next)
         lastOkRef.current = next
@@ -144,6 +163,11 @@ export default function FieldHealthCard() {
   const connecting = phase === 'connecting'
   const online = digest != null && digest.ok
   const lastOk = lastOkRef.current
+  // Degraded = critical-subsystems healthy but at least one informational
+  // service is down (detector / recorder, etc.). UI shows green dot but
+  // notes the names below.
+  const degraded = digest != null && digest.ok && digest.servicesDown.length > 0
+  const sys = digest?.system ?? lastOk?.system
 
   const onlineHeadline = palette.headlineGradient
   const offlineHeadline = isLight
@@ -237,6 +261,19 @@ export default function FieldHealthCard() {
         </div>
       </div>
 
+      {degraded && digest && (
+        <div
+          className="text-[11px] tracking-tight mb-4 -mt-2"
+          style={{
+            color: isLight ? '#b45309' : '#fcd34d',
+            opacity: 0.9,
+          }}
+        >
+          <span style={{ fontWeight: 600 }}>Degraded:</span>{' '}
+          {digest.servicesDown.join(', ')}
+        </div>
+      )}
+
       <dl className="grid grid-cols-2 gap-x-6 gap-y-4 mt-auto">
         <div>
           <dt
@@ -297,6 +334,31 @@ export default function FieldHealthCard() {
           </dd>
         </div>
       </dl>
+
+      {sys && (
+        <div
+          className="mt-4 pt-3 border-t flex flex-wrap gap-x-4 gap-y-1 text-[11px] tabular-nums"
+          style={{
+            borderColor: palette.hairline,
+            color: palette.mutedText,
+          }}
+        >
+          {typeof sys.cpu_temp_c === 'number' && sys.cpu_temp_c > 0 && (
+            <span>SoC {sys.cpu_temp_c.toFixed(0)}°C</span>
+          )}
+          {sys.loadavg && typeof sys.loadavg['1m'] === 'number' && (
+            <span>load {sys.loadavg['1m'].toFixed(1)}</span>
+          )}
+          {sys.mem && typeof sys.mem.cma_free_kb === 'number' && (
+            <span>cma {Math.round((sys.mem.cma_free_kb || 0) / 1024)}M</span>
+          )}
+          {typeof sys.tailscale_kicks_4h === 'number' && sys.tailscale_kicks_4h > 0 && (
+            <span style={{ color: isLight ? '#b45309' : '#fcd34d' }}>
+              ts kicks {sys.tailscale_kicks_4h}/4h
+            </span>
+          )}
+        </div>
+      )}
 
       <style jsx global>{`
         @keyframes fldHealthPing {
