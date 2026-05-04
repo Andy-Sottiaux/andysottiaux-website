@@ -1,212 +1,96 @@
 'use client'
 
 /**
- * FieldCameraFeed — live video from the field device.
+ * FieldCameraFeed — adaptive 3-tier live video client.
  *
- * Primary path: a fragmented-MP4 H.264 stream served straight from the
- * device's Tailscale Funnel hostname. rkipc HW-encodes once, go2rtc
- * rewraps RTSP packets into fmp4 with no transcoding, browser decodes
- * natively in <video>. End-to-end latency ~400-700 ms, board CPU
- * cost effectively zero above what the encoder was already burning.
+ * Picks the best transport that actually works for the viewer's
+ * network, top-down:
  *
- * Why direct from the funnel and not via Vercel Edge: we tested Edge
- * pass-through and it truncates long-lived binary streams after the
- * fmp4 init segment (~108 bytes) because it can't bridge the
- * keyframe-wait quiet period that follows. Edge is great for SSE/text
- * streaming, not for binary video. The "cost" of going direct is
- * exposing the funnel hostname in DevTools — acceptable: the same
- * hostname could be discovered via Tailscale's public DNS anyway, and
- * the only thing it routes is cayley-app's existing read-only API.
+ *   1. WebRTC           sub-200 ms glass-to-glass, UDP, jitter-tolerant
+ *   2. fmp4 over HTTPS  ~500-700 ms, TCP, restrictive networks
+ *   3. snapshot poll    ~1-2 s floor, plain HTTPS GETs only
  *
- * Fallback path: if the <video> errors (corp networks blocking
- * .ts.net, ad blockers, browser blocking the funnel cert, an old
- * browser without H.264 High@4.0 support, etc.) we drop to the
- * /api/v3/snapshot poll-and-swap path. Same visual treatment, lower
- * latency floor (~1.5 s) but rock-solid.
+ * (We don't include MJPEG — go2rtc-pure builds without ffmpeg can't
+ * transcode H.264 → MJPEG, so the endpoint returns empty. Snapshot
+ * poll covers the same "no streaming protocol allowed" use case.)
  *
- * Tailscale Funnel does close long-lived connections at some point;
- * <video> fires `ended` and we remount with a fresh src.
+ * The component PROBES tier-by-tier with a 3.5 s first-frame budget
+ * each. The first tier to deliver a real frame wins and we stick.
+ * On error it degrades one tier and tries again. Periodic re-probe
+ * (every 5 min) tries to climb back up to a faster tier.
  *
- * States:
- *   - 'connecting' : first paint, no frame yet (shimmer).
- *   - 'live'       : stream playing OR snapshot lease fresh.
- *   - 'offline'    : > FRESH_GRACE_MS without a frame.
+ * While the tab is hidden / scrolled out of view, ALL transports
+ * tear down so the board's wifi uplink isn't holding open consumers
+ * for backgrounded tabs (the Apr-2026 zombie-consumer leak).
+ *
+ * Browser-side telemetry is POSTed back to /api/v3/stream-metrics
+ * every 5 s for the board's stream-stats endpoint. This is what
+ * powers the dev HUD ("?debug=1") and what /api/services exposes.
  */
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useFieldTheme } from './fieldTheme'
 
+// ── Config ────────────────────────────────────────────────────────────
 const FUNNEL_HOST =
   process.env.NEXT_PUBLIC_V3_FUNNEL_HOST ||
   'https://cayley-v3-cam-1.tailc7d6b6.ts.net'
 const FEED_STREAM = process.env.NEXT_PUBLIC_V3_FEED_STREAM || 'cayley-sub'
-const FEED_URL = `${FUNNEL_HOST}/api/stream.mp4?src=${encodeURIComponent(FEED_STREAM)}`
 
+// go2rtc 1.9 exposes /api/webrtc (JSON-SDP exchange), not WHEP standard.
+// Body: {type:"offer", sdp:"..."} -> {type:"answer", sdp:"..."}.
+const WEBRTC_URL = `${FUNNEL_HOST}/api/webrtc?src=${encodeURIComponent(FEED_STREAM)}`
+const FMP4_URL = `${FUNNEL_HOST}/api/stream.mp4?src=${encodeURIComponent(FEED_STREAM)}`
 const SNAPSHOT_URL = '/api/v3/snapshot'
-const POLL_INTERVAL_MS = 500
-const FRESH_GRACE_MS = 30_000
-const RECONNECT_DELAY_MS = 200
+const METRICS_URL = '/api/v3/stream-metrics'
 
-// Live-edge tracking. Browsers' default <video> MSE behavior buffers
-// 1-3 s ahead for "smooth playback", which means once playback starts
-// you sit perpetually behind live. Every 1 s we check how far behind
-// the live edge we are; if more than LIVE_EDGE_MAX, jump forward.
-// 0.4 s offset matches the rkipc sub-stream's GOP=10 keyframe interval
-// — close enough to live to feel real-time, far enough to absorb a
-// blip without re-buffering.
-const LIVE_EDGE_OFFSET = 0.4
-const LIVE_EDGE_MAX = 1.2
-const LIVE_EDGE_CHECK_MS = 1000
+const FIRST_FRAME_TIMEOUT_MS = 3500
+const STALL_TIMEOUT_MS = 8000
+const REPROBE_INTERVAL_MS = 5 * 60_000
+const SNAPSHOT_POLL_MS = 700
+const METRICS_INTERVAL_MS = 5_000
+const RECONNECT_DELAY_MS = 250
 
-type FeedState = 'connecting' | 'live' | 'offline' | 'paused'
+// ── Types ─────────────────────────────────────────────────────────────
+type Tier = 'webrtc' | 'fmp4' | 'snapshot'
+type Phase =
+  | 'paused' // user away or scrolled past
+  | 'probing' // selecting a tier
+  | 'live' // first frame seen, stream active
+  | 'offline' // every tier failed; full retry cycle pending
 
-// We only hold the upstream stream connection while the user is actually
-// looking. Hidden tab / scrolled-past / minimized window all release the
-// connection. Without this, every backgrounded tab keeps a ~30 KB/s
-// stream alive on the board's wifi uplink — the radio caps near
-// 200 KB/s, so a handful of zombie tabs eats the budget.
-const containerHiddenInitially = (): boolean => {
-  if (typeof document === 'undefined') return true
-  return document.visibilityState !== 'visible'
+const ALL_TIERS: Tier[] = ['webrtc', 'fmp4', 'snapshot']
+
+type SessionStats = {
+  tier: Tier | null
+  rttMs: number
+  jitterMs: number
+  packetLoss: number
+  kbps: number
+  fps: number
+  joinMs: number
+  framesDecoded: number
 }
 
+// ── Component ─────────────────────────────────────────────────────────
 export default function FieldCameraFeed() {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
 
-  const [state, setState] = useState<FeedState>('connecting')
-  const [streamGen, setStreamGen] = useState(0)
-  const [fallback, setFallback] = useState(false)
-  const [active, setActive] = useState<boolean>(!containerHiddenInitially())
+  const debugMode = useDebugFlag()
 
-  const lastOkAtRef = useRef(0)
-  const videoRef = useRef<HTMLVideoElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-
-  // ── Streaming path ────────────────────────────────────────────────
-  // Stream-end (funnel cycling) → reconnect with a new <video>.
-  // Stream-error (network/codec issue) → fall back to snapshots.
-  const onStreamEnd = () => {
-    setTimeout(() => setStreamGen((g) => g + 1), RECONNECT_DELAY_MS)
-  }
-  const onStreamError = () => {
-    setFallback(true)
-  }
-  const onStreamPlaying = () => {
-    lastOkAtRef.current = Date.now()
-    setState('live')
-  }
-
-  // Live-edge tracker. Runs while the streaming path is active. Jumps
-  // currentTime forward whenever the browser has buffered too far ahead
-  // of where we're playing. Without this, MSE happily buffers 1-3 s
-  // and you watch a delayed copy of "live."
-  useEffect(() => {
-    if (fallback) return
-    const video = videoRef.current
-    if (!video) return
-    const id = setInterval(() => {
-      const ranges = video.buffered
-      if (ranges.length === 0 || video.paused) return
-      const liveEdge = ranges.end(ranges.length - 1)
-      const behind = liveEdge - video.currentTime
-      if (behind > LIVE_EDGE_MAX) {
-        try {
-          video.currentTime = Math.max(liveEdge - LIVE_EDGE_OFFSET, video.currentTime)
-        } catch {
-          // Some browsers throw on currentTime set during seek; ignore.
-        }
-      }
-    }, LIVE_EDGE_CHECK_MS)
-    return () => clearInterval(id)
-  }, [fallback, streamGen])
-
-  // ── Snapshot fallback ─────────────────────────────────────────────
+  const videoRef = useRef<HTMLVideoElement>(null)
   const imgRef = useRef<HTMLImageElement>(null)
-  const objectUrlRef = useRef<string | null>(null)
 
-  useEffect(() => {
-    if (!fallback) return
-    let cancelled = false
-    let timer: ReturnType<typeof setTimeout> | null = null
+  const [active, setActive] = useState<boolean>(() => initialActive())
+  const [phase, setPhase] = useState<Phase>(() => (initialActive() ? 'probing' : 'paused'))
+  const [tier, setTier] = useState<Tier | null>(null)
+  const [stats, setStats] = useState<SessionStats>(emptyStats())
 
-    const swap = (url: string) => {
-      const previous = objectUrlRef.current
-      objectUrlRef.current = url
-      if (imgRef.current) imgRef.current.src = url
-      if (previous) {
-        setTimeout(() => {
-          try { URL.revokeObjectURL(previous) } catch {}
-        }, 100)
-      }
-    }
+  const sessionId = useMemo(() => randomSessionId(), [])
 
-    const tick = async () => {
-      if (cancelled) return
-      try {
-        const ctrl = new AbortController()
-        const t = setTimeout(() => ctrl.abort(), 5000)
-        const res = await fetch(`${SNAPSHOT_URL}?t=${Date.now()}`, {
-          cache: 'no-store',
-          signal: ctrl.signal,
-        })
-        clearTimeout(t)
-        if (cancelled) return
-        if (res.ok) {
-          const blob = await res.blob()
-          if (cancelled) return
-          if (blob.size > 0 && blob.type.startsWith('image/')) {
-            swap(URL.createObjectURL(blob))
-            lastOkAtRef.current = Date.now()
-            setState('live')
-          } else {
-            maybeOffline()
-          }
-        } else {
-          maybeOffline()
-        }
-      } catch {
-        if (!cancelled) maybeOffline()
-      }
-      if (!cancelled) timer = setTimeout(tick, POLL_INTERVAL_MS)
-    }
-
-    const maybeOffline = () => {
-      if (lastOkAtRef.current === 0 || Date.now() - lastOkAtRef.current > FRESH_GRACE_MS) {
-        setState('offline')
-      }
-    }
-
-    tick()
-    return () => {
-      cancelled = true
-      if (timer) clearTimeout(timer)
-      if (objectUrlRef.current) {
-        try { URL.revokeObjectURL(objectUrlRef.current) } catch {}
-        objectUrlRef.current = null
-      }
-    }
-  }, [fallback])
-
-  // ── Watchdog ──────────────────────────────────────────────────────
-  // If we go FRESH_GRACE_MS without a 'playing' or snapshot success,
-  // surface offline. Doesn't tear down anything; flips back to live as
-  // soon as a frame lands.
-  useEffect(() => {
-    const id = setInterval(() => {
-      if (lastOkAtRef.current === 0) return
-      if (Date.now() - lastOkAtRef.current > FRESH_GRACE_MS) {
-        setState('offline')
-      }
-    }, 5000)
-    return () => clearInterval(id)
-  }, [])
-
-  // ── Active gate ───────────────────────────────────────────────────
-  // The <video> only mounts while the feed is on-screen AND the tab is
-  // visible. Going inactive imperatively detaches src + load() so the
-  // browser closes the underlying TCP connection immediately, instead
-  // of waiting for HTTP/2 keepalive timeout.
+  // ── Visibility / intersection gate ─────────────────────────────────
   useEffect(() => {
     const el = containerRef.current
     if (!el || typeof document === 'undefined') return
@@ -239,74 +123,180 @@ export default function FieldCameraFeed() {
     }
   }, [])
 
-  // Hard-detach the video element when going inactive so the underlying
-  // HTTP connection drops now, not on browser GC. Re-arm 'connecting' on
-  // the way back so the UI shows the shimmer until the next frame lands.
+  // ── Tier ladder, lifecycle ────────────────────────────────────────
   useEffect(() => {
-    const v = videoRef.current
     if (!active) {
-      if (v) {
+      setPhase('paused')
+      return
+    }
+    setPhase('probing')
+
+    let cancelled = false
+    let teardown: (() => void) | null = null
+    let tierIdx = 0
+    let reprobeTimer: ReturnType<typeof setTimeout> | null = null
+    const sessionStartedAt = performance.now()
+
+    const onLive = (newTier: Tier) => {
+      if (cancelled) return
+      const joinMs = Math.round(performance.now() - sessionStartedAt)
+      setTier(newTier)
+      setPhase('live')
+      setStats((s) => ({ ...s, tier: newTier, joinMs }))
+    }
+
+    const onStallOrError = () => {
+      if (cancelled) return
+      // Tear down current tier, advance.
+      if (teardown) {
         try {
-          v.pause()
-          v.removeAttribute('src')
-          v.load()
+          teardown()
         } catch {
-          // best-effort
+          // ignore
+        }
+        teardown = null
+      }
+      tierIdx++
+      if (tierIdx >= ALL_TIERS.length) {
+        setPhase('offline')
+        // Full retry cycle from top after 15 s.
+        const t = setTimeout(() => {
+          if (cancelled) return
+          tierIdx = 0
+          tryNext()
+        }, 15_000)
+        reprobeTimer = t
+        return
+      }
+      tryNext()
+    }
+
+    const onStatsUpdate = (patch: Partial<SessionStats>) => {
+      if (cancelled) return
+      setStats((s) => ({ ...s, ...patch }))
+    }
+
+    const tryNext = () => {
+      if (cancelled) return
+      const t = ALL_TIERS[tierIdx]
+      const handlers = { onLive, onStallOrError, onStatsUpdate }
+      switch (t) {
+        case 'webrtc':
+          teardown = startWebRTC(videoRef, handlers)
+          break
+        case 'fmp4':
+          teardown = startFMP4(videoRef, handlers)
+          break
+        case 'snapshot':
+          teardown = startSnapshot(imgRef, handlers)
+          break
+      }
+    }
+
+    tryNext()
+
+    // Try to climb back to a higher tier every REPROBE_INTERVAL_MS while
+    // we're stuck below WebRTC. (If WebRTC is already in use, no climb.)
+    const climb = setInterval(() => {
+      if (cancelled) return
+      if (tierIdx === 0) return
+      // Tear down current (degraded) tier, restart from top.
+      if (teardown) {
+        try {
+          teardown()
+        } catch {
+          // ignore
+        }
+        teardown = null
+      }
+      tierIdx = 0
+      tryNext()
+    }, REPROBE_INTERVAL_MS)
+
+    return () => {
+      cancelled = true
+      if (teardown) {
+        try {
+          teardown()
+        } catch {
+          // ignore
         }
       }
-      lastOkAtRef.current = 0
-      setState('paused')
-    } else {
-      setState('connecting')
+      clearInterval(climb)
+      if (reprobeTimer) clearTimeout(reprobeTimer)
     }
   }, [active])
 
+  // ── Telemetry beacon ──────────────────────────────────────────────
+  useEffect(() => {
+    if (phase !== 'live' || !tier) return
+    const id = setInterval(() => {
+      const body = {
+        session_id: sessionId,
+        protocol: tier,
+        rtt_ms: stats.rttMs,
+        jitter_ms: stats.jitterMs,
+        packet_loss: stats.packetLoss,
+        kbps: stats.kbps,
+        fps: stats.fps,
+      }
+      // sendBeacon when available — survives unload cleanly.
+      try {
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon(METRICS_URL, new Blob([JSON.stringify(body)], { type: 'application/json' }))
+        } else {
+          fetch(METRICS_URL, {
+            method: 'POST',
+            body: JSON.stringify(body),
+            headers: { 'Content-Type': 'application/json' },
+            keepalive: true,
+          }).catch(() => {})
+        }
+      } catch {
+        // ignore
+      }
+    }, METRICS_INTERVAL_MS)
+    return () => clearInterval(id)
+  }, [phase, tier, stats, sessionId])
+
+  // ── Render ────────────────────────────────────────────────────────
+  const usingVideo = tier === 'webrtc' || tier === 'fmp4'
+  const usingImg = tier === 'snapshot'
+
   return (
     <div ref={containerRef} className="relative w-full h-full overflow-hidden rounded-[16px]">
-      {fallback ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          ref={imgRef}
-          alt="Live camera frame"
-          className="absolute inset-0 w-full h-full object-cover"
-          style={{
-            opacity: state === 'live' ? 1 : 0,
-            transition: 'opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
-            background: '#000',
-          }}
-        />
-      ) : active ? (
-        <video
-          key={streamGen}
-          ref={videoRef}
-          src={FEED_URL}
-          autoPlay
-          muted
-          playsInline
-          preload="none"
-          className="absolute inset-0 w-full h-full object-cover"
-          style={{
-            opacity: state === 'live' ? 1 : 0,
-            transition: 'opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
-            background: '#000',
-          }}
-          onPlaying={onStreamPlaying}
-          onEnded={onStreamEnd}
-          onError={onStreamError}
-        />
-      ) : (
-        <div className="absolute inset-0" style={{ background: '#000' }} />
-      )}
+      <video
+        ref={videoRef}
+        autoPlay
+        muted
+        playsInline
+        // preload=none + no src on mount; we drive src/srcObject from
+        // the transport modules.
+        preload="none"
+        className="absolute inset-0 w-full h-full object-cover"
+        style={{
+          opacity: phase === 'live' && usingVideo ? 1 : 0,
+          transition: 'opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
+          background: '#000',
+        }}
+      />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        ref={imgRef}
+        alt="Live camera frame"
+        className="absolute inset-0 w-full h-full object-cover"
+        style={{
+          opacity: phase === 'live' && usingImg ? 1 : 0,
+          transition: 'opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
+          background: '#000',
+        }}
+      />
 
-      {state === 'connecting' && (
-        <FeedShimmer label="connecting…" isLight={isLight} />
-      )}
+      {phase === 'probing' && <FeedShimmer label="connecting…" isLight={isLight} />}
+      {phase === 'paused' && <FeedPaused />}
+      {phase === 'offline' && <FeedOffline isLight={isLight} />}
 
-      {state === 'offline' && <FeedOffline isLight={isLight} />}
-
-      {state === 'paused' && <FeedPaused isLight={isLight} />}
-
-      {state === 'live' && (
+      {phase === 'live' && (
         <div
           className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-widest"
           style={{
@@ -316,14 +306,19 @@ export default function FieldCameraFeed() {
             WebkitBackdropFilter: 'blur(8px)',
           }}
         >
-          <span className="w-1.5 h-1.5 rounded-full" style={{
-            background: '#ff453a',
-            boxShadow: '0 0 6px #ff453a',
-            animation: 'fldLivePulse 1.6s cubic-bezier(0.4,0,0.6,1) infinite',
-          }} />
+          <span
+            className="w-1.5 h-1.5 rounded-full"
+            style={{
+              background: '#ff453a',
+              boxShadow: '0 0 6px #ff453a',
+              animation: 'fldLivePulse 1.6s cubic-bezier(0.4,0,0.6,1) infinite',
+            }}
+          />
           LIVE
         </div>
       )}
+
+      {debugMode && phase === 'live' && tier && <DevHUD tier={tier} stats={stats} />}
 
       <style jsx global>{`
         @keyframes fldLivePulse {
@@ -343,6 +338,419 @@ export default function FieldCameraFeed() {
   )
 }
 
+// ── Tier 1: WebRTC / WHEP ─────────────────────────────────────────────
+type TierHandlers = {
+  onLive: (tier: Tier) => void
+  onStallOrError: () => void
+  onStatsUpdate: (patch: Partial<SessionStats>) => void
+}
+
+function startWebRTC(
+  videoRef: React.RefObject<HTMLVideoElement | null>,
+  handlers: TierHandlers
+): () => void {
+  let cancelled = false
+  let pc: RTCPeerConnection | null = null
+  let firstFrameTimer: ReturnType<typeof setTimeout> | null = null
+  let statsTimer: ReturnType<typeof setInterval> | null = null
+  let prevBytesRecv = 0
+  let prevFramesDecoded = 0
+  let prevTs = performance.now()
+
+  const tearDown = () => {
+    cancelled = true
+    if (firstFrameTimer) clearTimeout(firstFrameTimer)
+    if (statsTimer) clearInterval(statsTimer)
+    if (pc) {
+      try {
+        pc.getSenders().forEach((s) => s.track?.stop())
+        pc.close()
+      } catch {
+        // ignore
+      }
+      pc = null
+    }
+    const v = videoRef.current
+    if (v) {
+      try {
+        v.srcObject = null
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  ;(async () => {
+    try {
+      pc = new RTCPeerConnection({
+        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+        // Bundle reduces connection setup chatter — important for our
+        // sub-3.5s first-frame budget.
+        bundlePolicy: 'max-bundle',
+      })
+      pc.addTransceiver('video', { direction: 'recvonly' })
+
+      pc.ontrack = (ev) => {
+        if (cancelled) return
+        const v = videoRef.current
+        if (!v) return
+        v.srcObject = ev.streams[0] ?? new MediaStream([ev.track])
+        const onPlaying = () => {
+          if (cancelled) return
+          handlers.onLive('webrtc')
+        }
+        v.addEventListener('playing', onPlaying, { once: true })
+      }
+
+      const offer = await pc.createOffer({ offerToReceiveVideo: true })
+      await pc.setLocalDescription(offer)
+      // Wait for ICE gathering to complete (or 1.5s, whichever is first)
+      // so the SDP we POST to WHEP includes our candidates.
+      await iceGatheringDone(pc, 1500)
+
+      if (cancelled) return
+
+      // go2rtc's WebRTC endpoint takes JSON {type, sdp} and returns the
+      // same shape. (It pre-dates the WHEP standard by enough that the
+      // WHEP path isn't routed in 1.9.14.)
+      const resp = await fetch(WEBRTC_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          type: pc.localDescription?.type ?? 'offer',
+          sdp: pc.localDescription?.sdp ?? '',
+        }),
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+      })
+      if (!resp.ok) throw new Error('webrtc ' + resp.status)
+      const answer = (await resp.json()) as { type: string; sdp: string }
+      if (cancelled) return
+      await pc.setRemoteDescription({
+        type: (answer.type as RTCSdpType) ?? 'answer',
+        sdp: answer.sdp,
+      })
+
+      // First-frame deadline: if `playing` doesn't fire in time, advance.
+      firstFrameTimer = setTimeout(() => {
+        if (!cancelled) handlers.onStallOrError()
+      }, FIRST_FRAME_TIMEOUT_MS)
+
+      // RTC stats every 1s — actual measured RTT/jitter/loss.
+      statsTimer = setInterval(async () => {
+        if (cancelled || !pc) return
+        try {
+          const report = await pc.getStats()
+          let inboundBytes = 0
+          let framesDecoded = 0
+          let jitter = 0
+          let packetsLost = 0
+          let packetsReceived = 0
+          let rtt = 0
+
+          report.forEach((s) => {
+            if (s.type === 'inbound-rtp' && s.kind === 'video') {
+              inboundBytes = s.bytesReceived ?? 0
+              framesDecoded = s.framesDecoded ?? 0
+              jitter = s.jitter ?? 0
+              packetsLost = s.packetsLost ?? 0
+              packetsReceived = s.packetsReceived ?? 0
+            } else if (s.type === 'candidate-pair' && s.state === 'succeeded' && s.nominated) {
+              rtt = s.currentRoundTripTime ?? 0
+            }
+          })
+
+          const nowTs = performance.now()
+          const dtSec = Math.max(0.001, (nowTs - prevTs) / 1000)
+          const kbps = ((inboundBytes - prevBytesRecv) * 8) / 1000 / dtSec
+          const fps = (framesDecoded - prevFramesDecoded) / dtSec
+          prevBytesRecv = inboundBytes
+          prevFramesDecoded = framesDecoded
+          prevTs = nowTs
+
+          const total = packetsLost + packetsReceived
+          const loss = total > 0 ? packetsLost / total : 0
+
+          handlers.onStatsUpdate({
+            kbps,
+            fps,
+            rttMs: rtt * 1000,
+            jitterMs: jitter * 1000,
+            packetLoss: loss,
+            framesDecoded,
+          })
+          // If we've seen ≥1 decoded frame, the live event has already
+          // fired via 'playing'. Belt and braces.
+          if (framesDecoded > 0 && firstFrameTimer) {
+            clearTimeout(firstFrameTimer)
+            firstFrameTimer = null
+          }
+        } catch {
+          // ignore one-shot stats failures
+        }
+      }, 1000)
+
+      // Watchdog: PC connection state degrades → bail.
+      pc.onconnectionstatechange = () => {
+        if (!pc) return
+        if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected' || pc.connectionState === 'closed') {
+          if (!cancelled) handlers.onStallOrError()
+        }
+      }
+    } catch {
+      if (!cancelled) handlers.onStallOrError()
+    }
+  })()
+
+  return tearDown
+}
+
+function iceGatheringDone(pc: RTCPeerConnection, maxWaitMs: number): Promise<void> {
+  if (pc.iceGatheringState === 'complete') return Promise.resolve()
+  return new Promise<void>((resolve) => {
+    const t = setTimeout(() => {
+      pc.removeEventListener('icegatheringstatechange', listener)
+      resolve()
+    }, maxWaitMs)
+    const listener = () => {
+      if (pc.iceGatheringState === 'complete') {
+        clearTimeout(t)
+        pc.removeEventListener('icegatheringstatechange', listener)
+        resolve()
+      }
+    }
+    pc.addEventListener('icegatheringstatechange', listener)
+  })
+}
+
+// ── Tier 2: fmp4 over HTTPS ──────────────────────────────────────────
+function startFMP4(
+  videoRef: React.RefObject<HTMLVideoElement | null>,
+  handlers: TierHandlers
+): () => void {
+  let cancelled = false
+  let firstFrameTimer: ReturnType<typeof setTimeout> | null = null
+  let stallTimer: ReturnType<typeof setTimeout> | null = null
+  let statsTimer: ReturnType<typeof setInterval> | null = null
+  let lastPlaybackTime = 0
+  let prevDecoded = 0
+  let prevTs = performance.now()
+  const v = videoRef.current
+
+  const onPlaying = () => {
+    if (cancelled) return
+    handlers.onLive('fmp4')
+    if (firstFrameTimer) {
+      clearTimeout(firstFrameTimer)
+      firstFrameTimer = null
+    }
+  }
+  const onError = () => {
+    if (!cancelled) handlers.onStallOrError()
+  }
+  const onEnded = () => {
+    // Funnel cycles long-lived connections; quick reconnect.
+    if (cancelled || !videoRef.current) return
+    setTimeout(() => {
+      if (cancelled) return
+      const v2 = videoRef.current
+      if (!v2) return
+      try {
+        v2.src = `${FMP4_URL}&_=${Date.now()}`
+        void v2.play().catch(() => {})
+      } catch {
+        // ignore
+      }
+    }, RECONNECT_DELAY_MS)
+  }
+
+  if (v) {
+    v.srcObject = null
+    v.src = FMP4_URL
+    v.addEventListener('playing', onPlaying)
+    v.addEventListener('error', onError)
+    v.addEventListener('ended', onEnded)
+    void v.play().catch(() => {})
+
+    firstFrameTimer = setTimeout(() => {
+      if (!cancelled) handlers.onStallOrError()
+    }, FIRST_FRAME_TIMEOUT_MS)
+
+    // Stall watchdog: currentTime not advancing → bail.
+    stallTimer = setInterval(() => {
+      if (cancelled || !videoRef.current) return
+      if (videoRef.current.currentTime <= lastPlaybackTime + 0.01) {
+        // Could be normal (paused, buffering) — only escalate if no frame
+        // has played in STALL_TIMEOUT_MS while readyState says we should.
+        if (videoRef.current.readyState >= 2 && !videoRef.current.paused) {
+          handlers.onStallOrError()
+        }
+      }
+      lastPlaybackTime = videoRef.current.currentTime
+    }, STALL_TIMEOUT_MS)
+
+    // Bitrate / FPS estimation via the videoElement's webkit-* and W3C
+    // VideoPlaybackQuality. Keep it cheap — 1s.
+    statsTimer = setInterval(() => {
+      if (cancelled || !videoRef.current) return
+      const vq = videoRef.current.getVideoPlaybackQuality?.()
+      if (!vq) return
+      const nowTs = performance.now()
+      const dtSec = Math.max(0.001, (nowTs - prevTs) / 1000)
+      const fps = (vq.totalVideoFrames - prevDecoded) / dtSec
+      prevDecoded = vq.totalVideoFrames
+      prevTs = nowTs
+      handlers.onStatsUpdate({ fps, framesDecoded: vq.totalVideoFrames })
+    }, 1000)
+  } else {
+    // No video element — bail immediately.
+    setTimeout(() => {
+      if (!cancelled) handlers.onStallOrError()
+    }, 50)
+  }
+
+  return () => {
+    cancelled = true
+    if (firstFrameTimer) clearTimeout(firstFrameTimer)
+    if (stallTimer) clearInterval(stallTimer)
+    if (statsTimer) clearInterval(statsTimer)
+    if (v) {
+      v.removeEventListener('playing', onPlaying)
+      v.removeEventListener('error', onError)
+      v.removeEventListener('ended', onEnded)
+      try {
+        v.pause()
+        v.removeAttribute('src')
+        v.load()
+      } catch {
+        // ignore
+      }
+    }
+  }
+}
+
+// ── Tier 3: snapshot poll ────────────────────────────────────────────
+function startSnapshot(
+  imgRef: React.RefObject<HTMLImageElement | null>,
+  handlers: TierHandlers
+): () => void {
+  let cancelled = false
+  let timer: ReturnType<typeof setTimeout> | null = null
+  let objectUrl: string | null = null
+  let firstSeen = false
+  let lastTs = performance.now()
+  let frames = 0
+
+  const tick = async () => {
+    if (cancelled) return
+    try {
+      const ctrl = new AbortController()
+      const t = setTimeout(() => ctrl.abort(), 4000)
+      const res = await fetch(`${SNAPSHOT_URL}?t=${Date.now()}`, {
+        cache: 'no-store',
+        signal: ctrl.signal,
+      })
+      clearTimeout(t)
+      if (cancelled) return
+      if (!res.ok) {
+        handlers.onStallOrError()
+        return
+      }
+      const blob = await res.blob()
+      if (cancelled) return
+      if (blob.size === 0 || !blob.type.startsWith('image/')) {
+        handlers.onStallOrError()
+        return
+      }
+      const url = URL.createObjectURL(blob)
+      const prev = objectUrl
+      objectUrl = url
+      const img = imgRef.current
+      if (img) img.src = url
+      if (prev) {
+        setTimeout(() => {
+          try {
+            URL.revokeObjectURL(prev)
+          } catch {
+            // ignore
+          }
+        }, 100)
+      }
+      if (!firstSeen) {
+        firstSeen = true
+        handlers.onLive('snapshot')
+      }
+      frames++
+      const nowTs = performance.now()
+      if (nowTs - lastTs > 1000) {
+        const fps = (frames * 1000) / (nowTs - lastTs)
+        handlers.onStatsUpdate({ fps, framesDecoded: frames })
+        lastTs = nowTs
+        frames = 0
+      }
+    } catch {
+      if (!cancelled) handlers.onStallOrError()
+      return
+    }
+    if (!cancelled) timer = setTimeout(tick, SNAPSHOT_POLL_MS)
+  }
+  void tick()
+
+  return () => {
+    cancelled = true
+    if (timer) clearTimeout(timer)
+    if (objectUrl) {
+      try {
+        URL.revokeObjectURL(objectUrl)
+      } catch {
+        // ignore
+      }
+    }
+    const img = imgRef.current
+    if (img) {
+      try {
+        img.src = ''
+      } catch {
+        // ignore
+      }
+    }
+  }
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────
+function emptyStats(): SessionStats {
+  return {
+    tier: null,
+    rttMs: 0,
+    jitterMs: 0,
+    packetLoss: 0,
+    kbps: 0,
+    fps: 0,
+    joinMs: 0,
+    framesDecoded: 0,
+  }
+}
+
+function initialActive(): boolean {
+  if (typeof document === 'undefined') return false
+  return document.visibilityState === 'visible'
+}
+
+function randomSessionId(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID()
+  return Math.random().toString(36).slice(2) + Date.now().toString(36)
+}
+
+function useDebugFlag(): boolean {
+  const [on, setOn] = useState(false)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const url = new URL(window.location.href)
+    setOn(url.searchParams.get('debug') === '1')
+  }, [])
+  return on
+}
+
+// ── Subcomponents ────────────────────────────────────────────────────
 function FeedShimmer({ label, isLight }: { label: string; isLight: boolean }) {
   return (
     <div
@@ -368,13 +776,11 @@ function FeedShimmer({ label, isLight }: { label: string; isLight: boolean }) {
   )
 }
 
-function FeedPaused({ isLight }: { isLight: boolean }) {
+function FeedPaused() {
   return (
     <div
       className="absolute inset-0 flex items-center justify-center"
-      style={{
-        background: isLight ? '#0a0a0c' : '#000',
-      }}
+      style={{ background: '#000' }}
     >
       <div className="flex flex-col items-center gap-2 px-6 text-center">
         <CameraGlyph dim isLight={false} />
@@ -420,10 +826,49 @@ function FeedOffline({ isLight }: { isLight: boolean }) {
   )
 }
 
+// Dev HUD — switch on with ?debug=1. Mirrors what go2rtc / VMS dashboards
+// show: protocol, bitrate, fps, RTT, jitter, loss, join time. Tiny so it
+// doesn't dominate the frame.
+function DevHUD({ tier, stats }: { tier: Tier; stats: SessionStats }) {
+  const lines: string[] = [
+    `${tier.toUpperCase()}`,
+    `${Math.round(stats.kbps)} kbps · ${stats.fps.toFixed(1)} fps`,
+  ]
+  if (tier === 'webrtc') {
+    lines.push(
+      `rtt ${Math.round(stats.rttMs)}ms · jitter ${Math.round(stats.jitterMs)}ms · loss ${(stats.packetLoss * 100).toFixed(1)}%`
+    )
+  }
+  lines.push(`join ${stats.joinMs}ms · frames ${stats.framesDecoded}`)
+  return (
+    <div
+      className="absolute bottom-3 right-3 rounded-md px-2.5 py-2 text-[10px] tracking-wide leading-tight"
+      style={{
+        background: 'rgba(0,0,0,0.65)',
+        color: '#9af',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+        maxWidth: '60%',
+      }}
+    >
+      {lines.map((l, i) => (
+        <div key={i} className="tabular-nums">
+          {l}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function CameraGlyph({ dim = false, isLight = false }: { dim?: boolean; isLight?: boolean }) {
   const color = isLight
-    ? (dim ? 'rgba(0,0,0,0.32)' : 'rgba(0,0,0,0.5)')
-    : (dim ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.55)')
+    ? dim
+      ? 'rgba(0,0,0,0.32)'
+      : 'rgba(0,0,0,0.5)'
+    : dim
+      ? 'rgba(255,255,255,0.35)'
+      : 'rgba(255,255,255,0.55)'
   return (
     <svg
       width="56"
