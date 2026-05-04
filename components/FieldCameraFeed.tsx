@@ -58,7 +58,17 @@ const LIVE_EDGE_OFFSET = 0.4
 const LIVE_EDGE_MAX = 1.2
 const LIVE_EDGE_CHECK_MS = 1000
 
-type FeedState = 'connecting' | 'live' | 'offline'
+type FeedState = 'connecting' | 'live' | 'offline' | 'paused'
+
+// We only hold the upstream stream connection while the user is actually
+// looking. Hidden tab / scrolled-past / minimized window all release the
+// connection. Without this, every backgrounded tab keeps a ~30 KB/s
+// stream alive on the board's wifi uplink — the radio caps near
+// 200 KB/s, so a handful of zombie tabs eats the budget.
+const containerHiddenInitially = (): boolean => {
+  if (typeof document === 'undefined') return true
+  return document.visibilityState !== 'visible'
+}
 
 export default function FieldCameraFeed() {
   const palette = useFieldTheme()
@@ -67,9 +77,11 @@ export default function FieldCameraFeed() {
   const [state, setState] = useState<FeedState>('connecting')
   const [streamGen, setStreamGen] = useState(0)
   const [fallback, setFallback] = useState(false)
+  const [active, setActive] = useState<boolean>(!containerHiddenInitially())
 
   const lastOkAtRef = useRef(0)
   const videoRef = useRef<HTMLVideoElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
 
   // ── Streaming path ────────────────────────────────────────────────
   // Stream-end (funnel cycling) → reconnect with a new <video>.
@@ -190,8 +202,67 @@ export default function FieldCameraFeed() {
     return () => clearInterval(id)
   }, [])
 
+  // ── Active gate ───────────────────────────────────────────────────
+  // The <video> only mounts while the feed is on-screen AND the tab is
+  // visible. Going inactive imperatively detaches src + load() so the
+  // browser closes the underlying TCP connection immediately, instead
+  // of waiting for HTTP/2 keepalive timeout.
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el || typeof document === 'undefined') return
+
+    let intersecting = true
+    const recompute = () => {
+      const visible = document.visibilityState === 'visible'
+      setActive(visible && intersecting)
+    }
+
+    const onVis = () => recompute()
+    document.addEventListener('visibilitychange', onVis)
+
+    let observer: IntersectionObserver | null = null
+    if (typeof IntersectionObserver !== 'undefined') {
+      observer = new IntersectionObserver(
+        (entries) => {
+          intersecting = entries[0]?.isIntersecting ?? true
+          recompute()
+        },
+        { threshold: 0.1 }
+      )
+      observer.observe(el)
+    }
+    recompute()
+
+    return () => {
+      document.removeEventListener('visibilitychange', onVis)
+      if (observer) observer.disconnect()
+    }
+  }, [])
+
+  // Hard-detach the video element when going inactive so the underlying
+  // HTTP connection drops now, not on browser GC. Re-arm 'connecting' on
+  // the way back so the UI shows the shimmer until the next frame lands.
+  useEffect(() => {
+    const v = videoRef.current
+    if (!active) {
+      if (v) {
+        try {
+          v.pause()
+          v.removeAttribute('src')
+          v.load()
+        } catch {
+          // best-effort
+        }
+      }
+      lastOkAtRef.current = 0
+      setState('paused')
+    } else {
+      setState('connecting')
+    }
+  }, [active])
+
   return (
-    <div className="relative w-full h-full overflow-hidden rounded-[16px]">
+    <div ref={containerRef} className="relative w-full h-full overflow-hidden rounded-[16px]">
       {fallback ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -204,7 +275,7 @@ export default function FieldCameraFeed() {
             background: '#000',
           }}
         />
-      ) : (
+      ) : active ? (
         <video
           key={streamGen}
           ref={videoRef}
@@ -223,6 +294,8 @@ export default function FieldCameraFeed() {
           onEnded={onStreamEnd}
           onError={onStreamError}
         />
+      ) : (
+        <div className="absolute inset-0" style={{ background: '#000' }} />
       )}
 
       {state === 'connecting' && (
@@ -230,6 +303,8 @@ export default function FieldCameraFeed() {
       )}
 
       {state === 'offline' && <FeedOffline isLight={isLight} />}
+
+      {state === 'paused' && <FeedPaused isLight={isLight} />}
 
       {state === 'live' && (
         <div
@@ -287,6 +362,27 @@ function FeedShimmer({ label, isLight }: { label: string; isLight: boolean }) {
           style={{ color: isLight ? 'rgba(0,0,0,0.45)' : 'rgba(255,255,255,0.5)' }}
         >
           {label}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function FeedPaused({ isLight }: { isLight: boolean }) {
+  return (
+    <div
+      className="absolute inset-0 flex items-center justify-center"
+      style={{
+        background: isLight ? '#0a0a0c' : '#000',
+      }}
+    >
+      <div className="flex flex-col items-center gap-2 px-6 text-center">
+        <CameraGlyph dim isLight={false} />
+        <div
+          className="text-[11px] uppercase tracking-[0.18em] font-medium"
+          style={{ color: 'rgba(255,255,255,0.55)' }}
+        >
+          paused
         </div>
       </div>
     </div>
