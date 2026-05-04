@@ -26,6 +26,11 @@ const FieldCameraFeed = dynamic(() => import('./FieldCameraFeed'), {
   loading: () => <div className="absolute inset-0 bg-black/80" />,
 })
 
+const STLViewer = dynamic(() => import('./STLViewer'), {
+  ssr: false,
+  loading: () => <div className="w-full h-full bg-black/40" />,
+})
+
 export type ModalKey =
   | 'about'
   | 'live'
@@ -33,6 +38,7 @@ export type ModalKey =
   | 'projects'
   | 'marathon'
   | 'contact'
+  | 'airpodsmount'
 
 /* ─────────────────── About ─────────────────── */
 
@@ -786,5 +792,99 @@ function WebsiteIcon() {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
     </svg>
+  )
+}
+
+/* ───────────────────── AirPods Tesla Mount modal ──────────────────── */
+
+/** CAD mini-modal for the AirPods Pro 3 Tesla wireless-charger mount.
+ *  Mirrors the "featured design" panel from the old home page: live
+ *  STL viewer + STL/SLDPRT downloads + a tip jar. */
+export function AirpodsMountModalContent() {
+  const palette = useFieldTheme()
+  const isLight = palette.mode === 'light'
+  const downloads: { label: string; href: string }[] = [
+    { label: 'STL', href: '/files/AirPods Pro 3_Teslav2.STL' },
+    { label: 'SLDPRT', href: '/files/AirPods Pro 3_Teslav2.SLDPRT' },
+  ]
+  const stlUrls = [
+    '/files/assembly-mount.STL',
+    '/files/assembly-airpods.STL',
+  ]
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div
+        className="relative w-full overflow-hidden rounded-2xl"
+        style={{
+          aspectRatio: '16 / 10',
+          background: isLight ? '#f5f5f7' : '#0a0a0c',
+          boxShadow: isLight
+            ? '0 8px 24px rgba(28,26,28,0.10), inset 0 0 0 1px rgba(0,0,0,0.05)'
+            : '0 16px 40px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.05)',
+        }}
+      >
+        <STLViewer urls={stlUrls} />
+      </div>
+
+      <div>
+        <p
+          className="text-[14px] md:text-[15px] leading-relaxed"
+          style={{ color: palette.bodyText }}
+        >
+          Custom mount that positions AirPods Pro 3 at the correct height
+          for Tesla wireless chargers. SOLIDWORKS source + STL — free to
+          download, print, and modify.
+        </p>
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {['SOLIDWORKS', '3D Printing', 'CAD'].map((t) => (
+            <span
+              key={t}
+              className="px-2.5 py-1 text-[11px] font-medium rounded-md"
+              style={{
+                background: isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.06)',
+                color: palette.bodyText,
+                border: `1px solid ${isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.07)'}`,
+              }}
+            >
+              {t}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        {downloads.map((d) => (
+          <a
+            key={d.label}
+            href={d.href}
+            download
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-[13px] font-semibold tracking-tight transition-opacity hover:opacity-85"
+            style={{
+              background: isLight ? '#1c1a1c' : '#fff',
+              color: isLight ? '#fff' : '#1c1a1c',
+            }}
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.2} viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16" />
+            </svg>
+            {d.label}
+          </a>
+        ))}
+        <a
+          href="https://venmo.com/u/andysottiaux"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-[13px] font-medium tracking-tight transition-colors"
+          style={{
+            background: 'transparent',
+            color: palette.bodyText,
+            border: `1px solid ${isLight ? 'rgba(0,0,0,0.18)' : 'rgba(255,255,255,0.16)'}`,
+          }}
+        >
+          Tip designer
+        </a>
+      </div>
+    </div>
   )
 }

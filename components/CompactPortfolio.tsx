@@ -39,6 +39,7 @@ import { FieldThemeProvider, useFieldTheme } from './fieldTheme'
 import Modal from './Modal'
 import {
   AboutModalContent,
+  AirpodsMountModalContent,
   ContactModalContent,
   ExperienceModalContent,
   LiveModalContent,
@@ -94,7 +95,7 @@ function CompactInner({ initialBoardLive }: { initialBoardLive: boolean }) {
 
       {/* Bento — vertically centers on tall viewports, fills naturally on
           short ones. */}
-      <div className="flex-1 flex items-center justify-center px-4 sm:px-6 md:px-8 pt-6 sm:pt-8 pb-6 md:pb-8">
+      <div className="flex-1 flex items-center justify-center px-4 sm:px-6 md:px-8 py-3 sm:py-4 md:py-5">
         <div className="w-full max-w-[1380px] mx-auto">
           <Bento boardLive={boardLive} onOpen={setOpenModal} />
         </div>
@@ -154,6 +155,14 @@ function CompactInner({ initialBoardLive }: { initialBoardLive: boolean }) {
       >
         <ContactModalContent />
       </Modal>
+      <Modal
+        open={openModal === 'airpodsmount'}
+        onClose={close}
+        title="AirPods Tesla Mount"
+        eyebrow="3D printed · CAD design"
+      >
+        <AirpodsMountModalContent />
+      </Modal>
 
       {/* Random chinchilla mascot peeking from behind random tiles. Lives
           here at the page root so it can target any data-peek-target tile
@@ -204,7 +213,7 @@ function Bento({
         <CrossfadeTile
           showLive={boardLive}
           live={<SolarTile onOpen={() => onOpen('live')} />}
-          fallback={<MoreProjectsTile />}
+          fallback={<MoreProjectsTile onOpen={onOpen} />}
         />
       </div>
 
@@ -886,7 +895,7 @@ function BuildingTile() {
           backgroundClip: 'text',
         }}
       >
-        Rotor blades. Edge devices.
+        Rotor design. Edge devices.
         <br className="hidden sm:inline" />
         <span className="sm:ml-0"> iOS apps.</span>
       </h3>
@@ -989,6 +998,9 @@ const MORE_PROJECTS: {
   href: string
   download?: boolean
   note?: string
+  /** Render a live STL viewer in the chip + open the airpods-mount modal
+   *  on click instead of navigating. */
+  cad?: boolean
 }[] = [
   {
     name: 'AirMD+',
@@ -1020,23 +1032,25 @@ const MORE_PROJECTS: {
     icon: '/images/travelagentai-icon.png',
     href: 'https://apps.apple.com/us/app/travel-agent-ai/id6758284691',
   },
+  // CAD entry — shorter name, opens the in-page 3D modal instead of
+  // navigating. The icon slot renders a live STL preview (lazy-loaded).
   {
-    name: 'AirPods Pro 3 · Tesla Mount',
-    desc: 'CAD design · STL · free download',
-    iconRender: (
-      <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-        {/* CAD-y wireframe block: a cube with a small earpod silhouette */}
-        <path d="M6 11l10-5 10 5v10l-10 5-10-5z" />
-        <path d="M6 11l10 5 10-5M16 16v10" opacity="0.6" />
-      </svg>
-    ),
-    href: '/files/AirPods Pro 3_Teslav2.STL',
-    download: true,
-    note: 'STL',
+    name: 'AirPods Tesla Mount',
+    desc: 'CAD design · STL + SLDPRT downloads',
+    href: '#airpods-mount',
+    note: 'CAD',
+    cad: true,
   },
 ]
 
-function MoreProjectsTile() {
+// Lazy STL preview chip — three.js only loads when the tile is in DOM
+// and the chip is visible. Tiny scene; perf is fine.
+const STLViewerLazy = dynamic(() => import('./STLViewer'), {
+  ssr: false,
+  loading: () => <div className="w-full h-full bg-black/10" />,
+})
+
+function MoreProjectsTile({ onOpen }: { onOpen?: (key: ModalKey) => void }) {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
   const accent = isLight ? '#b45309' : 'rgba(252, 211, 77, 0.9)'
@@ -1073,24 +1087,29 @@ function MoreProjectsTile() {
       </div>
       <div className="px-5 md:px-6 pt-3 pb-4 md:pb-5 flex-1 flex flex-col">
         <div className="space-y-2.5 md:space-y-3 flex-1">
-          {MORE_PROJECTS.map((p) => (
-            <a
-              key={p.name}
-              href={p.href}
-              {...(p.download
-                ? { download: '' }
-                : { target: '_blank', rel: 'noopener noreferrer' })}
-              className="group relative z-10 flex items-center gap-3 py-1.5 rounded-lg -mx-1 px-1 transition-colors"
-            >
+          {MORE_PROJECTS.map((p) => {
+            const isCad = !!p.cad
+            // Common chip + content the row renders, regardless of action.
+            const chip = (
               <div
-                className="w-10 h-10 rounded-[10px] overflow-hidden flex-shrink-0 flex items-center justify-center"
+                className="w-10 h-10 rounded-[10px] overflow-hidden flex-shrink-0 flex items-center justify-center relative"
                 style={{
                   border: palette.cardBorder,
                   background: isLight ? '#fff' : 'rgba(255,255,255,0.04)',
                   color: accent,
                 }}
               >
-                {p.icon ? (
+                {isCad ? (
+                  // Tiny live STL preview — slow auto-rotate, no controls.
+                  <div className="absolute inset-0 [&>div]:!w-full [&>div]:!h-full">
+                    <STLViewerLazy
+                      urls={[
+                        '/files/assembly-mount.STL',
+                        '/files/assembly-airpods.STL',
+                      ]}
+                    />
+                  </div>
+                ) : p.icon ? (
                   <Image
                     src={p.icon}
                     alt=""
@@ -1102,50 +1121,86 @@ function MoreProjectsTile() {
                   <span className="w-5 h-5 block">{p.iconRender}</span>
                 )}
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span
-                    className="text-[13px] md:text-[14px] font-semibold tracking-tight truncate"
-                    style={{ color: isLight ? '#1c1a1c' : '#fff' }}
-                  >
-                    {p.name}
-                  </span>
-                  {p.note && (
+            )
+            const body = (
+              <>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
                     <span
-                      className="text-[9.5px] font-bold uppercase tracking-[0.16em] px-1.5 py-0.5 rounded flex-shrink-0"
-                      style={{
-                        color: accent,
-                        background: isLight ? `${accent}14` : `${accent}22`,
-                        border: `1px solid ${accent}33`,
-                      }}
+                      className="text-[13px] md:text-[14px] font-semibold tracking-tight truncate"
+                      style={{ color: isLight ? '#1c1a1c' : '#fff' }}
                     >
-                      {p.note}
+                      {p.name}
                     </span>
-                  )}
+                    {p.note && (
+                      <span
+                        className="text-[9.5px] font-bold uppercase tracking-[0.16em] px-1.5 py-0.5 rounded flex-shrink-0"
+                        style={{
+                          color: accent,
+                          background: isLight ? `${accent}14` : `${accent}22`,
+                          border: `1px solid ${accent}33`,
+                        }}
+                      >
+                        {p.note}
+                      </span>
+                    )}
+                  </div>
+                  <div
+                    className="text-[11px] md:text-[12px] tracking-tight truncate mt-0.5"
+                    style={{ color: palette.bodyText }}
+                  >
+                    {p.desc}
+                  </div>
                 </div>
-                <div
-                  className="text-[11px] md:text-[12px] tracking-tight truncate mt-0.5"
-                  style={{ color: palette.bodyText }}
+                <svg
+                  className="w-3.5 h-3.5 flex-shrink-0 opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                  style={{ color: palette.mutedText }}
                 >
-                  {p.desc}
-                </div>
-              </div>
-              <svg
-                className="w-3.5 h-3.5 flex-shrink-0 opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-                style={{ color: palette.mutedText }}
+                  {isCad ? (
+                    // square icon for "open dialog"
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 4h6v6M20 4l-7 7M10 20H4v-6M4 20l7-7" />
+                  ) : p.download ? (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16" />
+                  ) : (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  )}
+                </svg>
+              </>
+            )
+
+            // CAD entry opens the modal; everything else is a real link.
+            if (isCad) {
+              return (
+                <button
+                  type="button"
+                  key={p.name}
+                  onClick={() => onOpen?.('airpodsmount')}
+                  className="group relative z-10 flex items-center gap-3 py-1.5 rounded-lg -mx-1 px-1 transition-colors text-left w-full"
+                  aria-label={`Open ${p.name}`}
+                >
+                  {chip}
+                  {body}
+                </button>
+              )
+            }
+            return (
+              <a
+                key={p.name}
+                href={p.href}
+                {...(p.download
+                  ? { download: '' }
+                  : { target: '_blank', rel: 'noopener noreferrer' })}
+                className="group relative z-10 flex items-center gap-3 py-1.5 rounded-lg -mx-1 px-1 transition-colors"
               >
-                {p.download ? (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16" />
-                ) : (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                )}
-              </svg>
-            </a>
-          ))}
+                {chip}
+                {body}
+              </a>
+            )
+          })}
         </div>
         <div
           className="mt-2 pt-2 text-[10px] tracking-wide italic border-t"
@@ -1160,9 +1215,13 @@ function MoreProjectsTile() {
 
 /* ───────────────────── Experience tile ──────────────────────── */
 
-// Per-company logo metadata. `aspect` controls the visible chip shape so
-// wide marks (Bell SVG) don't get squashed into a square; `pad` lets each
-// brand breathe a little against its white plate.
+// Per-company logo metadata. Plates are ALL the same fixed square size.
+// `scale` is a per-logo zoom factor that compensates for differing
+// amounts of native whitespace baked into each source image — without
+// it, a logo with a lot of canvas margin (e.g. Texas Air's tiny
+// wordmark on a square JPEG) renders much smaller than one with a tight
+// crop (e.g. AVX's bowtie). Tuned by eye to give each mark roughly the
+// same visual weight inside its plate.
 const EXPERIENCE: {
   title: string
   company: string
@@ -1170,8 +1229,7 @@ const EXPERIENCE: {
   url: string
   current?: boolean
   logo: string
-  aspect?: 'square' | 'wide'
-  pad?: 'tight' | 'normal'
+  scale?: number
 }[] = [
   {
     title: 'Senior Engineer',
@@ -1180,8 +1238,7 @@ const EXPERIENCE: {
     url: 'https://www.avxaircraft.com/',
     current: true,
     logo: '/images/avx.png',
-    aspect: 'wide',
-    pad: 'tight',
+    scale: 1.0,
   },
   {
     title: 'Founder',
@@ -1189,8 +1246,7 @@ const EXPERIENCE: {
     period: '2021 — Present',
     url: 'https://www.hatchingpoint.com',
     logo: '/images/hatchingpoint-logo.jpeg',
-    aspect: 'square',
-    pad: 'tight',
+    scale: 1.05,
   },
   {
     title: 'Rotor Systems',
@@ -1198,8 +1254,7 @@ const EXPERIENCE: {
     period: '2020 — 2023',
     url: 'https://www.bellflight.com',
     logo: '/images/bell.svg',
-    aspect: 'wide',
-    pad: 'normal',
+    scale: 1.05,
   },
   {
     title: 'Project Manager',
@@ -1207,8 +1262,7 @@ const EXPERIENCE: {
     period: '2016 — 2020',
     url: 'https://www.texasairsystems.com/',
     logo: '/images/texasairsystems-logo.jpeg',
-    aspect: 'wide',
-    pad: 'tight',
+    scale: 1.45,
   },
 ]
 
@@ -1238,16 +1292,15 @@ function ExperienceTile({ onOpen }: { onOpen?: () => void }) {
                 style={{ borderColor: palette.hairline }}
               >
                 <div className="flex items-center gap-3 min-w-0 flex-1">
-                  {/* Logo chip — uniform 36×36 square plate for every brand
-                      so the column reads as a tidy stack. The mark itself
-                      uses object-contain so wide/tall/square logos all fit
-                      without distortion. */}
+                  {/* Logo chip — uniform 36×36 square plate. Per-logo
+                      `scale` compensates for differing native whitespace
+                      so each mark reads at roughly the same visual weight
+                      inside the same-sized plate. */}
                   <div
                     className="flex items-center justify-center rounded-md flex-shrink-0 overflow-hidden"
                     style={{
                       width: 36,
                       height: 36,
-                      padding: 4,
                       background: '#fff',
                       boxShadow: isLight
                         ? '0 1px 2px rgba(28,26,28,0.08), 0 0 0 1px rgba(0,0,0,0.04)'
@@ -1259,7 +1312,13 @@ function ExperienceTile({ onOpen }: { onOpen?: () => void }) {
                       alt={`${e.company} logo`}
                       width={56}
                       height={56}
-                      className="max-w-full max-h-full w-auto h-auto object-contain"
+                      className="w-auto h-auto object-contain"
+                      style={{
+                        maxWidth: '78%',
+                        maxHeight: '78%',
+                        transform: `scale(${e.scale ?? 1})`,
+                        transformOrigin: 'center',
+                      }}
                     />
                   </div>
 
