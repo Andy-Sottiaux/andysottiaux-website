@@ -8,8 +8,10 @@
  * that path is both slow and fragile: fMP4 downloads arrive at low throughput
  * over Funnel and go2rtc 1.9.14 has panicked in the MP4 HTTP consumer.
  *
- * go2rtc's native `stream.html` uses its WebSocket player with WebRTC/MSE/MJPEG
- * fallback. It must stay iframe-based because go2rtc rejects cross-origin
+ * go2rtc's native `stream.html` can negotiate WebRTC/MSE/MJPEG fallback, but
+ * that starts multiple consumers in parallel before selecting one. The public
+ * site uses one MSE transport so one visible player maps to one board consumer.
+ * It must stay iframe-based because go2rtc rejects cross-origin
  * WebSocket upgrades from andysottiaux.com; the iframe keeps the page origin on
  * the Funnel host where the native player is accepted.
  */
@@ -21,11 +23,12 @@ const FUNNEL_HOST =
   process.env.NEXT_PUBLIC_V3_FUNNEL_HOST ||
   'https://cayley-v3-cam-1.tailc7d6b6.ts.net'
 const FEED_STREAM = process.env.NEXT_PUBLIC_V3_FEED_STREAM || 'cayley-sub'
+const PLAYER_MODE = process.env.NEXT_PUBLIC_V3_PLAYER_MODE || 'mse'
 
 const NATIVE_PLAYER_URL =
   `${FUNNEL_HOST}/stream.html` +
   `?src=${encodeURIComponent(FEED_STREAM)}` +
-  '&mode=webrtc,mse,mjpeg' +
+  `&mode=${encodeURIComponent(PLAYER_MODE)}` +
   '&background=false' +
   '&width=100%'
 
@@ -33,14 +36,14 @@ const LOAD_TIMEOUT_MS = 10_000
 
 type Phase = 'paused' | 'connecting' | 'live' | 'offline'
 
-export default function FieldCameraFeed() {
+export default function FieldCameraFeed({ enabled = true }: { enabled?: boolean }) {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
   const debugMode = useDebugFlag()
   const containerRef = useRef<HTMLDivElement>(null)
 
-  const [active, setActive] = useState<boolean>(() => initialActive())
-  const [phase, setPhase] = useState<Phase>(() => (initialActive() ? 'connecting' : 'paused'))
+  const [active, setActive] = useState<boolean>(() => enabled && initialActive())
+  const [phase, setPhase] = useState<Phase>(() => (enabled && initialActive() ? 'connecting' : 'paused'))
   const [reloadNonce, setReloadNonce] = useState(0)
   const iframeSrc = active ? `${NATIVE_PLAYER_URL}&_=${reloadNonce}` : ''
 
@@ -49,7 +52,7 @@ export default function FieldCameraFeed() {
     if (!el || typeof document === 'undefined') return
 
     let intersecting = true
-    const recompute = () => setActive(document.visibilityState === 'visible' && intersecting)
+    const recompute = () => setActive(enabled && document.visibilityState === 'visible' && intersecting)
 
     const onVis = () => recompute()
     document.addEventListener('visibilitychange', onVis)
@@ -71,7 +74,7 @@ export default function FieldCameraFeed() {
       document.removeEventListener('visibilitychange', onVis)
       observer?.disconnect()
     }
-  }, [])
+  }, [enabled])
 
   useEffect(() => {
     if (!active) {
@@ -296,7 +299,7 @@ function DevHUD({ phase }: { phase: Phase }) {
       }}
     >
       <div>tier:native-go2rtc</div>
-      <div>mode:iframe webrtc/mse/mjpeg</div>
+      <div>mode:iframe {PLAYER_MODE}</div>
       <div>phase:{phase}</div>
     </div>
   )

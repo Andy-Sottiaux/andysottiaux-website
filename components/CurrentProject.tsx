@@ -24,8 +24,8 @@ import FieldSolarCard from './FieldSolarCard'
 import { FieldThemeProvider, useFieldTheme } from './fieldTheme'
 import { useReducedMotion } from '@/lib/useReducedMotion'
 
-// Dynamic import — the camera feed polls a same-origin snapshot proxy
-// from the browser; SSR'ing it is wasted work, so skip it server-side.
+// Dynamic import — the camera feed embeds go2rtc's native player from the
+// browser; SSR'ing it is wasted work, so skip it server-side.
 const FieldCameraFeed = dynamic(() => import('./FieldCameraFeed'), {
   ssr: false,
   loading: () => <CameraLoadingShimmer />,

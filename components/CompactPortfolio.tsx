@@ -49,8 +49,8 @@ import {
 import { useBoardLive } from '@/lib/useBoardLive'
 import { haptic } from '@/lib/haptics'
 
-// Same dynamic import the home page uses — the camera feed polls a
-// browser-side proxy, so SSR'ing it is wasted work.
+// Same dynamic import the home page uses — the camera feed embeds go2rtc's
+// native player, so SSR'ing it is wasted work.
 const FieldCameraFeed = dynamic(() => import('./FieldCameraFeed'), {
   ssr: false,
   loading: () => <div className="absolute inset-0 bg-black/80" />,
@@ -101,7 +101,7 @@ function CompactInner({ initialBoardLive }: { initialBoardLive: boolean }) {
           Mobile: keeps `min-h-screen` and natural vertical scrolling. */}
       <div className="bento-shell flex-1 flex flex-col px-4 sm:px-6 md:px-8 py-3 sm:py-4 md:py-5 md:min-h-0">
         <div className="w-full max-w-[1380px] mx-auto md:flex-1 md:flex md:flex-col md:min-h-0">
-          <Bento boardLive={boardLive} onOpen={setOpenModal} />
+          <Bento boardLive={boardLive} cameraEnabled={openModal !== 'live'} onOpen={setOpenModal} />
         </div>
       </div>
 
@@ -183,9 +183,11 @@ function CompactInner({ initialBoardLive }: { initialBoardLive: boolean }) {
 
 function Bento({
   boardLive,
+  cameraEnabled,
   onOpen,
 }: {
   boardLive: boolean
+  cameraEnabled: boolean
   onOpen: (key: ModalKey) => void
 }) {
   return (
@@ -202,7 +204,7 @@ function Bento({
 
       {/* Wide tile (col 4–9): keep the camera slot stable; the feed handles offline state. */}
       <div className="col-span-12 md:col-span-6">
-        <CameraTile onOpen={() => onOpen('live')} />
+        <CameraTile enabled={cameraEnabled} onOpen={() => onOpen('live')} />
       </div>
 
       {/* Tall tile (col 10–12, rows 1–2): Solar when live, MoreProjects
@@ -484,7 +486,7 @@ function IdentityTile({ onOpen }: { onOpen?: () => void }) {
 
 /* ───────────────────── Camera tile ──────────────────────── */
 
-function CameraTile({ onOpen }: { onOpen?: () => void }) {
+function CameraTile({ enabled, onOpen }: { enabled: boolean; onOpen?: () => void }) {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
 
@@ -508,7 +510,7 @@ function CameraTile({ onOpen }: { onOpen?: () => void }) {
               : '0 8px 24px rgba(0,0,0,0.4)',
           }}
         >
-          <FieldCameraFeed />
+          <FieldCameraFeed enabled={enabled} />
         </div>
         <div
           className="text-[12px] tracking-tight leading-snug mt-2.5 px-1"
