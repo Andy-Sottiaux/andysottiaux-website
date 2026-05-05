@@ -1,16 +1,17 @@
 'use client'
 
 /**
- * FieldCameraFeed — uses go2rtc's native WebSocket/WebRTC player.
+ * FieldCameraFeed — embeds go2rtc's native player.
  *
  * The previous implementation pulled `/api/stream.mp4` directly and tried to
  * hide Funnel connection churn with dual <video> elements. Field testing showed
  * that path is both slow and fragile: fMP4 downloads arrive at low throughput
  * over Funnel and go2rtc 1.9.14 has panicked in the MP4 HTTP consumer.
  *
- * go2rtc's native `video-rtc.js` player uses WebRTC/MSE/MJPEG fallback. We
- * load a tiny local wrapper around that client instead of iframeing
- * `stream.html`, so the video can be cropped to the card with object-fit.
+ * go2rtc's native `stream.html` uses its WebSocket player with WebRTC/MSE/MJPEG
+ * fallback. It must stay iframe-based because go2rtc rejects cross-origin
+ * WebSocket upgrades from andysottiaux.com; the iframe keeps the page origin on
+ * the Funnel host where the native player is accepted.
  */
 
 import { useEffect, useRef, useState } from 'react'
@@ -28,40 +29,20 @@ const NATIVE_PLAYER_URL =
   '&background=false' +
   '&width=100%'
 
-const STREAM_WS_URL = `${FUNNEL_HOST}/api/ws?src=${encodeURIComponent(FEED_STREAM)}`
-const FIELD_STREAM_SCRIPT_ID = 'go2rtc-field-video-stream'
-const FIELD_STREAM_SCRIPT_SRC = '/go2rtc/field-video-stream.js'
-
 const LOAD_TIMEOUT_MS = 10_000
 
 type Phase = 'paused' | 'connecting' | 'live' | 'offline'
-type FieldStreamElement = HTMLElement & {
-  background?: boolean
-  media?: string
-  mode?: string
-  src?: string
-  ondisconnect?: () => void
-}
-type FieldStreamState = {
-  phase?: Phase
-  mode?: string
-  error?: string
-}
-
-let fieldStreamModulePromise: Promise<void> | null = null
 
 export default function FieldCameraFeed() {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
   const debugMode = useDebugFlag()
   const containerRef = useRef<HTMLDivElement>(null)
-  const streamHostRef = useRef<HTMLDivElement>(null)
-  const streamRef = useRef<FieldStreamElement | null>(null)
 
   const [active, setActive] = useState<boolean>(() => initialActive())
   const [phase, setPhase] = useState<Phase>(() => (initialActive() ? 'connecting' : 'paused'))
   const [reloadNonce, setReloadNonce] = useState(0)
-  const [streamMode, setStreamMode] = useState('auto')
+  const iframeSrc = active ? `${NATIVE_PLAYER_URL}&_=${reloadNonce}` : ''
 
   useEffect(() => {
     const el = containerRef.current
@@ -93,74 +74,6 @@ export default function FieldCameraFeed() {
   }, [])
 
   useEffect(() => {
-    const host = streamHostRef.current
-    if (!host || typeof window === 'undefined') return
-
-    const current = streamRef.current
-    if (current) {
-      teardownStream(current)
-      streamRef.current = null
-    }
-
-    if (!active) {
-      host.replaceChildren()
-      setStreamMode('auto')
-      return
-    }
-
-    let cancelled = false
-    let streamEl: FieldStreamElement | null = null
-    setPhase('connecting')
-    setStreamMode('loading')
-
-    loadFieldStreamModule()
-      .then(() => {
-        if (cancelled || !streamHostRef.current) return
-
-        streamEl = document.createElement('field-video-stream') as FieldStreamElement
-        streamEl.className = 'absolute inset-0 h-full w-full'
-        streamEl.style.display = 'block'
-        streamEl.style.background = '#000'
-        streamEl.background = false
-        streamEl.media = 'video'
-        streamEl.mode = 'webrtc,mse,mjpeg'
-        streamEl.setAttribute('fit', 'cover')
-        streamEl.setAttribute('position', 'center center')
-
-        const onState = (event: Event) => {
-          const detail = (event as CustomEvent<FieldStreamState>).detail ?? {}
-          if (detail.mode) setStreamMode(detail.mode)
-          if (detail.phase === 'live') setPhase('live')
-          if (detail.phase === 'offline') setPhase('offline')
-          if (detail.phase === 'connecting') {
-            setPhase((p) => (p === 'live' ? p : 'connecting'))
-          }
-        }
-
-        streamEl.addEventListener('field-stream-state', onState)
-        streamHostRef.current.replaceChildren(streamEl)
-        streamRef.current = streamEl
-        streamEl.src = `${STREAM_WS_URL}&_=${reloadNonce}`
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setStreamMode('unavailable')
-          setPhase('offline')
-        }
-      })
-
-    return () => {
-      cancelled = true
-      if (streamEl) {
-        teardownStream(streamEl)
-      }
-      if (streamRef.current === streamEl) {
-        streamRef.current = null
-      }
-    }
-  }, [active, reloadNonce])
-
-  useEffect(() => {
     if (!active) {
       setPhase('paused')
       return
@@ -181,9 +94,24 @@ export default function FieldCameraFeed() {
 
   return (
     <div ref={containerRef} className="relative w-full h-full overflow-hidden rounded-[16px] bg-black">
-      <div ref={streamHostRef} className="absolute inset-0 h-full w-full bg-black" />
+      {iframeSrc && (
+        <iframe
+          key={iframeSrc}
+          src={iframeSrc}
+          title="Cayley field camera live stream"
+          allow="autoplay; fullscreen; picture-in-picture"
+          referrerPolicy="no-referrer"
+          scrolling="no"
+          className="absolute inset-0 h-full w-full border-0"
+          style={{
+            background: '#000',
+            display: 'block',
+          }}
+          onLoad={() => setPhase('live')}
+        />
+      )}
 
-      {phase === 'connecting' && <FeedShimmer label="opening WebRTC stream..." isLight={isLight} />}
+      {phase === 'connecting' && <FeedShimmer label="opening native stream..." isLight={isLight} />}
       {phase === 'paused' && <FeedPaused />}
       {phase === 'offline' && <FeedOffline isLight={isLight} onRetry={reload} />}
 
@@ -209,7 +137,7 @@ export default function FieldCameraFeed() {
         </div>
       )}
 
-      {debugMode && <DevHUD phase={phase} mode={streamMode} />}
+      {debugMode && <DevHUD phase={phase} />}
 
       <a
         href={NATIVE_PLAYER_URL}
@@ -247,51 +175,6 @@ export default function FieldCameraFeed() {
 function initialActive(): boolean {
   if (typeof document === 'undefined') return false
   return document.visibilityState === 'visible'
-}
-
-function loadFieldStreamModule(): Promise<void> {
-  if (typeof window === 'undefined') return Promise.reject(new Error('browser only'))
-  if (window.customElements.get('field-video-stream')) return Promise.resolve()
-  if (fieldStreamModulePromise) return fieldStreamModulePromise
-
-  fieldStreamModulePromise = new Promise((resolve, reject) => {
-    const existing = document.getElementById(FIELD_STREAM_SCRIPT_ID) as HTMLScriptElement | null
-
-    const fail = (message: string) => {
-      document.getElementById(FIELD_STREAM_SCRIPT_ID)?.remove()
-      fieldStreamModulePromise = null
-      reject(new Error(message))
-    }
-
-    const finish = () => {
-      if (window.customElements.get('field-video-stream')) {
-        resolve()
-      } else {
-        fail('field-video-stream custom element did not register')
-      }
-    }
-
-    if (existing) {
-      existing.addEventListener('load', finish, { once: true })
-      existing.addEventListener('error', () => fail('field stream module failed'), { once: true })
-      return
-    }
-
-    const script = document.createElement('script')
-    script.id = FIELD_STREAM_SCRIPT_ID
-    script.type = 'module'
-    script.src = FIELD_STREAM_SCRIPT_SRC
-    script.addEventListener('load', finish, { once: true })
-    script.addEventListener('error', () => fail('field stream module failed'), { once: true })
-    document.head.appendChild(script)
-  })
-
-  return fieldStreamModulePromise
-}
-
-function teardownStream(el: FieldStreamElement) {
-  el.ondisconnect?.()
-  el.remove()
 }
 
 function useDebugFlag(): boolean {
@@ -401,7 +284,7 @@ function CameraGlyph({ dim = false, isLight }: { dim?: boolean; isLight: boolean
   )
 }
 
-function DevHUD({ phase, mode }: { phase: Phase; mode: string }) {
+function DevHUD({ phase }: { phase: Phase }) {
   return (
     <div
       className="absolute bottom-3 left-3 rounded-lg px-2.5 py-2 text-[10px] font-mono leading-relaxed"
@@ -413,7 +296,7 @@ function DevHUD({ phase, mode }: { phase: Phase; mode: string }) {
       }}
     >
       <div>tier:native-go2rtc</div>
-      <div>mode:{mode}</div>
+      <div>mode:iframe webrtc/mse/mjpeg</div>
       <div>phase:{phase}</div>
     </div>
   )
