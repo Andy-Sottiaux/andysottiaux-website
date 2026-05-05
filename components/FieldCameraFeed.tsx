@@ -422,7 +422,7 @@ function DevHUD({ phase }: { phase: Phase }) {
       }}
     >
       <div>tier:native-go2rtc</div>
-      <div>mode:iframe {PLAYER_MODE}</div>
+      <div>mode:direct {PLAYER_MODE}</div>
       <div>phase:{phase}</div>
     </div>
   )
