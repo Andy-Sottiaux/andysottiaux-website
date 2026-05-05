@@ -24,6 +24,7 @@ const FUNNEL_HOST =
   'https://cayley-v3-cam-1.tailc7d6b6.ts.net'
 const FEED_STREAM = process.env.NEXT_PUBLIC_V3_FEED_STREAM || 'cayley-sub'
 const PLAYER_MODE = process.env.NEXT_PUBLIC_V3_PLAYER_MODE || 'mse'
+const STREAM_ASPECT_RATIO = '704 / 576'
 
 const NATIVE_PLAYER_URL =
   `${FUNNEL_HOST}/stream.html` +
@@ -98,20 +99,30 @@ export default function FieldCameraFeed({ enabled = true }: { enabled?: boolean 
   return (
     <div ref={containerRef} className="relative w-full h-full overflow-hidden rounded-[16px] bg-black">
       {iframeSrc && (
-        <iframe
-          key={iframeSrc}
-          src={iframeSrc}
-          title="Cayley field camera live stream"
-          allow="autoplay; fullscreen; picture-in-picture"
-          referrerPolicy="no-referrer"
-          scrolling="no"
-          className="absolute inset-0 h-full w-full border-0"
-          style={{
-            background: '#000',
-            display: 'block',
-          }}
-          onLoad={() => setPhase('live')}
-        />
+        <div className="absolute inset-0 flex items-center justify-center bg-black">
+          <div
+            className="relative h-full max-w-full overflow-hidden bg-black"
+            style={{
+              aspectRatio: STREAM_ASPECT_RATIO,
+              flex: '0 1 auto',
+            }}
+          >
+            <iframe
+              key={iframeSrc}
+              src={iframeSrc}
+              title="Cayley field camera live stream"
+              allow="autoplay; fullscreen; picture-in-picture"
+              referrerPolicy="no-referrer"
+              scrolling="no"
+              className="absolute inset-0 h-full w-full border-0"
+              style={{
+                background: '#000',
+                display: 'block',
+              }}
+              onLoad={() => setPhase('live')}
+            />
+          </div>
+        </div>
       )}
 
       {phase === 'connecting' && <FeedShimmer label="opening native stream..." isLight={isLight} />}
