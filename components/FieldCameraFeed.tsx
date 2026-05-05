@@ -1,21 +1,18 @@
 'use client'
 
 /**
- * FieldCameraFeed — embeds go2rtc's native player.
+ * FieldCameraFeed — embeds go2rtc's browser player without the native page.
  *
  * The previous implementation pulled `/api/stream.mp4` directly and tried to
  * hide Funnel connection churn with dual <video> elements. Field testing showed
  * that path is both slow and fragile: fMP4 downloads arrive at low throughput
  * over Funnel and go2rtc 1.9.14 has panicked in the MP4 HTTP consumer.
  *
- * go2rtc's native `stream.html` can negotiate WebRTC/MSE/MJPEG fallback, but
- * that starts multiple consumers in parallel before selecting one. The public
- * site uses one MSE transport so one visible player maps to one board consumer.
- * The iframe is cover-cropped into the card because the native substream is
- * 704x576 while the homepage card is intentionally wide.
- * It must stay iframe-based because go2rtc rejects cross-origin
- * WebSocket upgrades from andysottiaux.com; the iframe keeps the page origin on
- * the Funnel host where the native player is accepted.
+ * go2rtc's native `stream.html` is a whole page, not a reusable video surface.
+ * Scaling that page made the timestamp/status overlays too large and caused
+ * awkward crops in the homepage card. The board now allows CORS for the API, so
+ * the site loads go2rtc's `video-stream` web component directly and owns the
+ * video sizing with object-fit.
  */
 
 import { useEffect, useRef, useState } from 'react'
@@ -26,7 +23,6 @@ const FUNNEL_HOST =
   'https://cayley-v3-cam-1.tailc7d6b6.ts.net'
 const FEED_STREAM = process.env.NEXT_PUBLIC_V3_FEED_STREAM || 'cayley-sub'
 const PLAYER_MODE = process.env.NEXT_PUBLIC_V3_PLAYER_MODE || 'mse'
-const STREAM_COVER_HEIGHT = '145.5%'
 
 const NATIVE_PLAYER_URL =
   `${FUNNEL_HOST}/stream.html` +
@@ -39,16 +35,32 @@ const LOAD_TIMEOUT_MS = 10_000
 
 type Phase = 'paused' | 'connecting' | 'live' | 'offline'
 
+type Go2RTCPlayerElement = HTMLElement & {
+  background: boolean
+  media: string
+  mode: string
+  src: string | URL
+  video?: HTMLVideoElement
+  visibilityCheck: boolean
+  visibilityThreshold: number
+}
+
+declare global {
+  interface Window {
+    __cayleyVideoStreamScript?: Promise<void>
+  }
+}
+
 export default function FieldCameraFeed({ enabled = true }: { enabled?: boolean }) {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
   const debugMode = useDebugFlag()
   const containerRef = useRef<HTMLDivElement>(null)
+  const mountRef = useRef<HTMLDivElement>(null)
 
   const [active, setActive] = useState<boolean>(() => enabled && initialActive())
   const [phase, setPhase] = useState<Phase>(() => (enabled && initialActive() ? 'connecting' : 'paused'))
   const [reloadNonce, setReloadNonce] = useState(0)
-  const iframeSrc = active ? `${NATIVE_PLAYER_URL}&_=${reloadNonce}` : ''
 
   useEffect(() => {
     const el = containerRef.current
@@ -85,12 +97,90 @@ export default function FieldCameraFeed({ enabled = true }: { enabled?: boolean 
       return
     }
 
+    const mount = mountRef.current
+    if (!mount) return
+
+    let disposed = false
+    let player: Go2RTCPlayerElement | null = null
+    let video: HTMLVideoElement | null = null
+    let bindTimer = 0
+    const cleanups: Array<() => void> = []
+
     setPhase('connecting')
-    const id = window.setTimeout(() => {
+    mount.replaceChildren()
+
+    const timeout = window.setTimeout(() => {
       setPhase((p) => (p === 'connecting' ? 'offline' : p))
     }, LOAD_TIMEOUT_MS)
 
-    return () => window.clearTimeout(id)
+    loadVideoStreamScript()
+      .then(() => {
+        if (disposed) return
+
+        player = document.createElement('video-stream') as Go2RTCPlayerElement
+        player.className = 'field-camera-player'
+        player.style.display = 'block'
+        player.style.width = '100%'
+        player.style.height = '100%'
+        player.style.background = '#000'
+        mount.replaceChildren(player)
+
+        player.background = false
+        player.media = 'video'
+        player.mode = PLAYER_MODE
+        player.visibilityCheck = true
+        player.visibilityThreshold = 0.1
+        player.src = playerWsUrl(reloadNonce)
+
+        const bindVideo = () => {
+          if (disposed || !player) return
+          video = player.video || player.querySelector('video')
+
+          if (!video) {
+            bindTimer = window.setTimeout(bindVideo, 40)
+            return
+          }
+
+          video.controls = false
+          video.muted = true
+          video.autoplay = true
+          video.playsInline = true
+          video.style.objectFit = 'cover'
+          video.style.objectPosition = 'center top'
+
+          const markLive = () => {
+            if (!disposed) setPhase('live')
+          }
+          const markOffline = () => {
+            if (!disposed) setPhase('offline')
+          }
+
+          video.addEventListener('loadeddata', markLive)
+          video.addEventListener('playing', markLive)
+          video.addEventListener('error', markOffline)
+          cleanups.push(() => {
+            video?.removeEventListener('loadeddata', markLive)
+            video?.removeEventListener('playing', markLive)
+            video?.removeEventListener('error', markOffline)
+          })
+
+          if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) markLive()
+        }
+
+        bindVideo()
+      })
+      .catch(() => {
+        if (!disposed) setPhase('offline')
+      })
+
+    return () => {
+      disposed = true
+      window.clearTimeout(timeout)
+      window.clearTimeout(bindTimer)
+      cleanups.forEach((cleanup) => cleanup())
+      player?.remove()
+      if (mountRef.current === mount) mount.replaceChildren()
+    }
   }, [active, reloadNonce])
 
   const reload = () => {
@@ -100,34 +190,9 @@ export default function FieldCameraFeed({ enabled = true }: { enabled?: boolean 
 
   return (
     <div ref={containerRef} className="relative w-full h-full overflow-hidden rounded-[16px] bg-black">
-      {iframeSrc && (
-        <div className="absolute inset-0 flex items-start justify-center overflow-hidden bg-black">
-          <div
-            className="relative overflow-hidden bg-black"
-            style={{
-              width: '100%',
-              height: STREAM_COVER_HEIGHT,
-            }}
-          >
-            <iframe
-              key={iframeSrc}
-              src={iframeSrc}
-              title="Cayley field camera live stream"
-              allow="autoplay; fullscreen; picture-in-picture"
-              referrerPolicy="no-referrer"
-              scrolling="no"
-              className="absolute inset-0 h-full w-full border-0"
-              style={{
-                background: '#000',
-                display: 'block',
-              }}
-              onLoad={() => setPhase('live')}
-            />
-          </div>
-        </div>
-      )}
+      <div ref={mountRef} className="absolute inset-0 bg-black" aria-label="Cayley field camera live stream" />
 
-      {phase === 'connecting' && <FeedShimmer label="opening native stream..." isLight={isLight} />}
+      {phase === 'connecting' && <FeedShimmer label="opening live stream..." isLight={isLight} />}
       {phase === 'paused' && <FeedPaused />}
       {phase === 'offline' && <FeedOffline isLight={isLight} onRetry={reload} />}
 
@@ -183,9 +248,54 @@ export default function FieldCameraFeed({ enabled = true }: { enabled?: boolean 
           0%, 100% { opacity: 0.45; transform: scale(1); }
           50%      { opacity: 0.85; transform: scale(1.04); }
         }
+        .field-camera-player,
+        .field-camera-player video-stream,
+        .field-camera-player video {
+          width: 100% !important;
+          height: 100% !important;
+        }
+        .field-camera-player video {
+          display: block !important;
+          object-fit: cover !important;
+          object-position: center top !important;
+          background: #000 !important;
+        }
+        .field-camera-player .info {
+          display: none !important;
+        }
       `}</style>
     </div>
   )
+}
+
+function loadVideoStreamScript(): Promise<void> {
+  if (typeof window === 'undefined') return Promise.reject(new Error('browser unavailable'))
+  if (window.customElements.get('video-stream')) return Promise.resolve()
+  if (window.__cayleyVideoStreamScript) return window.__cayleyVideoStreamScript
+
+  window.__cayleyVideoStreamScript = new Promise<void>((resolve, reject) => {
+    const script = document.createElement('script')
+    script.type = 'module'
+    script.crossOrigin = 'anonymous'
+    script.src = `${FUNNEL_HOST}/video-stream.js`
+    script.onload = () => {
+      window.customElements.whenDefined('video-stream').then(() => resolve(), reject)
+    }
+    script.onerror = () => {
+      window.__cayleyVideoStreamScript = undefined
+      reject(new Error('go2rtc player script failed to load'))
+    }
+    document.head.appendChild(script)
+  })
+
+  return window.__cayleyVideoStreamScript
+}
+
+function playerWsUrl(reloadNonce: number): URL {
+  const url = new URL('/api/ws', FUNNEL_HOST)
+  url.searchParams.set('src', FEED_STREAM)
+  url.searchParams.set('_', String(reloadNonce))
+  return url
 }
 
 function initialActive(): boolean {
