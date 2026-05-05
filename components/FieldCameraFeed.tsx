@@ -11,6 +11,8 @@
  * go2rtc's native `stream.html` can negotiate WebRTC/MSE/MJPEG fallback, but
  * that starts multiple consumers in parallel before selecting one. The public
  * site uses one MSE transport so one visible player maps to one board consumer.
+ * The iframe is cover-cropped into the card because the native substream is
+ * 704x576 while the homepage card is intentionally wide.
  * It must stay iframe-based because go2rtc rejects cross-origin
  * WebSocket upgrades from andysottiaux.com; the iframe keeps the page origin on
  * the Funnel host where the native player is accepted.
@@ -24,7 +26,7 @@ const FUNNEL_HOST =
   'https://cayley-v3-cam-1.tailc7d6b6.ts.net'
 const FEED_STREAM = process.env.NEXT_PUBLIC_V3_FEED_STREAM || 'cayley-sub'
 const PLAYER_MODE = process.env.NEXT_PUBLIC_V3_PLAYER_MODE || 'mse'
-const STREAM_ASPECT_RATIO = '704 / 576'
+const STREAM_COVER_HEIGHT = '145.5%'
 
 const NATIVE_PLAYER_URL =
   `${FUNNEL_HOST}/stream.html` +
@@ -99,12 +101,12 @@ export default function FieldCameraFeed({ enabled = true }: { enabled?: boolean 
   return (
     <div ref={containerRef} className="relative w-full h-full overflow-hidden rounded-[16px] bg-black">
       {iframeSrc && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black">
+        <div className="absolute inset-0 flex items-center justify-center overflow-hidden bg-black">
           <div
-            className="relative h-full max-w-full overflow-hidden bg-black"
+            className="relative overflow-hidden bg-black"
             style={{
-              aspectRatio: STREAM_ASPECT_RATIO,
-              flex: '0 1 auto',
+              width: '100%',
+              height: STREAM_COVER_HEIGHT,
             }}
           >
             <iframe
