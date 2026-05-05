@@ -8,10 +8,9 @@
  *
  *   1. Smart fallback tiles. The board (`/api/v3/health`) is polled by a
  *      single shared `useBoardLive()` hook with hysteresis (see lib).
- *      When live: row 1 shows Solar / Camera / Health.
- *      When stale: row 1 swaps to Stats / Building / MoreProjects with a
- *      cross-fade. Identical grid positions and column spans, so the rest
- *      of the bento doesn't reflow.
+ *      Camera stays visible even when health is unreachable, so visitors see
+ *      the stream's own offline state instead of the feed disappearing. Solar
+ *      and health still swap to fallback content when the board is stale.
  *
  *   2. Modal expansion. Clicking a tile body opens an in-place modal with
  *      an expanded view of that section instead of navigating off to
@@ -196,18 +195,14 @@ function Bento({
         gridTemplateColumns: 'repeat(12, minmax(0, 1fr))',
       }}
     >
-      {/* Row 1: identity (3 cols) · camera-or-building (6 cols) · solar-or-stats (3 cols, spans 2 rows) */}
+      {/* Row 1: identity (3 cols) · camera (6 cols) · solar-or-projects (3 cols, spans 2 rows) */}
       <div className="col-span-12 md:col-span-3">
         <IdentityTile onOpen={() => onOpen('about')} />
       </div>
 
-      {/* Wide tile (col 4–9): Camera when live, Building when stale */}
+      {/* Wide tile (col 4–9): keep the camera slot stable; the feed handles offline state. */}
       <div className="col-span-12 md:col-span-6">
-        <CrossfadeTile
-          showLive={boardLive}
-          live={<CameraTile onOpen={() => onOpen('live')} />}
-          fallback={<BuildingTile />}
-        />
+        <CameraTile onOpen={() => onOpen('live')} />
       </div>
 
       {/* Tall tile (col 10–12, rows 1–2): Solar when live, MoreProjects
