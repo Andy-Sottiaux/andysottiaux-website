@@ -101,7 +101,7 @@ export default function FieldCameraFeed({ enabled = true }: { enabled?: boolean 
   return (
     <div ref={containerRef} className="relative w-full h-full overflow-hidden rounded-[16px] bg-black">
       {iframeSrc && (
-        <div className="absolute inset-0 flex items-center justify-center overflow-hidden bg-black">
+        <div className="absolute inset-0 flex items-start justify-center overflow-hidden bg-black">
           <div
             className="relative overflow-hidden bg-black"
             style={{
