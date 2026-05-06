@@ -202,7 +202,8 @@ function Bento({
         <IdentityTile onOpen={() => onOpen('about')} />
       </div>
 
-      {/* Wide tile (col 4–9): keep the camera slot stable; the feed handles offline state. */}
+      {/* Wide tile (col 4–9): the source is 704x576, so this compact card uses
+          a fill presentation while expanded views keep the full-frame mode. */}
       <div className="col-span-12 md:col-span-6">
         <CameraTile enabled={cameraEnabled} onOpen={() => onOpen('live')} />
       </div>
@@ -499,24 +500,18 @@ function CameraTile({ enabled, onOpen }: { enabled: boolean; onOpen?: () => void
       modalLabel="Open Field Live"
       className="min-h-[170px] md:min-h-0"
     >
-      <div className="px-3 md:px-4 pt-2 md:pt-3 pb-3 md:pb-4 flex-1 flex flex-col">
+      <div className="px-3 md:px-4 pt-2 md:pt-3 pb-3 md:pb-4 flex-1 min-h-0">
         <div
-          className="relative w-full overflow-hidden rounded-[12px] flex-1"
+          className="relative w-full h-full min-h-[132px] overflow-hidden rounded-[14px]"
           style={{
-            aspectRatio: '16 / 9',
             background: isLight ? '#0a0a0c' : '#000',
+            border: isLight ? '1px solid rgba(0,0,0,0.08)' : '1px solid rgba(255,255,255,0.08)',
             boxShadow: isLight
               ? '0 4px 12px rgba(28,26,28,0.12)'
               : '0 8px 24px rgba(0,0,0,0.4)',
           }}
         >
-          <FieldCameraFeed enabled={enabled} />
-        </div>
-        <div
-          className="text-[12px] tracking-tight leading-snug mt-2.5 px-1"
-          style={{ color: palette.bodyText }}
-        >
-          Live edge-AI camera. Public read-only stream.
+          <FieldCameraFeed enabled={enabled} fit="fill" />
         </div>
       </div>
     </Tile>

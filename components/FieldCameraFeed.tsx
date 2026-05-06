@@ -15,7 +15,7 @@
  * full 704x576 camera frame visible inside responsive cards.
  */
 
-import { useEffect, useRef, useState } from 'react'
+import { type CSSProperties, useEffect, useRef, useState } from 'react'
 import { useFieldTheme } from './fieldTheme'
 
 const CAMERA_HOST =
@@ -23,8 +23,6 @@ const CAMERA_HOST =
   'https://cayley-relay.tailc7d6b6.ts.net'
 const FEED_STREAM = process.env.NEXT_PUBLIC_V3_FEED_STREAM || 'cayley-sub'
 const PLAYER_MODE = process.env.NEXT_PUBLIC_V3_PLAYER_MODE || 'webrtc,mse,mjpeg'
-const VIDEO_FIT = 'contain'
-const VIDEO_POSITION = 'center center'
 
 const NATIVE_PLAYER_URL =
   `${CAMERA_HOST}/stream.html` +
@@ -36,6 +34,7 @@ const NATIVE_PLAYER_URL =
 const LOAD_TIMEOUT_MS = 10_000
 
 type Phase = 'paused' | 'connecting' | 'live' | 'offline'
+type VideoFit = 'contain' | 'cover' | 'fill'
 
 type Go2RTCPlayerElement = HTMLElement & {
   background: boolean
@@ -53,7 +52,15 @@ declare global {
   }
 }
 
-export default function FieldCameraFeed({ enabled = true }: { enabled?: boolean }) {
+export default function FieldCameraFeed({
+  enabled = true,
+  fit = 'contain',
+  position = 'center center',
+}: {
+  enabled?: boolean
+  fit?: VideoFit
+  position?: string
+}) {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
   const debugMode = useDebugFlag()
@@ -147,8 +154,8 @@ export default function FieldCameraFeed({ enabled = true }: { enabled?: boolean 
           video.muted = true
           video.autoplay = true
           video.playsInline = true
-          video.style.objectFit = VIDEO_FIT
-          video.style.objectPosition = VIDEO_POSITION
+          video.style.objectFit = fit
+          video.style.objectPosition = position
 
           const markLive = () => {
             if (!disposed) setPhase('live')
@@ -183,7 +190,7 @@ export default function FieldCameraFeed({ enabled = true }: { enabled?: boolean 
       player?.remove()
       if (mountRef.current === mount) mount.replaceChildren()
     }
-  }, [active, reloadNonce])
+  }, [active, reloadNonce, fit, position])
 
   const reload = () => {
     setPhase('connecting')
@@ -191,7 +198,14 @@ export default function FieldCameraFeed({ enabled = true }: { enabled?: boolean 
   }
 
   return (
-    <div ref={containerRef} className="relative w-full h-full overflow-hidden rounded-[16px] bg-black">
+    <div
+      ref={containerRef}
+      className="relative w-full h-full overflow-hidden rounded-[16px] bg-black"
+      style={{
+        '--field-camera-fit': fit,
+        '--field-camera-position': position,
+      } as CSSProperties}
+    >
       <div ref={mountRef} className="absolute inset-0 bg-black" aria-label="Cayley field camera live stream" />
 
       {phase === 'connecting' && <FeedShimmer label="opening live stream..." isLight={isLight} />}
@@ -258,8 +272,8 @@ export default function FieldCameraFeed({ enabled = true }: { enabled?: boolean 
         }
         .field-camera-player video {
           display: block !important;
-          object-fit: contain !important;
-          object-position: center center !important;
+          object-fit: var(--field-camera-fit, contain) !important;
+          object-position: var(--field-camera-position, center center) !important;
           background: #000 !important;
         }
         .field-camera-player .info {
