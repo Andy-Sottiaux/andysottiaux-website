@@ -82,7 +82,9 @@ export default function FieldSolarCard({
   const [solar, setSolar] = useState<Solar | null>(null)
   const [state, setState] = useState<CardState>('loading')
   const [spark, setSpark] = useState<number[]>([])
+  const [voltageSpark, setVoltageSpark] = useState<number[]>([])
   const sparkRef = useRef<number[]>([])
+  const voltageSparkRef = useRef<number[]>([])
 
   useEffect(() => {
     let cancelled = false
@@ -119,6 +121,10 @@ export default function FieldSolarCard({
             const next = [...sparkRef.current, reading.solar_power].slice(-SPARK_MAX)
             sparkRef.current = next
             setSpark(next)
+
+            const nextVoltage = [...voltageSparkRef.current, reading.battery_voltage].slice(-SPARK_MAX)
+            voltageSparkRef.current = nextVoltage
+            setVoltageSpark(nextVoltage)
           }
         } else if (data && (data.error || res.status === 503)) {
           // Upstream is reachable but reports no telemetry yet (BMV never
@@ -333,35 +339,83 @@ export default function FieldSolarCard({
         </div>
       </div>
 
-      {/* Session sparkline */}
-      <div
-        className={compact
-          ? 'mt-2 rounded-xl border p-3 flex-1 min-h-[96px] flex flex-col justify-end'
-          : 'mt-auto pt-4 border-t'
-        }
-        style={{
-          borderColor: compact ? (isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)') : palette.hairline,
-          background: compact
-            ? (isLight ? 'rgba(255,255,255,0.36)' : 'rgba(255,255,255,0.025)')
-            : undefined,
-        }}
-      >
-        <div className="flex items-center justify-between mb-2">
+      {compact ? (
+        <div className="mt-2 grid grid-rows-2 gap-3 flex-1 min-h-[190px]">
           <div
-            className={`${compact ? 'text-[9px]' : 'text-[10px]'} uppercase tracking-[0.18em] font-medium`}
-            style={{ color: palette.mutedText }}
+            className="rounded-xl border p-3 flex flex-col min-h-0"
+            style={{
+              borderColor: isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)',
+              background: isLight ? 'rgba(255,255,255,0.36)' : 'rgba(255,255,255,0.025)',
+            }}
           >
-            Solar input
+            <div className="flex items-center justify-between mb-2">
+              <div
+                className="text-[9px] uppercase tracking-[0.18em] font-medium"
+                style={{ color: palette.mutedText }}
+              >
+                Solar input
+              </div>
+              <div className="text-[10px] tabular-nums" style={{ color: palette.fadedText }}>
+                {hasValues ? `${Math.round(solar.solar_power)} W` : 'session'}
+              </div>
+            </div>
+            <Sparkline
+              data={spark}
+              isLight={isLight}
+              className="w-full flex-1 min-h-[50px]"
+              gradientId="solarSparkAreaCompact"
+              tone="solar"
+            />
           </div>
           <div
-            className="text-[10px] tracking-wide"
-            style={{ color: palette.fadedText }}
+            className="rounded-xl border p-3 flex flex-col min-h-0"
+            style={{
+              borderColor: isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)',
+              background: isLight ? 'rgba(255,255,255,0.28)' : 'rgba(255,255,255,0.02)',
+            }}
           >
-            session
+            <div className="flex items-center justify-between mb-2">
+              <div
+                className="text-[9px] uppercase tracking-[0.18em] font-medium"
+                style={{ color: palette.mutedText }}
+              >
+                Battery voltage
+              </div>
+              <div className="text-[10px] tabular-nums" style={{ color: palette.fadedText }}>
+                {hasValues ? `${solar.battery_voltage.toFixed(2)} V` : 'session'}
+              </div>
+            </div>
+            <Sparkline
+              data={voltageSpark}
+              isLight={isLight}
+              className="w-full flex-1 min-h-[50px]"
+              gradientId="voltageSparkAreaCompact"
+              tone="battery"
+            />
           </div>
         </div>
-        <Sparkline data={spark} isLight={isLight} className={compact ? 'w-full h-full min-h-[56px]' : 'w-full h-9'} />
-      </div>
+      ) : (
+        <div
+          className="mt-auto pt-4 border-t"
+          style={{ borderColor: palette.hairline }}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <div
+              className="text-[10px] uppercase tracking-[0.18em] font-medium"
+              style={{ color: palette.mutedText }}
+            >
+              Solar input
+            </div>
+            <div
+              className="text-[10px] tracking-wide"
+              style={{ color: palette.fadedText }}
+            >
+              session
+            </div>
+          </div>
+          <Sparkline data={spark} isLight={isLight} />
+        </div>
+      )}
 
       <style jsx global>{`
         @keyframes fldSolarIdlePulse {
@@ -377,14 +431,26 @@ function Sparkline({
   data,
   isLight,
   className = 'w-full h-9',
+  gradientId = 'solarSparkArea',
+  tone = 'solar',
 }: {
   data: number[]
   isLight: boolean
   className?: string
+  gradientId?: string
+  tone?: 'solar' | 'battery'
 }) {
   const W = 280
   const H = 36
-  const strokeColor = isLight ? '#c2410c' : '#ffb84d'
+  const strokeColor = tone === 'battery'
+    ? (isLight ? '#0a8aa8' : '#67e8f9')
+    : (isLight ? '#c2410c' : '#ffb84d')
+  const areaTop = tone === 'battery'
+    ? (isLight ? 'rgba(10,138,168,0.24)' : 'rgba(103,232,249,0.30)')
+    : (isLight ? 'rgba(194,65,12,0.30)' : 'rgba(255,184,77,0.4)')
+  const areaBottom = tone === 'battery'
+    ? (isLight ? 'rgba(10,138,168,0)' : 'rgba(103,232,249,0)')
+    : (isLight ? 'rgba(194,65,12,0)' : 'rgba(255,184,77,0)')
   const baselineColor = isLight ? 'rgba(0,0,0,0.18)' : 'rgba(255,255,255,0.12)'
 
   if (data.length < 2) {
@@ -394,23 +460,25 @@ function Sparkline({
       </svg>
     )
   }
-  const max = Math.max(1, ...data)
+  const max = Math.max(...data)
+  const min = Math.min(...data)
+  const range = Math.max(0.1, max - min)
   const stepX = W / (data.length - 1)
   const points = data.map((v, i) => {
     const x = i * stepX
-    const y = H - (v / max) * (H - 2) - 1
+    const y = H - ((v - min) / range) * (H - 2) - 1
     return `${x.toFixed(1)},${y.toFixed(1)}`
   }).join(' ')
   const areaPoints = `0,${H} ${points} ${W},${H}`
   return (
     <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className={className} aria-hidden="true">
       <defs>
-        <linearGradient id="solarSparkArea" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={isLight ? 'rgba(194,65,12,0.30)' : 'rgba(255,184,77,0.4)'} />
-          <stop offset="100%" stopColor={isLight ? 'rgba(194,65,12,0)' : 'rgba(255,184,77,0)'} />
+        <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={areaTop} />
+          <stop offset="100%" stopColor={areaBottom} />
         </linearGradient>
       </defs>
-      <polygon points={areaPoints} fill="url(#solarSparkArea)" />
+      <polygon points={areaPoints} fill={`url(#${gradientId})`} />
       <polyline
         points={points}
         fill="none"

@@ -209,7 +209,7 @@ function Bento({
         <CameraTile enabled={cameraEnabled} onOpen={() => onOpen('live')} />
       </div>
 
-      <div className="col-span-12 md:col-span-3 md:col-start-10 md:row-start-1 md:row-span-2">
+      <div className="col-span-12 md:col-span-3 md:col-start-10 md:row-start-1 md:row-span-3">
         <CrossfadeTile
           showLive={boardLive}
           live={<SolarTile onOpen={() => onOpen('live')} />}
@@ -234,7 +234,7 @@ function Bento({
       <div className="col-span-12 md:col-span-4 md:col-start-6 md:row-start-3 md:row-span-2">
         <MarathonTile onOpen={() => onOpen('marathon')} />
       </div>
-      <div className="col-span-12 md:col-span-3 md:col-start-10 md:row-start-3 md:row-span-2">
+      <div className="col-span-12 md:col-span-3 md:col-start-10 md:row-start-4">
         <ContactTile onOpen={() => onOpen('contact')} />
       </div>
     </div>
@@ -1677,28 +1677,28 @@ function ContactTile({ onOpen }: { onOpen?: () => void }) {
       modalLabel="Open Contact"
       className="min-h-[180px] md:min-h-0"
     >
-      <div className="px-5 md:px-6 pt-3 pb-4 md:pb-5 flex-1 flex flex-col">
-        <div className="grid grid-cols-2 gap-2 flex-1">
+      <div className="px-5 md:px-5 pt-3 pb-3 flex-1 flex flex-col min-h-0">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 flex-1 min-h-0">
           {CONTACTS.map((c) => (
             <a
               key={c.label}
               href={c.href}
               target={c.href.startsWith('mailto:') ? undefined : '_blank'}
               rel={c.href.startsWith('mailto:') ? undefined : 'noopener noreferrer'}
-              className="relative z-10 flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl transition-all hover:scale-[1.02]"
+              className="relative z-10 flex flex-col items-center justify-center gap-1 md:gap-1.5 px-1 py-2 rounded-xl transition-all hover:scale-[1.02]"
               style={{
                 background: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)',
                 border: palette.cardBorder,
                 color: isLight ? '#1c1a1c' : '#fff',
               }}
             >
-              <div className="w-5 h-5 opacity-90">{c.icon}</div>
-              <div className="text-[12px] font-semibold tracking-tight">{c.label}</div>
+              <div className="w-[18px] h-[18px] md:w-5 md:h-5 opacity-90">{c.icon}</div>
+              <div className="text-[10px] md:text-[10.5px] font-semibold tracking-tight truncate max-w-full">{c.label}</div>
             </a>
           ))}
         </div>
         <div
-          className="mt-3 text-[10px] tracking-wide text-center"
+          className="mt-2 text-[9px] tracking-wide text-center"
           style={{ color: palette.fadedText }}
         >
           © {new Date().getFullYear()} Andy Sottiaux
