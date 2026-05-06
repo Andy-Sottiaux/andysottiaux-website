@@ -1,20 +1,21 @@
 'use client'
 
 /**
- * FieldSolarCard — battery, solar in, SOC bar, session-buffer sparkline.
+ * FieldSolarCard — battery, solar in, SOC bar, 24h solar history.
  *
- * Polls the same-origin solar proxy every 30s. Builds a rolling client-side
- * ring buffer of solar power readings across the user's session — clearly
- * labelled "session" so it's not misread as a 24h history.
+ * Polls the same-origin solar proxy every 30s. Charts use the dedicated
+ * `/api/v3/solar/history` endpoint so the compact bento shows real 24-hour
+ * history once the Raspberry Pi/relay exporter is online.
  *
  * Theme: card chrome / typography swap via useFieldTheme(); the warm amber
  * sparkline + green→cyan SOC gradient stay constant in both themes.
  */
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useFieldTheme } from './fieldTheme'
 
 const SOLAR_URL = '/api/v3/solar'
+const SOLAR_HISTORY_URL = '/api/v3/solar/history'
 
 type Solar = {
   battery_voltage: number
@@ -36,6 +37,12 @@ type Solar = {
 
 type CardState = 'loading' | 'live' | 'stale' | 'no-telemetry' | 'offline'
 type SolarCardVariant = 'default' | 'compact'
+
+type SolarHistoryPoint = {
+  battery_voltage: number
+  solar_power: number
+  timestamp: number
+}
 
 function fmtAge(seconds: number): string {
   const s = Math.max(0, Math.floor(seconds))
@@ -68,8 +75,6 @@ function calcSOC(bv: number, loadA = 0, chargeA = 0): number {
   return 0
 }
 
-const SPARK_MAX = 60 // 60 samples × 30s ≈ 30 minutes of session history
-
 export default function FieldSolarCard({
   variant = 'default',
 }: {
@@ -81,10 +86,7 @@ export default function FieldSolarCard({
 
   const [solar, setSolar] = useState<Solar | null>(null)
   const [state, setState] = useState<CardState>('loading')
-  const [spark, setSpark] = useState<number[]>([])
-  const [voltageSpark, setVoltageSpark] = useState<number[]>([])
-  const sparkRef = useRef<number[]>([])
-  const voltageSparkRef = useRef<number[]>([])
+  const [history, setHistory] = useState<SolarHistoryPoint[]>([])
 
   useEffect(() => {
     let cancelled = false
@@ -115,17 +117,6 @@ export default function FieldSolarCard({
           // Server now distinguishes live (recent) from stale (cached
           // last-known). Both render the values; only the badge differs.
           setState(reading.live === false || reading.stale === true ? 'stale' : 'live')
-          // Don't pad the sparkline with stale repeats — only push when
-          // the data is genuinely new.
-          if (reading.live !== false) {
-            const next = [...sparkRef.current, reading.solar_power].slice(-SPARK_MAX)
-            sparkRef.current = next
-            setSpark(next)
-
-            const nextVoltage = [...voltageSparkRef.current, reading.battery_voltage].slice(-SPARK_MAX)
-            voltageSparkRef.current = nextVoltage
-            setVoltageSpark(nextVoltage)
-          }
         } else if (data && (data.error || res.status === 503)) {
           // Upstream is reachable but reports no telemetry yet (BMV never
           // seen since boot). Treat as 'idle / awaiting', not broken.
@@ -149,6 +140,33 @@ export default function FieldSolarCard({
     }
   }, [])
 
+  useEffect(() => {
+    let cancelled = false
+    let timer: ReturnType<typeof setTimeout> | null = null
+
+    const tick = async () => {
+      try {
+        const ctrl = new AbortController()
+        const t = setTimeout(() => ctrl.abort(), 8000)
+        const res = await fetch(SOLAR_HISTORY_URL, { signal: ctrl.signal, cache: 'no-store' })
+        clearTimeout(t)
+        if (!cancelled && res.ok) {
+          const data = await res.json()
+          setHistory(normalizeHistory(data))
+        }
+      } catch {
+        if (!cancelled) setHistory([])
+      }
+      timer = setTimeout(tick, 5 * 60_000)
+    }
+
+    tick()
+    return () => {
+      cancelled = true
+      if (timer) clearTimeout(timer)
+    }
+  }, [])
+
   const soc = solar ? calcSOC(solar.battery_voltage, solar.load_current, solar.charging_current) : null
   // Display values whenever we have a reading at all, fresh or stale.
   // Only "no-telemetry" / "offline" / "loading" hide the numbers.
@@ -164,6 +182,9 @@ export default function FieldSolarCard({
         : state === 'no-telemetry'
           ? 'waiting'
           : 'offline'
+  const hasHistory = history.length >= 2
+  const solarHistory = history.map((p) => p.solar_power)
+  const voltageHistory = history.map((p) => p.battery_voltage)
 
   return (
     <div
@@ -353,19 +374,23 @@ export default function FieldSolarCard({
                 className="text-[9px] uppercase tracking-[0.18em] font-medium"
                 style={{ color: palette.mutedText }}
               >
-                Solar input
+                Solar input · 24h
               </div>
               <div className="text-[10px] tabular-nums" style={{ color: palette.fadedText }}>
-                {hasValues ? `${Math.round(solar.solar_power)} W` : 'session'}
+                {hasValues ? `${Math.round(solar.solar_power)} W` : 'waiting'}
               </div>
             </div>
-            <Sparkline
-              data={spark}
-              isLight={isLight}
-              className="w-full flex-1 min-h-[50px]"
-              gradientId="solarSparkAreaCompact"
-              tone="solar"
-            />
+            {hasHistory ? (
+              <Sparkline
+                data={solarHistory}
+                isLight={isLight}
+                className="w-full flex-1 min-h-[50px]"
+                gradientId="solarSparkAreaCompact"
+                tone="solar"
+              />
+            ) : (
+              <HistoryPlaceholder isLight={isLight} label="Pi 24h source pending" />
+            )}
           </div>
           <div
             className="rounded-xl border p-3 flex flex-col min-h-0"
@@ -379,19 +404,23 @@ export default function FieldSolarCard({
                 className="text-[9px] uppercase tracking-[0.18em] font-medium"
                 style={{ color: palette.mutedText }}
               >
-                Battery voltage
+                Battery voltage · 24h
               </div>
               <div className="text-[10px] tabular-nums" style={{ color: palette.fadedText }}>
-                {hasValues ? `${solar.battery_voltage.toFixed(2)} V` : 'session'}
+                {hasValues ? `${solar.battery_voltage.toFixed(2)} V` : 'waiting'}
               </div>
             </div>
-            <Sparkline
-              data={voltageSpark}
-              isLight={isLight}
-              className="w-full flex-1 min-h-[50px]"
-              gradientId="voltageSparkAreaCompact"
-              tone="battery"
-            />
+            {hasHistory ? (
+              <Sparkline
+                data={voltageHistory}
+                isLight={isLight}
+                className="w-full flex-1 min-h-[50px]"
+                gradientId="voltageSparkAreaCompact"
+                tone="battery"
+              />
+            ) : (
+              <HistoryPlaceholder isLight={isLight} label="Waiting for Pi history" />
+            )}
           </div>
         </div>
       ) : (
@@ -404,16 +433,20 @@ export default function FieldSolarCard({
               className="text-[10px] uppercase tracking-[0.18em] font-medium"
               style={{ color: palette.mutedText }}
             >
-              Solar input
+              Solar input · 24h
             </div>
             <div
               className="text-[10px] tracking-wide"
               style={{ color: palette.fadedText }}
             >
-              session
+              history
             </div>
           </div>
-          <Sparkline data={spark} isLight={isLight} />
+          {hasHistory ? (
+            <Sparkline data={solarHistory} isLight={isLight} />
+          ) : (
+            <HistoryPlaceholder isLight={isLight} label="Pi 24h history pending" />
+          )}
         </div>
       )}
 
@@ -423,6 +456,73 @@ export default function FieldSolarCard({
           50%      { opacity: 1;   transform: scale(1.25); }
         }
       `}</style>
+    </div>
+  )
+}
+
+function normalizeHistory(data: unknown): SolarHistoryPoint[] {
+  const root = data as { points?: unknown; history?: unknown; data?: unknown }
+  const raw = Array.isArray(data)
+    ? data
+    : Array.isArray(root?.points)
+      ? root.points
+      : Array.isArray(root?.history)
+        ? root.history
+        : Array.isArray(root?.data)
+          ? root.data
+          : []
+  const cutoff = Date.now() / 1000 - 24 * 60 * 60
+
+  return raw
+    .map((item) => {
+      const p = item as Record<string, unknown>
+      const timestamp = numeric(p.timestamp ?? p.ts ?? p.time)
+      const solarPower = numeric(p.solar_power ?? p.solarPower ?? p.pv_power_w ?? p.pvPowerW)
+      const batteryVoltage = numeric(p.battery_voltage ?? p.batteryVoltage ?? p.battery_v ?? p.batteryV)
+      if (timestamp == null || solarPower == null || batteryVoltage == null) return null
+      const seconds = timestamp > 10_000_000_000 ? timestamp / 1000 : timestamp
+      if (seconds < cutoff) return null
+      return {
+        timestamp: seconds,
+        solar_power: solarPower,
+        battery_voltage: batteryVoltage,
+      }
+    })
+    .filter((p): p is SolarHistoryPoint => p != null)
+    .sort((a, b) => a.timestamp - b.timestamp)
+}
+
+function numeric(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'string') {
+    const parsed = Number(value)
+    return Number.isFinite(parsed) ? parsed : null
+  }
+  return null
+}
+
+function HistoryPlaceholder({ isLight, label }: { isLight: boolean; label: string }) {
+  const lineColor = isLight ? 'rgba(0,0,0,0.18)' : 'rgba(255,255,255,0.12)'
+  const textColor = isLight ? 'rgba(28,26,28,0.45)' : 'rgba(255,255,255,0.35)'
+
+  return (
+    <div className="relative flex-1 min-h-[50px]">
+      <svg viewBox="0 0 280 36" preserveAspectRatio="none" className="absolute inset-0 w-full h-full" aria-hidden="true">
+        <line x1="0" y1="35" x2="280" y2="35" stroke={lineColor} strokeWidth="1" />
+        <path
+          d="M0 28 C 45 24, 74 30, 112 22 S 190 18, 280 24"
+          fill="none"
+          stroke={lineColor}
+          strokeWidth="1.2"
+          strokeDasharray="4 5"
+        />
+      </svg>
+      <div
+        className="absolute inset-0 flex items-center justify-center text-[10px] font-semibold uppercase tracking-[0.16em]"
+        style={{ color: textColor }}
+      >
+        {label}
+      </div>
     </div>
   )
 }

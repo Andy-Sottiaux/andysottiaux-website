@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * FieldHealthCard — board liveness, uptime, services, latency.
+ * FieldHealthCard — board liveness, camera state, thermal, memory, services.
  *
  * Polls a same-origin health proxy every 15s, measures wall-clock RTT
  * against the fetch (this is end-to-end, browser → proxy → device), and
@@ -40,11 +40,6 @@ type SystemLoose = {
     visual_quality?: string
     input_size?: string
     output_size?: string
-  }
-  performance?: {
-    degraded?: boolean
-    score?: number
-    status?: string
   }
   tailnet?: {
     ok?: boolean
@@ -215,10 +210,8 @@ export default function FieldHealthCard({
       : '0 0 8px rgba(255,69,58,0.5)'
 
   const valueColor = isLight ? '#1c1a1c' : '#fff'
-  const score = sys?.performance?.score
   const mediaWorking = sys?.media_graph?.working
   const mediaQuality = sys?.media_graph?.visual_quality
-  const tailnetOk = sys?.tailnet?.ok && sys?.tailnet?.tailnet_route_ok !== false
   const cameraLabel = mediaWorking
     ? mediaQuality === 'calibrated'
       ? 'Calibrated'
@@ -226,8 +219,16 @@ export default function FieldHealthCard({
     : online
       ? 'Check'
       : '—'
-  const networkLabel = tailnetOk ? 'Routed' : online ? 'Check' : '—'
-  const scoreColor = typeof score === 'number' && score < 90
+  const thermalLabel = typeof sys?.cpu_temp_c === 'number' && sys.cpu_temp_c > 0
+    ? `${Math.round(sys.cpu_temp_c)}°C`
+    : '—'
+  const thermalColor = typeof sys?.cpu_temp_c === 'number' && sys.cpu_temp_c >= 70
+    ? (isLight ? '#b45309' : '#fcd34d')
+    : valueColor
+  const ramAvailMB = typeof sys?.mem?.avail_kb === 'number'
+    ? Math.max(0, Math.round(sys.mem.avail_kb / 1024))
+    : null
+  const ramColor = ramAvailMB != null && ramAvailMB < 32
     ? (isLight ? '#b45309' : '#fcd34d')
     : valueColor
 
@@ -342,16 +343,13 @@ export default function FieldHealthCard({
             className={`${compact ? 'text-[9px]' : 'text-[10px]'} uppercase tracking-[0.18em] font-medium`}
             style={{ color: palette.mutedText }}
           >
-            Score
+            Thermal
           </dt>
           <dd
             className={`${compact ? 'text-[18px] md:text-[19px]' : 'text-[20px] sm:text-[22px]'} font-semibold tracking-tight tabular-nums mt-1`}
-            style={{ color: scoreColor }}
+            style={{ color: thermalColor }}
           >
-            {typeof score === 'number' ? score : (online ? 'OK' : '—')}
-            {typeof score === 'number' && (
-              <span className="text-[12px] font-medium ml-0.5" style={{ color: palette.mutedText }}>/100</span>
-            )}
+            {thermalLabel}
           </dd>
         </div>
         <div>
@@ -373,13 +371,13 @@ export default function FieldHealthCard({
             className={`${compact ? 'text-[9px]' : 'text-[10px]'} uppercase tracking-[0.18em] font-medium`}
             style={{ color: palette.mutedText }}
           >
-            Network
+            RAM
           </dt>
           <dd
-            className={`${compact ? 'text-[18px] md:text-[19px]' : 'text-[20px] sm:text-[22px]'} font-semibold tracking-tight mt-1`}
-            style={{ color: valueColor }}
+            className={`${compact ? 'text-[18px] md:text-[19px]' : 'text-[20px] sm:text-[22px]'} font-semibold tracking-tight tabular-nums mt-1`}
+            style={{ color: ramColor }}
           >
-            {networkLabel}
+            {ramAvailMB != null ? `${ramAvailMB}M` : '—'}
           </dd>
         </div>
         <div>

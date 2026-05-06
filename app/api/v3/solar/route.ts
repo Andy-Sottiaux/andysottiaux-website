@@ -17,7 +17,10 @@ import { NextResponse } from 'next/server'
 export const runtime = 'edge'
 export const dynamic = 'force-dynamic'
 
-const UPSTREAM = process.env.V3_UPSTREAM_HOST || 'https://cayley-v3-cam-1.tailc7d6b6.ts.net'
+const UPSTREAM =
+  process.env.V3_SOLAR_UPSTREAM_HOST ||
+  process.env.V3_UPSTREAM_HOST ||
+  'https://cayley-v3-cam-1.tailc7d6b6.ts.net'
 
 export async function GET() {
   try {
