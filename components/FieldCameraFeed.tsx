@@ -11,8 +11,8 @@
  * go2rtc's native `stream.html` is a whole page, not a reusable video surface.
  * Scaling that page made the timestamp/status overlays too large and caused
  * awkward crops in the homepage card. The board now allows CORS for the API, so
- * the site loads go2rtc's `video-stream` web component directly and owns the
- * video sizing with object-fit.
+ * the site loads go2rtc's `video-stream` web component directly and keeps the
+ * full 704x576 camera frame visible inside responsive cards.
  */
 
 import { useEffect, useRef, useState } from 'react'
@@ -23,6 +23,8 @@ const CAMERA_HOST =
   'https://cayley-relay.tailc7d6b6.ts.net'
 const FEED_STREAM = process.env.NEXT_PUBLIC_V3_FEED_STREAM || 'cayley-sub'
 const PLAYER_MODE = process.env.NEXT_PUBLIC_V3_PLAYER_MODE || 'webrtc,mse,mjpeg'
+const VIDEO_FIT = 'contain'
+const VIDEO_POSITION = 'center center'
 
 const NATIVE_PLAYER_URL =
   `${CAMERA_HOST}/stream.html` +
@@ -145,8 +147,8 @@ export default function FieldCameraFeed({ enabled = true }: { enabled?: boolean 
           video.muted = true
           video.autoplay = true
           video.playsInline = true
-          video.style.objectFit = 'cover'
-          video.style.objectPosition = 'center top'
+          video.style.objectFit = VIDEO_FIT
+          video.style.objectPosition = VIDEO_POSITION
 
           const markLive = () => {
             if (!disposed) setPhase('live')
@@ -256,8 +258,8 @@ export default function FieldCameraFeed({ enabled = true }: { enabled?: boolean 
         }
         .field-camera-player video {
           display: block !important;
-          object-fit: cover !important;
-          object-position: center top !important;
+          object-fit: contain !important;
+          object-position: center center !important;
           background: #000 !important;
         }
         .field-camera-player .info {
