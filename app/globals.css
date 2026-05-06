@@ -86,11 +86,16 @@ html {
   }
 }
 
-/* Marathon QR shrinks on small screens so the countdown column gets
- * back ~16px of width. Desktop stays at 104px. */
-.marathon-qr { width: 88px; height: 88px; }
-@media (min-width: 640px) {
-  .marathon-qr { width: 104px; height: 104px; }
+/* Keep the donate QR scannable without letting it invade the progress band. */
+.marathon-qr {
+  width: clamp(88px, 24vw, 112px);
+  height: clamp(88px, 24vw, 112px);
+}
+@media (min-width: 768px) {
+  .marathon-qr {
+    width: clamp(92px, 8vw, 116px);
+    height: clamp(92px, 8vw, 116px);
+  }
 }
 
 /* Honor iOS safe areas on the bento shell. Mobile-only — desktop keeps

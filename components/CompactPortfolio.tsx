@@ -17,14 +17,16 @@
  *      `/#section`. The deep-link `<a>` is still rendered as a fallback,
  *      but `onOpen` takes precedence when provided.
  *
- * Layout (1440×900 desktop, ~85vh of bento):
+ * Layout (1440×900 desktop, viewport-filling bento):
  *   ┌────────────┬─────────────────────────┬────────────┐
- *   │ identity   │ camera (16:9 hero)      │ solar      │
- *   ├────────────┴─────────────────────────┤            │
- *   │ experience          │ health         │            │
- *   ├─────────────────────┴────────────────┴────────────┤
- *   │ projects     │ marathon      │ contact            │
- *   └──────────────┴───────────────┴────────────────────┘
+ *   │ identity   │ camera                  │ solar      │
+ *   ├────────────┤                         │            │
+ *   │ health     │                         │            │
+ *   ├────────────┴──────────────┬──────────┴────────────┤
+ *   │ experience                │ marathon │ contact    │
+ *   ├───────────────────────────┤          │            │
+ *   │ projects                  │          │            │
+ *   └───────────────────────────┴──────────┴────────────┘
  *
  * Mobile: stacks vertically. Modal renders full-bleed-ish.
  */
@@ -192,26 +194,22 @@ function Bento({
 }) {
   return (
     <div
-      className="grid gap-3 md:gap-4 mt-4 md:mt-0 md:flex-1 md:min-h-0 [grid-auto-rows:auto] md:[grid-auto-rows:minmax(0,1fr)]"
+      className="grid gap-3 md:gap-4 mt-4 md:mt-0 md:flex-1 md:min-h-0 [grid-auto-rows:auto] md:grid-rows-4 md:[grid-auto-rows:minmax(0,1fr)]"
       style={{
         gridTemplateColumns: 'repeat(12, minmax(0, 1fr))',
       }}
     >
-      {/* Row 1: identity (3 cols) · camera (6 cols) · solar-or-projects (3 cols, spans 2 rows) */}
-      <div className="col-span-12 md:col-span-3">
+      {/* Camera now spans two rows. The feed is 4:3-ish, so height is the
+          clean fix; stretching the pixels was the wrong trade. */}
+      <div className="col-span-12 md:col-span-3 md:col-start-1 md:row-start-1">
         <IdentityTile onOpen={() => onOpen('about')} />
       </div>
 
-      {/* Wide tile (col 4–9): the source is 704x576, so this compact card uses
-          a fill presentation while expanded views keep the full-frame mode. */}
-      <div className="col-span-12 md:col-span-6">
+      <div className="col-span-12 md:col-span-6 md:col-start-4 md:row-start-1 md:row-span-2">
         <CameraTile enabled={cameraEnabled} onOpen={() => onOpen('live')} />
       </div>
 
-      {/* Tall tile (col 10–12, rows 1–2): Solar when live, MoreProjects
-          when stale. The tall slot has room for many projects, so the
-          long-tail of iOS apps lives here when the live data is down. */}
-      <div className="col-span-12 md:col-span-3 md:row-span-2">
+      <div className="col-span-12 md:col-span-3 md:col-start-10 md:row-start-1 md:row-span-2">
         <CrossfadeTile
           showLive={boardLive}
           live={<SolarTile onOpen={() => onOpen('live')} />}
@@ -219,15 +217,7 @@ function Bento({
         />
       </div>
 
-      {/* Row 2: experience (5 cols) · health-or-more-projects (4 cols) · solar/stats already spans into this row */}
-      <div className="col-span-12 md:col-span-5">
-        <ExperienceTile onOpen={() => onOpen('experience')} />
-      </div>
-      {/* Mid tile (col 6–9, row 2, single-row): Health when live, Education
-          when stale. Single-row slot is roughly square — fits the Texas
-          Tech mark + degree info comfortably without forcing long
-          vertical run. */}
-      <div className="col-span-12 md:col-span-4">
+      <div className="col-span-12 md:col-span-3 md:col-start-1 md:row-start-2">
         <CrossfadeTile
           showLive={boardLive}
           live={<HealthTile onOpen={() => onOpen('live')} />}
@@ -235,14 +225,16 @@ function Bento({
         />
       </div>
 
-      {/* Row 3 */}
-      <div className="col-span-12 md:col-span-5">
+      <div className="col-span-12 md:col-span-5 md:col-start-1 md:row-start-3">
+        <ExperienceTile onOpen={() => onOpen('experience')} />
+      </div>
+      <div className="col-span-12 md:col-span-5 md:col-start-1 md:row-start-4">
         <ProjectsTile onOpen={() => onOpen('projects')} />
       </div>
-      <div className="col-span-12 md:col-span-4">
+      <div className="col-span-12 md:col-span-4 md:col-start-6 md:row-start-3 md:row-span-2">
         <MarathonTile onOpen={() => onOpen('marathon')} />
       </div>
-      <div className="col-span-12 md:col-span-3">
+      <div className="col-span-12 md:col-span-3 md:col-start-10 md:row-start-3 md:row-span-2">
         <ContactTile onOpen={() => onOpen('contact')} />
       </div>
     </div>
@@ -498,7 +490,7 @@ function CameraTile({ enabled, onOpen }: { enabled: boolean; onOpen?: () => void
       deepLink="/#now"
       onOpen={onOpen}
       modalLabel="Open Field Live"
-      className="min-h-[170px] md:min-h-0"
+      className="min-h-[280px] md:min-h-0"
     >
       <div className="px-3 md:px-4 pt-2 md:pt-3 pb-3 md:pb-4 flex-1 min-h-0">
         <div
@@ -511,7 +503,7 @@ function CameraTile({ enabled, onOpen }: { enabled: boolean; onOpen?: () => void
               : '0 8px 24px rgba(0,0,0,0.4)',
           }}
         >
-          <FieldCameraFeed enabled={enabled} fit="fill" />
+          <FieldCameraFeed enabled={enabled} fit="cover" />
         </div>
       </div>
     </Tile>
@@ -1471,110 +1463,106 @@ function MarathonTile({ onOpen }: { onOpen?: () => void }) {
         }}
       />
 
-      <div className="relative z-10 px-5 md:px-6 pt-4 pb-4 md:pb-5 h-full grid gap-3 md:gap-4 grid-cols-[1fr_auto] grid-rows-[auto_1fr_auto] items-start">
-        {/* Top-left: TCS logo on white chip */}
-        <div
-          className="inline-flex items-center justify-center rounded-xl px-3 py-2 self-start justify-self-start"
-          style={{
-            background: '#fff',
-            boxShadow: '0 6px 18px rgba(0,0,0,0.18)',
-          }}
-        >
-          <Image
-            src="/images/tcs-marathon-logo.png"
-            alt="2026 TCS New York City Marathon"
-            width={140}
-            height={100}
-            className="h-14 md:h-16 w-auto object-contain"
-          />
-        </div>
-
-        {/* Top-right: date chip aligned with logo row */}
-        <div
-          className="text-[10px] font-bold uppercase tracking-[0.2em] px-2 py-1 rounded-full justify-self-end self-start"
-          style={{
-            background: isLight ? 'rgba(232,100,44,0.10)' : 'rgba(232,100,44,0.18)',
-            color: isLight ? '#c63d1f' : '#ff8a4a',
-            border: isLight ? '1px solid rgba(232,100,44,0.25)' : '1px solid rgba(232,100,44,0.35)',
-          }}
-        >
-          Nov 1, 2026
-        </div>
-
-        {/* Mid-left: countdown + cause line */}
-        <div className="flex flex-col">
-          <div className="flex items-baseline gap-2">
-            <span
-              aria-hidden="true"
-              className="inline-block w-2 h-2 rounded-full self-center"
-              style={{
-                background: '#E8642C',
-                boxShadow: '0 0 10px rgba(232,100,44,0.7)',
-                animation: 'fldMarathonPulse 1.8s ease-in-out infinite',
-              }}
-            />
-            <div
-              className="text-[40px] md:text-[52px] font-bold leading-none tracking-tight tabular-nums"
-              style={{ color: numberColor }}
-            >
-              {days ?? '—'}
-            </div>
-            <div
-              className="text-[12px] md:text-[13px] font-bold uppercase tracking-[0.22em] pb-1.5"
-              style={{ color: subtleText }}
-            >
-              Days
-            </div>
-          </div>
-          <div className="text-[11.5px] md:text-[12px] tracking-tight mt-2" style={{ color: subtleText }}>
-            Running for <span className="font-semibold" style={{ color: numberColor }}>Team for Kids</span> · NYRR
-          </div>
-        </div>
-
-        {/* Mid-right: physical QR code chip — scanner reticle around a white
-            tile holding the live NYRR donation QR. The QR is the donate
-            button: tap on desktop, scan on mobile. */}
-        <a
-          href="https://donations.nyrr.org/donations/new?fundraiser=624830c3c37aaaa441f8"
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="Scan or tap to donate"
-          className="relative z-10 row-span-2 self-start group"
-        >
+      <div className="relative z-10 px-5 md:px-6 pt-4 pb-4 md:pb-5 h-full flex flex-col gap-3 md:gap-4">
+        <div className="flex items-start justify-between gap-4">
           <div
-            className="marathon-qr relative rounded-xl p-2 transition-transform duration-300 group-hover:-translate-y-0.5"
+            className="inline-flex items-center justify-center rounded-xl px-3 py-2 self-start"
             style={{
               background: '#fff',
-              boxShadow:
-                '0 0 0 1.5px rgba(232,100,44,0.55), 0 8px 22px rgba(232,100,44,0.22), inset 0 1px 0 rgba(255,255,255,0.6)',
+              boxShadow: '0 6px 18px rgba(0,0,0,0.18)',
             }}
           >
             <Image
-              src="/images/nyrr-qr.png"
-              alt="Donation QR code"
-              fill
-              className="object-contain p-2"
-              sizes="(max-width: 639px) 88px, 104px"
+              src="/images/tcs-marathon-logo.png"
+              alt="2026 TCS New York City Marathon"
+              width={140}
+              height={100}
+              className="h-14 md:h-16 w-auto object-contain"
             />
-            {/* Scanner reticle corners — purely decorative */}
-            <span aria-hidden="true" className="absolute -top-[3px] -left-[3px] w-3 h-3 border-t-2 border-l-2 rounded-tl-md" style={{ borderColor: '#E8642C' }} />
-            <span aria-hidden="true" className="absolute -top-[3px] -right-[3px] w-3 h-3 border-t-2 border-r-2 rounded-tr-md" style={{ borderColor: '#E8642C' }} />
-            <span aria-hidden="true" className="absolute -bottom-[3px] -left-[3px] w-3 h-3 border-b-2 border-l-2 rounded-bl-md" style={{ borderColor: '#E8642C' }} />
-            <span aria-hidden="true" className="absolute -bottom-[3px] -right-[3px] w-3 h-3 border-b-2 border-r-2 rounded-br-md" style={{ borderColor: '#E8642C' }} />
           </div>
-          <div
-            className="mt-1.5 text-[9.5px] font-bold uppercase tracking-[0.2em] text-center inline-flex items-center justify-center gap-1 w-full"
-            style={{ color: isLight ? '#c63d1f' : '#ff8a4a' }}
-          >
-            Scan · Donate
-            <svg className="w-2.5 h-2.5 transition-transform duration-300 group-hover:translate-x-0.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
-          </div>
-        </a>
 
-        {/* Bottom-left (spans full bottom row): progress bar + amounts */}
-        <div className="col-span-2 self-end">
+          <div
+            className="text-[10px] font-bold uppercase tracking-[0.2em] px-2 py-1 rounded-full flex-shrink-0"
+            style={{
+              background: isLight ? 'rgba(232,100,44,0.10)' : 'rgba(232,100,44,0.18)',
+              color: isLight ? '#c63d1f' : '#ff8a4a',
+              border: isLight ? '1px solid rgba(232,100,44,0.25)' : '1px solid rgba(232,100,44,0.35)',
+            }}
+          >
+            Nov 1, 2026
+          </div>
+        </div>
+
+        <div className="flex-1 min-h-0 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 md:gap-5">
+          <div className="flex flex-col min-w-0">
+            <div className="flex items-baseline gap-2">
+              <span
+                aria-hidden="true"
+                className="inline-block w-2 h-2 rounded-full self-center flex-shrink-0"
+                style={{
+                  background: '#E8642C',
+                  boxShadow: '0 0 10px rgba(232,100,44,0.7)',
+                  animation: 'fldMarathonPulse 1.8s ease-in-out infinite',
+                }}
+              />
+              <div
+                className="text-[40px] md:text-[52px] font-bold leading-none tracking-tight tabular-nums"
+                style={{ color: numberColor }}
+              >
+                {days ?? '—'}
+              </div>
+              <div
+                className="text-[12px] md:text-[13px] font-bold uppercase tracking-[0.22em] pb-1.5"
+                style={{ color: subtleText }}
+              >
+                Days
+              </div>
+            </div>
+            <div className="text-[11.5px] md:text-[12px] tracking-tight mt-2" style={{ color: subtleText }}>
+              Running for <span className="font-semibold" style={{ color: numberColor }}>Team for Kids</span> · NYRR
+            </div>
+          </div>
+
+          <a
+            href="https://donations.nyrr.org/donations/new?fundraiser=624830c3c37aaaa441f8"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Scan or tap to donate"
+            className="relative z-10 self-start sm:self-center group flex-shrink-0"
+          >
+            <div
+              className="marathon-qr relative rounded-xl p-2 transition-transform duration-300 group-hover:-translate-y-0.5"
+              style={{
+                background: '#fff',
+                boxShadow:
+                  '0 0 0 1.5px rgba(232,100,44,0.55), 0 8px 22px rgba(232,100,44,0.22), inset 0 1px 0 rgba(255,255,255,0.6)',
+              }}
+            >
+              <Image
+                src="/images/nyrr-qr.png"
+                alt="Donation QR code"
+                fill
+                className="object-contain p-2"
+                sizes="(max-width: 639px) 88px, 116px"
+              />
+              <span aria-hidden="true" className="absolute -top-[3px] -left-[3px] w-3 h-3 border-t-2 border-l-2 rounded-tl-md" style={{ borderColor: '#E8642C' }} />
+              <span aria-hidden="true" className="absolute -top-[3px] -right-[3px] w-3 h-3 border-t-2 border-r-2 rounded-tr-md" style={{ borderColor: '#E8642C' }} />
+              <span aria-hidden="true" className="absolute -bottom-[3px] -left-[3px] w-3 h-3 border-b-2 border-l-2 rounded-bl-md" style={{ borderColor: '#E8642C' }} />
+              <span aria-hidden="true" className="absolute -bottom-[3px] -right-[3px] w-3 h-3 border-b-2 border-r-2 rounded-br-md" style={{ borderColor: '#E8642C' }} />
+            </div>
+            <div
+              className="mt-1.5 text-[9.5px] font-bold uppercase tracking-[0.2em] text-center inline-flex items-center justify-center gap-1 w-full"
+              style={{ color: isLight ? '#c63d1f' : '#ff8a4a' }}
+            >
+              Scan · Donate
+              <svg className="w-2.5 h-2.5 transition-transform duration-300 group-hover:translate-x-0.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+          </a>
+        </div>
+
+        <div className="pt-1 md:pt-2 mt-auto">
           <div className="h-2.5 w-full rounded-full overflow-hidden" style={{ background: palette.trackBackground }}>
             <div
               className="h-full rounded-full relative overflow-hidden"
