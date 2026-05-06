@@ -23,6 +23,9 @@ const CAMERA_HOST =
   'https://cayley-relay.tailc7d6b6.ts.net'
 const FEED_STREAM = process.env.NEXT_PUBLIC_V3_FEED_STREAM || 'cayley-sub'
 const PLAYER_MODE = process.env.NEXT_PUBLIC_V3_PLAYER_MODE || 'webrtc,mse,mjpeg'
+const ENCODER_FPS = 10
+const ENCODER_CODEC = 'H.264'
+const ENCODER_MAX_KBPS = 512
 
 const NATIVE_PLAYER_URL =
   `${CAMERA_HOST}/stream.html` +
@@ -35,6 +38,38 @@ const LOAD_TIMEOUT_MS = 10_000
 
 type Phase = 'paused' | 'connecting' | 'live' | 'offline'
 type VideoFit = 'contain' | 'cover' | 'fill'
+
+type CameraHealthOverlay = {
+  batteryVoltage?: number
+  cameraState?: string
+  outputSize?: string
+  performanceScore?: number
+  solarPower?: number
+  tempC?: number
+}
+
+type HealthPayload = {
+  system?: {
+    cpu_temp_c?: number
+    media_graph?: {
+      output_size?: string
+      state?: string
+      visual_quality?: string
+      working?: boolean
+    }
+    performance?: {
+      score?: number
+      status?: string
+    }
+  }
+}
+
+type SolarPayload = {
+  battery_voltage?: number
+  live?: boolean
+  solar_power?: number
+  stale?: boolean
+}
 
 type Go2RTCPlayerElement = HTMLElement & {
   background: boolean
@@ -64,6 +99,7 @@ export default function FieldCameraFeed({
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
   const debugMode = useDebugFlag()
+  const overlay = useCameraHealthOverlay()
   const containerRef = useRef<HTMLDivElement>(null)
   const mountRef = useRef<HTMLDivElement>(null)
 
@@ -235,6 +271,7 @@ export default function FieldCameraFeed({
       )}
 
       {debugMode && <DevHUD phase={phase} />}
+      {phase === 'live' && <CameraSpecsOverlay data={overlay} />}
 
       <a
         href={NATIVE_PLAYER_URL}
@@ -280,6 +317,114 @@ export default function FieldCameraFeed({
           display: none !important;
         }
       `}</style>
+    </div>
+  )
+}
+
+function useCameraHealthOverlay(): CameraHealthOverlay {
+  const [overlay, setOverlay] = useState<CameraHealthOverlay>({})
+
+  useEffect(() => {
+    let cancelled = false
+    let timer: ReturnType<typeof setTimeout> | null = null
+
+    const tick = async () => {
+      const next: CameraHealthOverlay = {}
+
+      try {
+        const healthRes = await fetch('/api/v3/health', { cache: 'no-store' })
+        if (healthRes.ok) {
+          const health = (await healthRes.json()) as HealthPayload
+          const media = health.system?.media_graph
+          next.outputSize = media?.output_size
+          next.cameraState = media?.working
+            ? media.visual_quality === 'calibrated'
+              ? 'calibrated'
+              : media.state || 'working'
+            : media?.state
+          next.performanceScore = health.system?.performance?.score
+          next.tempC = health.system?.cpu_temp_c
+        }
+      } catch {
+        // Overlay is informational only; never affect video playback.
+      }
+
+      try {
+        const solarRes = await fetch('/api/v3/solar', { cache: 'no-store' })
+        if (solarRes.ok) {
+          const solar = (await solarRes.json()) as SolarPayload
+          if (solar.live !== false && solar.stale !== true) {
+            next.solarPower = solar.solar_power
+            next.batteryVoltage = solar.battery_voltage
+          }
+        }
+      } catch {
+        // Same as health: keep the last known render quiet on fetch failure.
+      }
+
+      if (!cancelled) {
+        setOverlay(next)
+        timer = setTimeout(tick, 20_000)
+      }
+    }
+
+    tick()
+    return () => {
+      cancelled = true
+      if (timer) clearTimeout(timer)
+    }
+  }, [])
+
+  return overlay
+}
+
+function CameraSpecsOverlay({ data }: { data: CameraHealthOverlay }) {
+  const output = data.outputSize || '704x576'
+  const score = typeof data.performanceScore === 'number' ? `${Math.round(data.performanceScore)}/100` : null
+  const temp = typeof data.tempC === 'number' ? `${Math.round(data.tempC)}°C` : null
+  const solar = typeof data.solarPower === 'number' ? `${Math.round(data.solarPower)}W` : null
+  const battery = typeof data.batteryVoltage === 'number' ? `${data.batteryVoltage.toFixed(2)}V` : null
+  const camera = data.cameraState || 'calibrated'
+
+  return (
+    <div
+      className="pointer-events-none absolute top-3 right-3 hidden sm:flex flex-col items-end gap-1 text-[9px] font-semibold uppercase tracking-[0.16em]"
+      style={{ color: '#fff' }}
+    >
+      <div
+        className="px-2.5 py-1 rounded-full"
+        style={{
+          background: 'rgba(0,0,0,0.58)',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+        }}
+      >
+        {output} · {ENCODER_FPS}fps · {ENCODER_CODEC} · {ENCODER_MAX_KBPS}kbps
+      </div>
+      <div
+        className="px-2.5 py-1 rounded-full opacity-80"
+        style={{
+          background: 'rgba(0,0,0,0.46)',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+        }}
+      >
+        {camera}
+        {score && ` · score ${score}`}
+        {temp && ` · ${temp}`}
+      </div>
+      {(solar || battery) && (
+        <div
+          className="px-2.5 py-1 rounded-full opacity-75"
+          style={{
+            background: 'rgba(0,0,0,0.42)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+          }}
+        >
+          {[solar, battery].filter(Boolean).join(' · ')}
+        </div>
+      )}
     </div>
   )
 }
