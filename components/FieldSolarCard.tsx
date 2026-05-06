@@ -35,6 +35,7 @@ type Solar = {
 }
 
 type CardState = 'loading' | 'live' | 'stale' | 'no-telemetry' | 'offline'
+type SolarCardVariant = 'default' | 'compact'
 
 function fmtAge(seconds: number): string {
   const s = Math.max(0, Math.floor(seconds))
@@ -69,9 +70,14 @@ function calcSOC(bv: number, loadA = 0, chargeA = 0): number {
 
 const SPARK_MAX = 60 // 60 samples × 30s ≈ 30 minutes of session history
 
-export default function FieldSolarCard() {
+export default function FieldSolarCard({
+  variant = 'default',
+}: {
+  variant?: SolarCardVariant
+}) {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
+  const compact = variant === 'compact'
 
   const [solar, setSolar] = useState<Solar | null>(null)
   const [state, setState] = useState<CardState>('loading')
@@ -143,10 +149,19 @@ export default function FieldSolarCard() {
   const hasValues = (state === 'live' || state === 'stale') && solar != null
   const live = state === 'live' && solar != null
   const valueColor = isLight ? '#1c1a1c' : '#fff'
+  const statusLabel = live
+    ? 'live'
+    : state === 'stale'
+      ? 'stale'
+      : state === 'loading'
+        ? 'connecting'
+        : state === 'no-telemetry'
+          ? 'waiting'
+          : 'offline'
 
   return (
     <div
-      className="relative rounded-2xl p-7 md:p-8 h-full flex flex-col overflow-hidden"
+      className={`relative rounded-2xl h-full flex flex-col overflow-hidden ${compact ? 'p-5 md:p-6' : 'p-7 md:p-8'}`}
       style={{
         background: palette.cardBackground,
         border: palette.cardBorder,
@@ -165,17 +180,39 @@ export default function FieldSolarCard() {
         }}
       />
 
-      <div
-        className="text-[10.5px] font-semibold uppercase tracking-[0.22em] mb-5"
-        style={{ color: isLight ? '#b45309' : 'rgba(252, 211, 77, 0.9)' /* amber-300/90 */ }}
-      >
-        Solar
+      <div className={`flex items-center justify-between gap-3 ${compact ? 'mb-4' : 'mb-5'}`}>
+        <div
+          className={`${compact ? 'text-[10px]' : 'text-[10.5px]'} font-semibold uppercase tracking-[0.22em]`}
+          style={{ color: isLight ? '#b45309' : 'rgba(252, 211, 77, 0.9)' /* amber-300/90 */ }}
+        >
+          Solar
+        </div>
+        {compact && (
+          <div
+            className="rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.18em]"
+            style={{
+              color: live
+                ? (isLight ? '#0f9d4f' : '#86efac')
+                : state === 'stale'
+                  ? (isLight ? '#b45309' : '#fcd34d')
+                  : palette.mutedText,
+              background: live
+                ? (isLight ? 'rgba(15,157,79,0.08)' : 'rgba(134,239,172,0.10)')
+                : state === 'stale'
+                  ? (isLight ? 'rgba(180,83,9,0.10)' : 'rgba(252,211,77,0.12)')
+                  : (isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.06)'),
+              border: palette.cardBorder,
+            }}
+          >
+            {statusLabel}
+          </div>
+        )}
       </div>
 
       {/* Hero number — battery voltage */}
       <div className="flex items-baseline gap-2 mb-1">
         <div
-          className="text-[56px] sm:text-[68px] font-semibold leading-none tracking-tight tabular-nums"
+          className={`${compact ? 'text-[54px] md:text-[58px]' : 'text-[56px] sm:text-[68px]'} font-semibold leading-none tracking-tight tabular-nums`}
           style={{
             // backgroundImage longhand — `background:` shorthand resets
             // background-clip back to default and the gradient renders as
@@ -189,14 +226,14 @@ export default function FieldSolarCard() {
           {hasValues ? solar.battery_voltage.toFixed(2) : '—'}
         </div>
         <div
-          className="text-[20px] sm:text-[24px] font-medium tracking-tight"
+          className={`${compact ? 'text-[20px]' : 'text-[20px] sm:text-[24px]'} font-medium tracking-tight`}
           style={{ color: palette.mutedText }}
         >
           V
         </div>
       </div>
       <div
-        className="text-[13px] tracking-tight mb-6 flex items-center gap-2"
+        className={`${compact ? 'text-[12px] mb-4' : 'text-[13px] mb-6'} tracking-tight flex items-center gap-2`}
         style={{ color: palette.bodyText, minHeight: '1.25rem' }}
       >
         {hasValues ? (
@@ -240,7 +277,7 @@ export default function FieldSolarCard() {
       </div>
 
       {/* SOC bar — bigger, with depth */}
-      <div className="relative mb-7">
+      <div className={`relative ${compact ? 'mb-5' : 'mb-7'}`}>
         <div
           className="h-2.5 w-full rounded-full overflow-hidden"
           style={{ background: palette.trackBackground }}
@@ -258,16 +295,16 @@ export default function FieldSolarCard() {
       </div>
 
       {/* Two secondary stats */}
-      <div className="grid grid-cols-2 gap-6 mb-5">
+      <div className={`grid grid-cols-2 ${compact ? 'gap-4 mb-4' : 'gap-6 mb-5'}`}>
         <div>
           <div
-            className="text-[10px] uppercase tracking-[0.18em] font-medium"
+            className={`${compact ? 'text-[9px]' : 'text-[10px]'} uppercase tracking-[0.18em] font-medium`}
             style={{ color: palette.mutedText }}
           >
             Solar in
           </div>
           <div
-            className="text-[26px] sm:text-[28px] font-semibold tracking-tight tabular-nums mt-1"
+            className={`${compact ? 'text-[24px]' : 'text-[26px] sm:text-[28px]'} font-semibold tracking-tight tabular-nums mt-1`}
             style={{
               color: hasValues && solar.solar_power > 0
                 ? (isLight ? '#c2410c' : '#ffb84d')
@@ -281,13 +318,13 @@ export default function FieldSolarCard() {
         </div>
         <div>
           <div
-            className="text-[10px] uppercase tracking-[0.18em] font-medium"
+            className={`${compact ? 'text-[9px]' : 'text-[10px]'} uppercase tracking-[0.18em] font-medium`}
             style={{ color: palette.mutedText }}
           >
             Yield today
           </div>
           <div
-            className="text-[26px] sm:text-[28px] font-semibold tracking-tight tabular-nums mt-1"
+            className={`${compact ? 'text-[24px]' : 'text-[26px] sm:text-[28px]'} font-semibold tracking-tight tabular-nums mt-1`}
             style={{ color: valueColor, opacity: state === 'stale' ? 0.7 : 1 }}
           >
             {hasValues ? solar.yield_today : '—'}
@@ -298,12 +335,20 @@ export default function FieldSolarCard() {
 
       {/* Session sparkline */}
       <div
-        className="mt-auto pt-4 border-t"
-        style={{ borderColor: palette.hairline }}
+        className={compact
+          ? 'mt-2 rounded-xl border p-3 flex-1 min-h-[96px] flex flex-col justify-end'
+          : 'mt-auto pt-4 border-t'
+        }
+        style={{
+          borderColor: compact ? (isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)') : palette.hairline,
+          background: compact
+            ? (isLight ? 'rgba(255,255,255,0.36)' : 'rgba(255,255,255,0.025)')
+            : undefined,
+        }}
       >
         <div className="flex items-center justify-between mb-2">
           <div
-            className="text-[10px] uppercase tracking-[0.18em] font-medium"
+            className={`${compact ? 'text-[9px]' : 'text-[10px]'} uppercase tracking-[0.18em] font-medium`}
             style={{ color: palette.mutedText }}
           >
             Solar input
@@ -315,7 +360,7 @@ export default function FieldSolarCard() {
             session
           </div>
         </div>
-        <Sparkline data={spark} isLight={isLight} />
+        <Sparkline data={spark} isLight={isLight} className={compact ? 'w-full h-full min-h-[56px]' : 'w-full h-9'} />
       </div>
 
       <style jsx global>{`
@@ -328,7 +373,15 @@ export default function FieldSolarCard() {
   )
 }
 
-function Sparkline({ data, isLight }: { data: number[]; isLight: boolean }) {
+function Sparkline({
+  data,
+  isLight,
+  className = 'w-full h-9',
+}: {
+  data: number[]
+  isLight: boolean
+  className?: string
+}) {
   const W = 280
   const H = 36
   const strokeColor = isLight ? '#c2410c' : '#ffb84d'
@@ -336,7 +389,7 @@ function Sparkline({ data, isLight }: { data: number[]; isLight: boolean }) {
 
   if (data.length < 2) {
     return (
-      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="w-full h-9">
+      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className={className}>
         <line x1="0" y1={H - 1} x2={W} y2={H - 1} stroke={baselineColor} strokeWidth="1" />
       </svg>
     )
@@ -350,7 +403,7 @@ function Sparkline({ data, isLight }: { data: number[]; isLight: boolean }) {
   }).join(' ')
   const areaPoints = `0,${H} ${points} ${W},${H}`
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="w-full h-9" aria-hidden="true">
+    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className={className} aria-hidden="true">
       <defs>
         <linearGradient id="solarSparkArea" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={isLight ? 'rgba(194,65,12,0.30)' : 'rgba(255,184,77,0.4)'} />

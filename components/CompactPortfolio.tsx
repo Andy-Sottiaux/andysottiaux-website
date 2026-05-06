@@ -525,7 +525,7 @@ function SolarTile({ onOpen }: { onOpen?: () => void }) {
         aria-label="Open Field Live"
         className="block w-full h-full min-h-[360px] md:min-h-0 [&>div]:h-full hover:scale-[1.005] transition-transform duration-300 text-left"
       >
-        <FieldSolarCard />
+        <FieldSolarCard variant="compact" />
       </button>
     )
   }
@@ -535,7 +535,7 @@ function SolarTile({ onOpen }: { onOpen?: () => void }) {
       aria-label="Open Field Live on the full site"
       className="block h-full min-h-[360px] md:min-h-0 [&>div]:h-full hover:scale-[1.005] transition-transform duration-300"
     >
-      <FieldSolarCard />
+      <FieldSolarCard variant="compact" />
     </a>
   )
 }
@@ -552,7 +552,7 @@ function HealthTile({ onOpen }: { onOpen?: () => void }) {
         aria-label="Open Field Live"
         className="block w-full h-full min-h-[260px] md:min-h-0 [&>div]:h-full hover:scale-[1.005] transition-transform duration-300 text-left"
       >
-        <FieldHealthCard />
+        <FieldHealthCard variant="compact" />
       </button>
     )
   }
@@ -562,7 +562,7 @@ function HealthTile({ onOpen }: { onOpen?: () => void }) {
       aria-label="Open Field Live on the full site"
       className="block h-full min-h-[260px] md:min-h-0 [&>div]:h-full hover:scale-[1.005] transition-transform duration-300"
     >
-      <FieldHealthCard />
+      <FieldHealthCard variant="compact" />
     </a>
   )
 }

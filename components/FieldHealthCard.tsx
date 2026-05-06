@@ -59,6 +59,8 @@ type HealthDigest = {
   system?: SystemLoose
 }
 
+type HealthCardVariant = 'default' | 'compact'
+
 function fmtUptime(s: number): string {
   if (s < 60) return `${Math.floor(s)}s`
   if (s < 3600) return `${Math.floor(s / 60)} min`
@@ -81,9 +83,14 @@ function fmtAge(ms: number): string {
   return `${h}h ago`
 }
 
-export default function FieldHealthCard() {
+export default function FieldHealthCard({
+  variant = 'default',
+}: {
+  variant?: HealthCardVariant
+}) {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
+  const compact = variant === 'compact'
 
   const [digest, setDigest] = useState<HealthDigest | null>(null)
   // Tri-state: 'connecting' until the first poll resolves, then 'online'
@@ -194,7 +201,7 @@ export default function FieldHealthCard() {
 
   return (
     <div
-      className="relative rounded-2xl p-7 md:p-8 h-full flex flex-col overflow-hidden"
+      className={`relative rounded-2xl h-full flex flex-col overflow-hidden ${compact ? 'p-5 md:p-6' : 'p-7 md:p-8'}`}
       style={{
         background: palette.cardBackground,
         border: palette.cardBorder,
@@ -218,14 +225,14 @@ export default function FieldHealthCard() {
       />
 
       <div
-        className="text-[10.5px] font-semibold uppercase tracking-[0.22em] mb-5"
+        className={`${compact ? 'text-[10px] mb-3' : 'text-[10.5px] mb-5'} font-semibold uppercase tracking-[0.22em]`}
         style={{ color: isLight ? '#0f9d4f' : 'rgba(74, 222, 128, 0.9)' }}
       >
         Health
       </div>
 
-      <div className="flex items-center gap-3 mb-6">
-        <span className="relative flex h-3 w-3" aria-hidden="true">
+      <div className={`flex items-center gap-3 ${compact ? 'mb-4' : 'mb-6'}`}>
+        <span className={`relative flex ${compact ? 'h-2.5 w-2.5' : 'h-3 w-3'}`} aria-hidden="true">
           <span
             className="absolute inline-flex h-full w-full rounded-full"
             style={{
@@ -237,7 +244,7 @@ export default function FieldHealthCard() {
             }}
           />
           <span
-            className="relative inline-flex h-3 w-3 rounded-full"
+            className={`relative inline-flex rounded-full ${compact ? 'h-2.5 w-2.5' : 'h-3 w-3'}`}
             style={{
               background: dotColor,
               boxShadow: dotGlow,
@@ -245,7 +252,7 @@ export default function FieldHealthCard() {
           />
         </span>
         <div
-          className="text-[34px] sm:text-[40px] font-semibold leading-none tracking-tight"
+          className={`${compact ? 'text-[34px]' : 'text-[34px] sm:text-[40px]'} font-semibold leading-none tracking-tight`}
           style={{
             // backgroundImage (longhand) — using `background:` shorthand
             // resets background-clip back to its default, leaving the
@@ -263,7 +270,7 @@ export default function FieldHealthCard() {
 
       {degraded && digest && (
         <div
-          className="text-[11px] tracking-tight mb-4 -mt-2"
+          className={`${compact ? 'text-[10.5px] mb-3 -mt-2 truncate' : 'text-[11px] mb-4 -mt-2'} tracking-tight`}
           style={{
             color: isLight ? '#b45309' : '#fcd34d',
             opacity: 0.9,
@@ -274,16 +281,16 @@ export default function FieldHealthCard() {
         </div>
       )}
 
-      <dl className="grid grid-cols-2 gap-x-6 gap-y-4 mt-auto">
+      <dl className={`grid grid-cols-2 mt-auto ${compact ? 'gap-x-4 gap-y-3' : 'gap-x-6 gap-y-4'}`}>
         <div>
           <dt
-            className="text-[10px] uppercase tracking-[0.18em] font-medium"
+            className={`${compact ? 'text-[9px]' : 'text-[10px]'} uppercase tracking-[0.18em] font-medium`}
             style={{ color: palette.mutedText }}
           >
             Uptime
           </dt>
           <dd
-            className="text-[20px] sm:text-[22px] font-semibold tracking-tight tabular-nums mt-1"
+            className={`${compact ? 'text-[18px] md:text-[19px]' : 'text-[20px] sm:text-[22px]'} font-semibold tracking-tight tabular-nums mt-1`}
             style={{ color: valueColor }}
           >
             {digest ? fmtUptime(digest.uptimeSec) : (lastOk ? fmtUptime(lastOk.uptimeSec) : '—')}
@@ -291,13 +298,13 @@ export default function FieldHealthCard() {
         </div>
         <div>
           <dt
-            className="text-[10px] uppercase tracking-[0.18em] font-medium"
+            className={`${compact ? 'text-[9px]' : 'text-[10px]'} uppercase tracking-[0.18em] font-medium`}
             style={{ color: palette.mutedText }}
           >
             Services
           </dt>
           <dd
-            className="text-[20px] sm:text-[22px] font-semibold tracking-tight tabular-nums mt-1"
+            className={`${compact ? 'text-[18px] md:text-[19px]' : 'text-[20px] sm:text-[22px]'} font-semibold tracking-tight tabular-nums mt-1`}
             style={{ color: valueColor }}
           >
             {digest
@@ -307,13 +314,13 @@ export default function FieldHealthCard() {
         </div>
         <div>
           <dt
-            className="text-[10px] uppercase tracking-[0.18em] font-medium"
+            className={`${compact ? 'text-[9px]' : 'text-[10px]'} uppercase tracking-[0.18em] font-medium`}
             style={{ color: palette.mutedText }}
           >
             Round-trip
           </dt>
           <dd
-            className="text-[20px] sm:text-[22px] font-semibold tracking-tight tabular-nums mt-1"
+            className={`${compact ? 'text-[18px] md:text-[19px]' : 'text-[20px] sm:text-[22px]'} font-semibold tracking-tight tabular-nums mt-1`}
             style={{ color: valueColor }}
           >
             {digest ? `${digest.rttMs} ms` : (online ? '—' : '—')}
@@ -321,13 +328,13 @@ export default function FieldHealthCard() {
         </div>
         <div>
           <dt
-            className="text-[10px] uppercase tracking-[0.18em] font-medium"
+            className={`${compact ? 'text-[9px]' : 'text-[10px]'} uppercase tracking-[0.18em] font-medium`}
             style={{ color: palette.mutedText }}
           >
             Last seen
           </dt>
           <dd
-            className="text-[20px] sm:text-[22px] font-semibold tracking-tight mt-1"
+            className={`${compact ? 'text-[18px] md:text-[19px]' : 'text-[20px] sm:text-[22px]'} font-semibold tracking-tight mt-1`}
             style={{ color: valueColor }}
           >
             {digest ? 'just now' : (lastOk ? fmtAge(Date.now() - lastOk.fetchedAt) : '—')}
@@ -337,7 +344,7 @@ export default function FieldHealthCard() {
 
       {sys && (
         <div
-          className="mt-4 pt-3 border-t flex flex-wrap gap-x-4 gap-y-1 text-[11px] tabular-nums"
+          className={`${compact ? 'mt-3 pt-2 gap-x-3 text-[10px]' : 'mt-4 pt-3 gap-x-4 text-[11px]'} border-t flex flex-wrap gap-y-1 tabular-nums`}
           style={{
             borderColor: palette.hairline,
             color: palette.mutedText,
