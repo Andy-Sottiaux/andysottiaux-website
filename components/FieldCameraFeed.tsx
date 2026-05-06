@@ -18,14 +18,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { useFieldTheme } from './fieldTheme'
 
-const FUNNEL_HOST =
-  process.env.NEXT_PUBLIC_V3_FUNNEL_HOST ||
-  'https://cayley-v3-cam-1.tailc7d6b6.ts.net'
+const CAMERA_HOST =
+  process.env.NEXT_PUBLIC_V3_CAMERA_HOST ||
+  'https://cayley-relay.tailc7d6b6.ts.net'
 const FEED_STREAM = process.env.NEXT_PUBLIC_V3_FEED_STREAM || 'cayley-sub'
 const PLAYER_MODE = process.env.NEXT_PUBLIC_V3_PLAYER_MODE || 'mse'
 
 const NATIVE_PLAYER_URL =
-  `${FUNNEL_HOST}/stream.html` +
+  `${CAMERA_HOST}/stream.html` +
   `?src=${encodeURIComponent(FEED_STREAM)}` +
   `&mode=${encodeURIComponent(PLAYER_MODE)}` +
   '&background=false' +
@@ -277,7 +277,7 @@ function loadVideoStreamScript(): Promise<void> {
     const script = document.createElement('script')
     script.type = 'module'
     script.crossOrigin = 'anonymous'
-    script.src = `${FUNNEL_HOST}/video-stream.js`
+    script.src = `${CAMERA_HOST}/video-stream.js`
     script.onload = () => {
       window.customElements.whenDefined('video-stream').then(() => resolve(), reject)
     }
@@ -292,7 +292,7 @@ function loadVideoStreamScript(): Promise<void> {
 }
 
 function playerWsUrl(reloadNonce: number): URL {
-  const url = new URL('/api/ws', FUNNEL_HOST)
+  const url = new URL('/api/ws', CAMERA_HOST)
   url.searchParams.set('src', FEED_STREAM)
   url.searchParams.set('_', String(reloadNonce))
   return url
