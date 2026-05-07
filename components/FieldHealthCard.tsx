@@ -419,14 +419,14 @@ export default function FieldHealthCard({
             borderColor: palette.hairline,
             color: palette.mutedText,
           }}
-          aria-label={`Uptime ${uptimeText}, checked ${checkedText}, Tailnet ${tailnetText}`}
+          aria-label={`Uptime ${uptimeText}, SoC temperature ${thermalLabel}, Tailnet ${tailnetText}`}
         >
           <span className="min-w-0 truncate">
             <span style={{ color: palette.mutedText }}>up </span>
             <span style={{ color: valueColor }}>{uptimeText}</span>
           </span>
-          <span className="min-w-0 truncate" style={{ color: valueColor }}>
-            {checkedText}
+          <span className="min-w-0 truncate" style={{ color: thermalColor }}>
+            SoC {thermalLabel}
           </span>
           <span className="min-w-0 truncate" style={{ color: tailnetColor }}>
             {tailnetText}
