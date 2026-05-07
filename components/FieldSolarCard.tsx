@@ -405,7 +405,7 @@ export default function FieldSolarCard({
               <Sparkline
                 data={solarHistory}
                 isLight={isLight}
-                className="w-full flex-1 min-h-[76px]"
+                className="w-full flex-1 min-h-[76px] max-h-[128px] self-center"
                 gradientId="solarSparkAreaCompact"
                 tone="solar"
               />
@@ -435,7 +435,7 @@ export default function FieldSolarCard({
               <Sparkline
                 data={voltageHistory}
                 isLight={isLight}
-                className="w-full flex-1 min-h-[76px]"
+                className="w-full flex-1 min-h-[76px] max-h-[128px] self-center"
                 gradientId="voltageSparkAreaCompact"
                 tone="battery"
               />
@@ -586,7 +586,7 @@ function Sparkline({
 
   if (data.length < 2) {
     return (
-      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className={className}>
+      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet" className={className}>
         <line x1={PAD_L} y1={PAD_T + innerH} x2={W - PAD_R} y2={PAD_T + innerH} stroke={baselineColor} strokeWidth="1" />
       </svg>
     )
@@ -616,7 +616,7 @@ function Sparkline({
   const currentY = yFor(current)
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className={className} aria-hidden="true">
+    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet" className={className} aria-hidden="true">
       <defs>
         <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={areaTop} />
