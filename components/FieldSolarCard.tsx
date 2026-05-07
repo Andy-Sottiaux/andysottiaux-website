@@ -19,6 +19,7 @@ const SOLAR_HISTORY_URL = '/api/v3/solar/history'
 
 type Solar = {
   battery_voltage: number
+  battery_soc?: number
   charging_current: number
   solar_power: number
   yield_today: number
@@ -54,22 +55,22 @@ function fmtAge(seconds: number): string {
   return `${Math.floor(h / 24)}d ago`
 }
 
-// 4S LiFePO4 OCV → SOC, with internal-resistance compensation.
-function calcSOC(bv: number, loadA = 0, chargeA = 0): number {
-  const ocv = bv + (loadA * 0.025) - (Math.max(0, chargeA) * 0.025)
+// Fallback 4S LiFePO4 SOC curve. The relay publishes battery_soc using the
+// same Pi dashboard formula; keep this as a client-side fallback only.
+function calcSOC(bv: number, chargeA = 0): number {
+  const ocv = bv - chargeA * 0.03
   const table: [number, number][] = [
-    [14.4, 100], [13.6, 99], [13.4, 95], [13.35, 90],
-    [13.3, 80], [13.25, 70], [13.2, 60], [13.15, 50],
-    [13.1, 40], [13.05, 30], [13.0, 25], [12.9, 20],
-    [12.8, 15], [12.5, 10], [12.0, 7], [11.5, 4], [11.0, 0],
+    [10.0, 0], [12.5, 9], [12.7, 14], [12.8, 17],
+    [12.9, 20], [13.0, 30], [13.1, 40], [13.2, 70],
+    [13.3, 90], [13.4, 99], [13.6, 100],
   ]
-  if (ocv >= table[0][0]) return 100
-  if (ocv <= table[table.length - 1][0]) return 0
+  if (ocv <= table[0][0]) return 0
+  if (ocv >= table[table.length - 1][0]) return 100
   for (let i = 0; i < table.length - 1; i++) {
-    if (ocv >= table[i + 1][0]) {
-      const range = table[i][0] - table[i + 1][0]
-      const frac = (ocv - table[i + 1][0]) / range
-      return Math.round(table[i + 1][1] + frac * (table[i][1] - table[i + 1][1]))
+    if (ocv >= table[i][0] && ocv <= table[i + 1][0]) {
+      const range = table[i + 1][0] - table[i][0]
+      const frac = (ocv - table[i][0]) / range
+      return Math.round(table[i][1] + frac * (table[i + 1][1] - table[i][1]))
     }
   }
   return 0
@@ -167,7 +168,11 @@ export default function FieldSolarCard({
     }
   }, [])
 
-  const soc = solar ? calcSOC(solar.battery_voltage, solar.load_current, solar.charging_current) : null
+  const soc = solar
+    ? Math.round(typeof solar.battery_soc === 'number'
+      ? solar.battery_soc
+      : calcSOC(solar.battery_voltage, solar.charging_current))
+    : null
   // Display values whenever we have a reading at all, fresh or stale.
   // Only "no-telemetry" / "offline" / "loading" hide the numbers.
   const hasValues = (state === 'live' || state === 'stale') && solar != null
@@ -321,8 +326,8 @@ export default function FieldSolarCard({
         </div>
       </div>
 
-      {/* Two secondary stats */}
-      <div className={`grid grid-cols-2 ${compact ? 'gap-4 mb-4' : 'gap-6 mb-5'}`}>
+      {/* Secondary stats */}
+      <div className={`grid grid-cols-3 ${compact ? 'gap-3 mb-4' : 'gap-5 mb-5'}`}>
         <div>
           <div
             className={`${compact ? 'text-[9px]' : 'text-[10px]'} uppercase tracking-[0.18em] font-medium`}
@@ -331,7 +336,7 @@ export default function FieldSolarCard({
             Solar in
           </div>
           <div
-            className={`${compact ? 'text-[24px]' : 'text-[26px] sm:text-[28px]'} font-semibold tracking-tight tabular-nums mt-1`}
+            className={`${compact ? 'text-[20px]' : 'text-[24px] sm:text-[26px]'} font-semibold tracking-tight tabular-nums mt-1`}
             style={{
               color: hasValues && solar.solar_power > 0
                 ? (isLight ? '#c2410c' : '#ffb84d')
@@ -340,7 +345,22 @@ export default function FieldSolarCard({
             }}
           >
             {hasValues ? Math.round(solar.solar_power) : '—'}
-            <span className="text-[14px] font-medium ml-1" style={{ color: palette.mutedText }}>W</span>
+            <span className="text-[12px] font-medium ml-1" style={{ color: palette.mutedText }}>W</span>
+          </div>
+        </div>
+        <div>
+          <div
+            className={`${compact ? 'text-[9px]' : 'text-[10px]'} uppercase tracking-[0.18em] font-medium`}
+            style={{ color: palette.mutedText }}
+          >
+            Load
+          </div>
+          <div
+            className={`${compact ? 'text-[20px]' : 'text-[24px] sm:text-[26px]'} font-semibold tracking-tight tabular-nums mt-1`}
+            style={{ color: valueColor, opacity: state === 'stale' ? 0.7 : 1 }}
+          >
+            {hasValues ? solar.load_current.toFixed(1) : '—'}
+            <span className="text-[12px] font-medium ml-1" style={{ color: palette.mutedText }}>A</span>
           </div>
         </div>
         <div>
@@ -351,11 +371,11 @@ export default function FieldSolarCard({
             Yield today
           </div>
           <div
-            className={`${compact ? 'text-[24px]' : 'text-[26px] sm:text-[28px]'} font-semibold tracking-tight tabular-nums mt-1`}
+            className={`${compact ? 'text-[20px]' : 'text-[24px] sm:text-[26px]'} font-semibold tracking-tight tabular-nums mt-1`}
             style={{ color: valueColor, opacity: state === 'stale' ? 0.7 : 1 }}
           >
             {hasValues ? solar.yield_today : '—'}
-            <span className="text-[14px] font-medium ml-1" style={{ color: palette.mutedText }}>Wh</span>
+            <span className="text-[12px] font-medium ml-1" style={{ color: palette.mutedText }}>Wh</span>
           </div>
         </div>
       </div>
