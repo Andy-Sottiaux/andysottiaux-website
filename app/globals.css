@@ -88,13 +88,13 @@ html {
 
 /* Keep the donate QR scannable without letting it invade the progress band. */
 .marathon-qr {
-  width: clamp(88px, 24vw, 112px);
-  height: clamp(88px, 24vw, 112px);
+  width: clamp(76px, min(24vw, 14dvh), 112px);
+  height: clamp(76px, min(24vw, 14dvh), 112px);
 }
 @media (min-width: 768px) {
   .marathon-qr {
-    width: clamp(92px, 8vw, 116px);
-    height: clamp(92px, 8vw, 116px);
+    width: clamp(80px, min(8vw, 13dvh), 116px);
+    height: clamp(80px, min(8vw, 13dvh), 116px);
   }
 }
 

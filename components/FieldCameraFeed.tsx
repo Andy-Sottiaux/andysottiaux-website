@@ -23,10 +23,6 @@ const CAMERA_HOST =
   'https://cayley-relay.tailc7d6b6.ts.net'
 const FEED_STREAM = process.env.NEXT_PUBLIC_V3_FEED_STREAM || 'cayley-sub'
 const PLAYER_MODE = process.env.NEXT_PUBLIC_V3_PLAYER_MODE || 'webrtc,mse,mjpeg'
-const ENCODER_FPS = 20
-const ENCODER_CODEC = 'H.264'
-const ENCODER_MAX_KBPS = 4096
-const ENCODER_MAX_MBPS = ENCODER_MAX_KBPS / 1000
 
 const NATIVE_PLAYER_URL =
   `${CAMERA_HOST}/stream.html` +
@@ -42,12 +38,28 @@ type VideoFit = 'contain' | 'cover' | 'fill'
 
 type CameraHealthOverlay = {
   outputSize?: string
+  profile?: CameraStreamProfile
+}
+
+type CameraStreamProfile = {
+  output_size?: string
+  width?: number
+  height?: number
+  fps?: number
+  source_fps?: number
+  codec?: string
+  profile?: string
+  bitrate_kbps?: number
+  bitrate_mbps?: number
+  gop?: number
+  rc_mode?: string
 }
 
 type HealthPayload = {
   system?: {
     media_graph?: {
       output_size?: string
+      stream_profile?: CameraStreamProfile
     }
   }
 }
@@ -318,6 +330,7 @@ function useCameraHealthOverlay(): CameraHealthOverlay {
           const health = (await healthRes.json()) as HealthPayload
           const media = health.system?.media_graph
           next.outputSize = media?.output_size
+          next.profile = media?.stream_profile
         }
       } catch {
         // Overlay is informational only; never affect video playback.
@@ -325,7 +338,7 @@ function useCameraHealthOverlay(): CameraHealthOverlay {
 
       if (!cancelled) {
         setOverlay(next)
-        timer = setTimeout(tick, 20_000)
+        timer = setTimeout(tick, 10_000)
       }
     }
 
@@ -340,7 +353,24 @@ function useCameraHealthOverlay(): CameraHealthOverlay {
 }
 
 function CameraSpecsOverlay({ data }: { data: CameraHealthOverlay }) {
-  const output = data.outputSize || '1920x1440'
+  const profile = data.profile
+  const output = profile?.output_size ||
+    (profile?.width && profile?.height ? `${profile.width}x${profile.height}` : data.outputSize)
+  const fps = typeof profile?.fps === 'number' && profile.fps > 0 ? `${Math.round(profile.fps)}fps` : null
+  const codec = profile?.codec || null
+  const mbps = typeof profile?.bitrate_mbps === 'number' && profile.bitrate_mbps > 0
+    ? profile.bitrate_mbps
+    : typeof profile?.bitrate_kbps === 'number' && profile.bitrate_kbps > 0
+      ? profile.bitrate_kbps / 1000
+      : null
+  const parts = [
+    output,
+    fps,
+    codec,
+    mbps != null ? `${mbps.toFixed(1)} Mbps` : null,
+  ].filter(Boolean)
+
+  if (parts.length === 0) return null
 
   return (
     <div
@@ -355,7 +385,7 @@ function CameraSpecsOverlay({ data }: { data: CameraHealthOverlay }) {
           WebkitBackdropFilter: 'blur(8px)',
         }}
       >
-        {output} · {ENCODER_FPS}fps · {ENCODER_CODEC} · {ENCODER_MAX_MBPS.toFixed(1)} Mbps
+        {parts.join(' · ')}
       </div>
     </div>
   )

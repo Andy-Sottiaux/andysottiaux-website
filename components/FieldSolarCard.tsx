@@ -194,7 +194,7 @@ export default function FieldSolarCard({
 
   return (
     <div
-      className={`relative rounded-2xl h-full flex flex-col overflow-hidden ${compact ? 'p-5 md:p-6' : 'p-7 md:p-8'}`}
+      className={`relative rounded-2xl h-full min-h-0 flex flex-col overflow-hidden ${compact ? 'p-5 md:p-[clamp(1rem,1.75dvh,1.5rem)]' : 'p-7 md:p-8'}`}
       style={{
         background: palette.cardBackground,
         border: palette.cardBorder,
@@ -213,16 +213,16 @@ export default function FieldSolarCard({
         }}
       />
 
-      <div className={`flex items-center justify-between gap-3 ${compact ? 'mb-4' : 'mb-5'}`}>
+      <div className={`flex items-center justify-between gap-3 ${compact ? 'mb-4 md:mb-[clamp(0.45rem,1.25dvh,1rem)]' : 'mb-5'}`}>
         <div
-          className={`${compact ? 'text-[10px]' : 'text-[10.5px]'} font-semibold uppercase tracking-[0.22em]`}
+          className={`${compact ? 'text-[10px] md:text-[clamp(8.5px,1.1dvh,10px)]' : 'text-[10.5px]'} font-semibold uppercase tracking-[0.22em]`}
           style={{ color: isLight ? '#b45309' : 'rgba(252, 211, 77, 0.9)' /* amber-300/90 */ }}
         >
           Solar
         </div>
         {compact && (
           <div
-            className="rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.18em]"
+            className="rounded-full px-2 py-0.5 text-[9px] md:text-[clamp(7.5px,0.9dvh,9px)] font-bold uppercase tracking-[0.18em]"
             style={{
               color: live
                 ? (isLight ? '#0f9d4f' : '#86efac')
@@ -245,7 +245,7 @@ export default function FieldSolarCard({
       {/* Hero number — battery voltage */}
       <div className="flex items-baseline gap-2 mb-1">
         <div
-          className={`${compact ? 'text-[54px] md:text-[58px]' : 'text-[56px] sm:text-[68px]'} font-semibold leading-none tracking-tight tabular-nums`}
+          className={`${compact ? 'text-[54px] md:text-[clamp(42px,7dvh,58px)]' : 'text-[56px] sm:text-[68px]'} font-semibold leading-none tracking-tight tabular-nums`}
           style={{
             // backgroundImage longhand — `background:` shorthand resets
             // background-clip back to default and the gradient renders as
@@ -259,14 +259,14 @@ export default function FieldSolarCard({
           {hasValues ? solar.battery_voltage.toFixed(2) : '—'}
         </div>
         <div
-          className={`${compact ? 'text-[20px]' : 'text-[20px] sm:text-[24px]'} font-medium tracking-tight`}
+          className={`${compact ? 'text-[20px] md:text-[clamp(15px,2.2dvh,20px)]' : 'text-[20px] sm:text-[24px]'} font-medium tracking-tight`}
           style={{ color: palette.mutedText }}
         >
           V
         </div>
       </div>
       <div
-        className={`${compact ? 'text-[12px] mb-4' : 'text-[13px] mb-6'} tracking-tight flex items-center gap-2`}
+        className={`${compact ? 'text-[12px] md:text-[clamp(10px,1.3dvh,12px)] mb-4 md:mb-[clamp(0.45rem,1.25dvh,1rem)]' : 'text-[13px] mb-6'} tracking-tight flex items-center gap-2`}
         style={{ color: palette.bodyText, minHeight: '1.25rem' }}
       >
         {hasValues ? (
@@ -310,9 +310,9 @@ export default function FieldSolarCard({
       </div>
 
       {/* SOC bar — bigger, with depth */}
-      <div className={`relative ${compact ? 'mb-5' : 'mb-7'}`}>
+      <div className={`relative ${compact ? 'mb-5 md:mb-[clamp(0.55rem,1.4dvh,1.25rem)]' : 'mb-7'}`}>
         <div
-          className="h-2.5 w-full rounded-full overflow-hidden"
+          className="h-2.5 md:h-[clamp(0.4rem,0.9dvh,0.625rem)] w-full rounded-full overflow-hidden"
           style={{ background: palette.trackBackground }}
         >
           <div
@@ -328,16 +328,16 @@ export default function FieldSolarCard({
       </div>
 
       {/* Secondary stats */}
-      <div className={`grid grid-cols-3 ${compact ? 'gap-3 mb-4' : 'gap-5 mb-5'}`}>
+      <div className={`grid grid-cols-3 ${compact ? 'gap-3 md:gap-[clamp(0.45rem,1dvh,0.75rem)] mb-4 md:mb-[clamp(0.45rem,1.2dvh,1rem)]' : 'gap-5 mb-5'}`}>
         <div>
           <div
-            className={`${compact ? 'text-[9px]' : 'text-[10px]'} uppercase tracking-[0.18em] font-medium`}
+            className={`${compact ? 'text-[9px] md:text-[clamp(7.5px,0.9dvh,9px)]' : 'text-[10px]'} uppercase tracking-[0.18em] font-medium`}
             style={{ color: palette.mutedText }}
           >
             Solar in
           </div>
           <div
-            className={`${compact ? 'text-[20px]' : 'text-[24px] sm:text-[26px]'} font-semibold tracking-tight tabular-nums mt-1`}
+            className={`${compact ? 'text-[20px] md:text-[clamp(15px,2.05dvh,20px)]' : 'text-[24px] sm:text-[26px]'} font-semibold tracking-tight tabular-nums mt-1 md:mt-[clamp(0.15rem,0.55dvh,0.25rem)]`}
             style={{
               color: hasValues && solar.solar_power > 0
                 ? (isLight ? '#c2410c' : '#ffb84d')
@@ -351,13 +351,13 @@ export default function FieldSolarCard({
         </div>
         <div>
           <div
-            className={`${compact ? 'text-[9px]' : 'text-[10px]'} uppercase tracking-[0.18em] font-medium`}
+            className={`${compact ? 'text-[9px] md:text-[clamp(7.5px,0.9dvh,9px)]' : 'text-[10px]'} uppercase tracking-[0.18em] font-medium`}
             style={{ color: palette.mutedText }}
           >
             Load
           </div>
           <div
-            className={`${compact ? 'text-[20px]' : 'text-[24px] sm:text-[26px]'} font-semibold tracking-tight tabular-nums mt-1`}
+            className={`${compact ? 'text-[20px] md:text-[clamp(15px,2.05dvh,20px)]' : 'text-[24px] sm:text-[26px]'} font-semibold tracking-tight tabular-nums mt-1 md:mt-[clamp(0.15rem,0.55dvh,0.25rem)]`}
             style={{ color: valueColor, opacity: state === 'stale' ? 0.7 : 1 }}
           >
             {hasValues && loadWatts != null ? loadWatts.toFixed(1) : '—'}
@@ -366,13 +366,13 @@ export default function FieldSolarCard({
         </div>
         <div>
           <div
-            className={`${compact ? 'text-[9px]' : 'text-[10px]'} uppercase tracking-[0.18em] font-medium`}
+            className={`${compact ? 'text-[9px] md:text-[clamp(7.5px,0.9dvh,9px)]' : 'text-[10px]'} uppercase tracking-[0.18em] font-medium`}
             style={{ color: palette.mutedText }}
           >
             Yield today
           </div>
           <div
-            className={`${compact ? 'text-[20px]' : 'text-[24px] sm:text-[26px]'} font-semibold tracking-tight tabular-nums mt-1`}
+            className={`${compact ? 'text-[20px] md:text-[clamp(15px,2.05dvh,20px)]' : 'text-[24px] sm:text-[26px]'} font-semibold tracking-tight tabular-nums mt-1 md:mt-[clamp(0.15rem,0.55dvh,0.25rem)]`}
             style={{ color: valueColor, opacity: state === 'stale' ? 0.7 : 1 }}
           >
             {hasValues ? solar.yield_today : '—'}
@@ -382,17 +382,17 @@ export default function FieldSolarCard({
       </div>
 
       {compact ? (
-        <div className="mt-2 grid grid-rows-2 gap-3 flex-1 min-h-[190px]">
+        <div className="mt-auto grid grid-rows-2 gap-3 md:gap-[clamp(0.45rem,1.2dvh,0.75rem)] min-h-0">
           <div
-            className="rounded-xl border p-3 flex flex-col min-h-0"
+            className="rounded-xl border p-3 md:p-[clamp(0.55rem,1.1dvh,0.75rem)] flex flex-col min-h-0 h-[clamp(104px,17dvh,138px)]"
             style={{
               borderColor: isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)',
               background: isLight ? 'rgba(255,255,255,0.36)' : 'rgba(255,255,255,0.025)',
             }}
           >
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-2 md:mb-[clamp(0.35rem,0.9dvh,0.5rem)]">
               <div
-                className="text-[9px] uppercase tracking-[0.18em] font-medium"
+                className="text-[9px] md:text-[clamp(7.5px,0.9dvh,9px)] uppercase tracking-[0.18em] font-medium"
                 style={{ color: palette.mutedText }}
               >
                 Solar input · 24h
@@ -405,7 +405,7 @@ export default function FieldSolarCard({
               <Sparkline
                 data={solarHistory}
                 isLight={isLight}
-                className="w-full flex-1 min-h-[76px] max-h-[128px] self-center"
+                className="w-full flex-1 min-h-0 self-center"
                 gradientId="solarSparkAreaCompact"
                 tone="solar"
               />
@@ -414,15 +414,15 @@ export default function FieldSolarCard({
             )}
           </div>
           <div
-            className="rounded-xl border p-3 flex flex-col min-h-0"
+            className="rounded-xl border p-3 md:p-[clamp(0.55rem,1.1dvh,0.75rem)] flex flex-col min-h-0 h-[clamp(104px,17dvh,138px)]"
             style={{
               borderColor: isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)',
               background: isLight ? 'rgba(255,255,255,0.28)' : 'rgba(255,255,255,0.02)',
             }}
           >
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-2 md:mb-[clamp(0.35rem,0.9dvh,0.5rem)]">
               <div
-                className="text-[9px] uppercase tracking-[0.18em] font-medium"
+                className="text-[9px] md:text-[clamp(7.5px,0.9dvh,9px)] uppercase tracking-[0.18em] font-medium"
                 style={{ color: palette.mutedText }}
               >
                 Battery voltage · 24h
@@ -435,7 +435,7 @@ export default function FieldSolarCard({
               <Sparkline
                 data={voltageHistory}
                 isLight={isLight}
-                className="w-full flex-1 min-h-[76px] max-h-[128px] self-center"
+                className="w-full flex-1 min-h-0 self-center"
                 gradientId="voltageSparkAreaCompact"
                 tone="battery"
               />

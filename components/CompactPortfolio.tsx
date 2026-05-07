@@ -171,10 +171,6 @@ function CompactInner({ initialBoardLive }: { initialBoardLive: boolean }) {
         <AirpodsMountModalContent />
       </Modal>
 
-      {/* Random chinchilla mascot peeking from behind random tiles. Lives
-          here at the page root so it can target any data-peek-target tile
-          via DOMRect math without coupling to the bento layout. */}
-      <ChinchillaPeek />
     </main>
   )
 }
@@ -362,7 +358,7 @@ function Tile({
       ) : null}
       {label && (
         <div
-          className="relative z-10 px-5 md:px-6 pt-4 md:pt-5 text-[10px] font-semibold uppercase tracking-[0.22em] flex items-center justify-between pointer-events-none"
+          className="relative z-10 px-5 md:px-[clamp(1rem,1.7vw,1.5rem)] pt-4 md:pt-[clamp(0.75rem,1.55dvh,1.25rem)] text-[10px] md:text-[clamp(8.5px,1.1dvh,10px)] font-semibold uppercase tracking-[0.22em] flex items-center justify-between pointer-events-none"
           style={{ color: accentColor ?? palette.mutedText }}
         >
           <span>{label}</span>
@@ -405,11 +401,11 @@ function IdentityTile({ onOpen }: { onOpen?: () => void }) {
       modalLabel="Open About"
       className="min-h-[170px] md:min-h-0"
     >
-      <div className="flex-1 flex flex-col px-5 md:px-6 py-5 md:py-6">
+      <div className="flex-1 min-h-0 flex flex-col px-5 md:px-[clamp(1rem,1.7vw,1.5rem)] py-5 md:py-[clamp(0.85rem,2.0dvh,1.5rem)]">
         {/* Hero portrait — square card with a subtle ring + soft drop. */}
         <div className="flex justify-center">
           <div
-            className="relative w-[108px] h-[108px] md:w-[116px] md:h-[116px] rounded-2xl overflow-hidden"
+            className="relative w-[108px] h-[108px] md:w-[clamp(72px,10.8dvh,116px)] md:h-[clamp(72px,10.8dvh,116px)] rounded-2xl overflow-hidden"
             style={{
               boxShadow: isLight
                 ? '0 12px 32px rgba(28,26,28,0.18), 0 0 0 1px rgba(0,0,0,0.05)'
@@ -428,7 +424,7 @@ function IdentityTile({ onOpen }: { onOpen?: () => void }) {
         </div>
 
         <div
-          className="text-center text-[24px] md:text-[22px] font-semibold leading-tight tracking-tight mt-4"
+          className="text-center text-[24px] md:text-[clamp(17px,2.35dvh,22px)] font-semibold leading-tight tracking-tight mt-4 md:mt-[clamp(0.55rem,1.5dvh,1rem)]"
           style={{
             backgroundImage: palette.headlineGradient,
             WebkitBackgroundClip: 'text',
@@ -439,23 +435,23 @@ function IdentityTile({ onOpen }: { onOpen?: () => void }) {
           Andy Sottiaux
         </div>
         <div
-          className="text-center text-[10.5px] md:text-[11px] uppercase tracking-[0.18em] mt-1.5"
+          className="text-center text-[10.5px] md:text-[clamp(8.5px,1.15dvh,11px)] uppercase tracking-[0.18em] mt-1.5 md:mt-[clamp(0.2rem,0.7dvh,0.375rem)]"
           style={{ color: palette.mutedText }}
         >
           Dallas, TX
         </div>
 
         <div
-          className="text-center text-[12.5px] md:text-[13px] leading-snug tracking-tight mt-3 px-1"
+          className="text-center text-[12.5px] md:text-[clamp(10.5px,1.35dvh,13px)] leading-snug tracking-tight mt-3 md:mt-[clamp(0.35rem,1.1dvh,0.75rem)] px-1"
           style={{ color: palette.bodyText }}
         >
           Aerospace hardware · Production software
         </div>
 
-        <div className="mt-auto pt-4 flex justify-center">
+        <div className="mt-auto pt-4 md:pt-[clamp(0.45rem,1.3dvh,1rem)] flex justify-center">
           <a
             href="mailto:andrewsottiaux@gmail.com"
-            className="relative z-10 inline-flex items-center gap-1.5 text-[12px] font-semibold tracking-tight hover:gap-2 transition-all px-3 py-1.5 rounded-full"
+            className="relative z-10 inline-flex items-center gap-1.5 text-[12px] md:text-[clamp(10px,1.25dvh,12px)] font-semibold tracking-tight hover:gap-2 transition-all px-3 py-1.5 md:py-[clamp(0.25rem,0.75dvh,0.375rem)] rounded-full"
             style={{
               color: isLight ? '#0a8aa8' : 'rgb(103, 232, 249)',
               background: isLight
@@ -489,7 +485,7 @@ function CameraTile({ enabled, onOpen }: { enabled: boolean; onOpen?: () => void
       modalLabel="Open Field Live"
       className="min-h-[280px] md:min-h-0"
     >
-      <div className="px-3 md:px-4 pt-2 md:pt-3 pb-3 md:pb-4 flex-1 min-h-0">
+      <div className="px-3 md:px-[clamp(0.75rem,1.15vw,1rem)] pt-2 md:pt-[clamp(0.35rem,1.0dvh,0.75rem)] pb-3 md:pb-[clamp(0.55rem,1.35dvh,1rem)] flex-1 min-h-0">
         <div
           className="relative w-full h-full min-h-[132px] overflow-hidden rounded-[14px]"
           style={{
@@ -581,7 +577,7 @@ function EducationTile() {
 
   return (
     <div
-      className="relative z-[1] rounded-2xl h-full min-h-[260px] md:min-h-0 flex flex-col p-5 md:p-6 overflow-hidden"
+      className="relative z-[1] rounded-2xl h-full min-h-[260px] md:min-h-0 flex flex-col p-5 md:p-[clamp(1rem,1.8dvh,1.5rem)] overflow-hidden"
       style={{
         background: palette.cardBackground,
         border: palette.cardBorder,
@@ -604,7 +600,7 @@ function EducationTile() {
         }}
       />
       <div
-        className="text-[10px] font-semibold uppercase tracking-[0.22em]"
+        className="text-[10px] md:text-[clamp(8.5px,1.1dvh,10px)] font-semibold uppercase tracking-[0.22em]"
         style={{ color: isLight ? '#cc0000' : '#ff7a7a' }}
       >
         Education
@@ -612,7 +608,7 @@ function EducationTile() {
 
       {/* Horizontal layout — logo on the left, text on the right. Fits a
           square slot far better than the previous vertically stacked one. */}
-      <div className="relative flex-1 flex items-center gap-4 md:gap-5">
+      <div className="relative flex-1 min-h-0 flex items-center gap-4 md:gap-[clamp(0.75rem,1.4dvh,1.25rem)]">
         <div
           className="flex items-center justify-center rounded-xl flex-shrink-0 p-2.5"
           style={{
@@ -620,8 +616,8 @@ function EducationTile() {
             boxShadow: isLight
               ? '0 6px 18px rgba(28,26,28,0.10), 0 0 0 1px rgba(0,0,0,0.04)'
               : '0 10px 24px rgba(0,0,0,0.4), 0 0 0 1px rgba(0,0,0,0.15)',
-            width: '88px',
-            height: '88px',
+            width: 'clamp(62px, 8dvh, 88px)',
+            height: 'clamp(62px, 8dvh, 88px)',
           }}
         >
           <Image
@@ -635,7 +631,7 @@ function EducationTile() {
 
         <div className="flex-1 min-w-0">
           <div
-            className="text-[15px] md:text-[16px] font-semibold tracking-tight leading-tight"
+            className="text-[15px] md:text-[clamp(12px,1.6dvh,16px)] font-semibold tracking-tight leading-tight"
             style={{
               backgroundImage: palette.headlineGradient,
               WebkitBackgroundClip: 'text',
@@ -646,13 +642,13 @@ function EducationTile() {
             B.S. Mechanical Engineering
           </div>
           <div
-            className="text-[12px] tracking-tight mt-1"
+            className="text-[12px] md:text-[clamp(10px,1.25dvh,12px)] tracking-tight mt-1"
             style={{ color: palette.bodyText }}
           >
             Texas Tech University · 2016
           </div>
           <div
-            className="text-[11px] tracking-tight mt-1 italic"
+            className="text-[11px] md:text-[clamp(9.5px,1.15dvh,11px)] tracking-tight mt-1 italic"
             style={{ color: palette.mutedText }}
           >
             Minor in Mathematics
@@ -661,7 +657,7 @@ function EducationTile() {
       </div>
 
       <div
-        className="text-[10px] uppercase tracking-[0.18em] font-medium mt-auto text-center pt-3 border-t"
+        className="text-[10px] md:text-[clamp(8.5px,1.05dvh,10px)] uppercase tracking-[0.18em] font-medium mt-auto text-center pt-3 md:pt-[clamp(0.4rem,1dvh,0.75rem)] border-t"
         style={{ color: palette.fadedText, borderColor: palette.hairline }}
       >
         Study abroad · Seville, Spain
@@ -686,7 +682,7 @@ function BuildingTile() {
 
   return (
     <div
-      className="relative z-[1] rounded-2xl h-full min-h-[170px] md:min-h-0 flex flex-col p-6 md:p-7 overflow-hidden"
+      className="relative z-[1] rounded-2xl h-full min-h-[170px] md:min-h-0 flex flex-col p-6 md:p-[clamp(1rem,2dvh,1.75rem)] overflow-hidden"
       style={{
         background: palette.cardBackground,
         border: palette.cardBorder,
@@ -720,9 +716,9 @@ function BuildingTile() {
       />
 
       {/* Eyebrow row — eyebrow + small "always shipping" pulse */}
-      <div className="relative flex items-center justify-between mb-3">
+      <div className="relative flex items-center justify-between mb-[clamp(0.35rem,1.2dvh,0.75rem)]">
         <div
-          className="inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.22em]"
+          className="inline-flex items-center gap-2 text-[10px] md:text-[clamp(8.5px,1.05dvh,10px)] font-semibold uppercase tracking-[0.22em]"
           style={{ color: accent }}
         >
           <span
@@ -737,7 +733,7 @@ function BuildingTile() {
           Currently Building
         </div>
         <div
-          className="inline-flex items-center gap-1.5 text-[9.5px] font-semibold uppercase tracking-[0.2em]"
+          className="hidden lg:inline-flex items-center gap-1.5 text-[9.5px] md:text-[clamp(8px,0.95dvh,9.5px)] font-semibold uppercase tracking-[0.2em]"
           style={{ color: palette.fadedText }}
         >
           Always shipping
@@ -750,7 +746,7 @@ function BuildingTile() {
       <h3
         className="relative font-semibold leading-[1.05] tracking-tight"
         style={{
-          fontSize: 'clamp(22px, 3.4vw, 34px)',
+          fontSize: 'clamp(20px, min(3.4vw, 4.5dvh), 34px)',
           backgroundImage: palette.headlineGradient,
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
@@ -763,7 +759,7 @@ function BuildingTile() {
       </h3>
 
       <p
-        className="relative text-[12.5px] md:text-[13px] leading-snug tracking-tight mt-2.5 max-w-[36ch]"
+        className="relative text-[12.5px] md:text-[clamp(10.5px,1.3dvh,13px)] leading-snug tracking-tight mt-[clamp(0.35rem,1.1dvh,0.625rem)] max-w-[36ch]"
         style={{ color: palette.bodyText }}
       >
         Building hardware and software at production scale — from AVX
@@ -874,7 +870,7 @@ function BuildingTile() {
       {/* tiny live "design ↻" annotation in the bottom-left so the rotor
           is read as work-in-progress, not decoration */}
       <div
-        className="relative mt-auto pt-5 inline-flex items-center gap-1.5 text-[9.5px] font-semibold uppercase tracking-[0.22em]"
+        className="relative mt-auto pt-[clamp(0.5rem,1.6dvh,1.25rem)] inline-flex items-center gap-1.5 text-[9.5px] md:text-[clamp(8px,0.95dvh,9.5px)] font-semibold uppercase tracking-[0.22em]"
         style={{ color: palette.fadedText }}
       >
         <svg
@@ -1004,20 +1000,22 @@ function MoreProjectsTile({ onOpen }: { onOpen?: (key: ModalKey) => void }) {
         }}
       />
       <div
-        className="px-5 md:px-6 pt-4 md:pt-5 text-[10px] font-semibold uppercase tracking-[0.22em]"
+        className="px-5 md:px-[clamp(1rem,1.7vw,1.5rem)] pt-4 md:pt-[clamp(0.75rem,1.55dvh,1.25rem)] text-[10px] md:text-[clamp(8.5px,1.1dvh,10px)] font-semibold uppercase tracking-[0.22em]"
         style={{ color: accent }}
       >
         More Projects
       </div>
-      <div className="px-5 md:px-6 pt-3 pb-4 md:pb-5 flex-1 flex flex-col">
-        <div className="space-y-2.5 md:space-y-3 flex-1">
+      <div className="px-5 md:px-[clamp(1rem,1.7vw,1.5rem)] pt-3 md:pt-[clamp(0.45rem,1.1dvh,0.75rem)] pb-4 md:pb-[clamp(0.65rem,1.35dvh,1.25rem)] flex-1 min-h-0 flex flex-col overflow-hidden">
+        <div className="flex-1 min-h-0 flex flex-col justify-between gap-[clamp(0.125rem,0.5dvh,0.55rem)]">
           {MORE_PROJECTS.map((p) => {
             const isCad = !!p.cad
             // Common chip + content the row renders, regardless of action.
             const chip = (
               <div
-                className="w-10 h-10 rounded-[10px] overflow-hidden flex-shrink-0 flex items-center justify-center relative"
+                className="rounded-[10px] overflow-hidden flex-shrink-0 flex items-center justify-center relative"
                 style={{
+                  width: 'clamp(30px,3.6dvh,40px)',
+                  height: 'clamp(30px,3.6dvh,40px)',
                   border: palette.cardBorder,
                   background: isLight ? '#fff' : 'rgba(255,255,255,0.04)',
                   color: accent,
@@ -1051,7 +1049,7 @@ function MoreProjectsTile({ onOpen }: { onOpen?: (key: ModalKey) => void }) {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span
-                      className="text-[13px] md:text-[14px] font-semibold tracking-tight truncate"
+                      className="text-[13px] md:text-[clamp(11px,1.35dvh,14px)] font-semibold leading-tight tracking-tight truncate"
                       style={{ color: isLight ? '#1c1a1c' : '#fff' }}
                     >
                       {p.name}
@@ -1070,7 +1068,7 @@ function MoreProjectsTile({ onOpen }: { onOpen?: (key: ModalKey) => void }) {
                     )}
                   </div>
                   <div
-                    className="text-[11px] md:text-[12px] tracking-tight truncate mt-0.5"
+                    className="text-[11px] md:text-[clamp(9.5px,1.15dvh,12px)] leading-tight tracking-tight truncate mt-0.5"
                     style={{ color: palette.bodyText }}
                   >
                     {p.desc}
@@ -1103,7 +1101,7 @@ function MoreProjectsTile({ onOpen }: { onOpen?: (key: ModalKey) => void }) {
                   type="button"
                   key={p.name}
                   onClick={() => { haptic('open'); onOpen?.('airpodsmount') }}
-                  className="group relative z-10 flex items-center gap-3 py-1.5 rounded-lg -mx-1 px-1 transition-colors text-left w-full"
+                  className="group relative z-10 flex items-center gap-2.5 md:gap-3 py-[clamp(0.1rem,0.35dvh,0.375rem)] rounded-lg -mx-1 px-1 transition-colors text-left w-full"
                   aria-label={`Open ${p.name}`}
                 >
                   {chip}
@@ -1118,7 +1116,7 @@ function MoreProjectsTile({ onOpen }: { onOpen?: (key: ModalKey) => void }) {
                 {...(p.download
                   ? { download: '' }
                   : { target: '_blank', rel: 'noopener noreferrer' })}
-                className="group relative z-10 flex items-center gap-3 py-1.5 rounded-lg -mx-1 px-1 transition-colors"
+                className="group relative z-10 flex items-center gap-2.5 md:gap-3 py-[clamp(0.1rem,0.35dvh,0.375rem)] rounded-lg -mx-1 px-1 transition-colors"
               >
                 {chip}
                 {body}
@@ -1130,7 +1128,7 @@ function MoreProjectsTile({ onOpen }: { onOpen?: (key: ModalKey) => void }) {
           href="https://www.hatchingpoint.com/"
           target="_blank"
           rel="noopener noreferrer"
-          className="relative z-10 mt-2 pt-2 inline-flex items-center gap-1 text-[11px] tracking-tight border-t hover:opacity-100 opacity-70 transition-opacity"
+          className="relative z-10 mt-[clamp(0.25rem,0.7dvh,0.5rem)] pt-[clamp(0.25rem,0.7dvh,0.5rem)] inline-flex items-center gap-1 text-[10px] md:text-[clamp(9px,1.05dvh,11px)] tracking-tight border-t hover:opacity-100 opacity-70 transition-opacity"
           style={{ color: palette.mutedText, borderColor: palette.hairline }}
         >
           More on the App Store
@@ -1199,6 +1197,7 @@ const EXPERIENCE: {
 function ExperienceTile({ onOpen }: { onOpen?: () => void }) {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
+  const logoSize = 'clamp(28px, 3.35dvh, 36px)'
 
   return (
     <Tile
@@ -1209,8 +1208,8 @@ function ExperienceTile({ onOpen }: { onOpen?: () => void }) {
       modalLabel="Open Experience"
       className="min-h-[200px] md:min-h-0"
     >
-      <div className="px-5 md:px-6 pt-3 pb-4 md:pb-5 flex-1 flex flex-col">
-        <div className="space-y-2 md:space-y-2.5">
+      <div className="px-5 md:px-[clamp(1rem,1.7vw,1.5rem)] pt-2 md:pt-[clamp(0.25rem,0.9dvh,0.75rem)] pb-3 md:pb-[clamp(0.5rem,1.4dvh,1.25rem)] flex-1 min-h-0 flex flex-col overflow-hidden">
+        <div className="h-full min-h-0 flex flex-col justify-between gap-[clamp(0.125rem,0.55dvh,0.625rem)]">
           {EXPERIENCE.map((e) => {
             return (
               <a
@@ -1218,7 +1217,7 @@ function ExperienceTile({ onOpen }: { onOpen?: () => void }) {
                 href={e.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="relative z-10 group flex items-center justify-between gap-3 py-1.5 border-b last:border-b-0"
+                className="relative z-10 group min-h-0 flex items-center justify-between gap-2 md:gap-3 py-[clamp(0.125rem,0.35dvh,0.375rem)] border-b last:border-b-0"
                 style={{ borderColor: palette.hairline }}
               >
                 <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -1229,8 +1228,8 @@ function ExperienceTile({ onOpen }: { onOpen?: () => void }) {
                   <div
                     className="flex items-center justify-center rounded-md flex-shrink-0 overflow-hidden"
                     style={{
-                      width: 36,
-                      height: 36,
+                      width: logoSize,
+                      height: logoSize,
                       background: '#fff',
                       boxShadow: isLight
                         ? '0 1px 2px rgba(28,26,28,0.08), 0 0 0 1px rgba(0,0,0,0.04)'
@@ -1254,13 +1253,13 @@ function ExperienceTile({ onOpen }: { onOpen?: () => void }) {
 
                   <div className="flex items-baseline gap-2 min-w-0 flex-1">
                     <span
-                      className="text-[13px] md:text-[14px] font-semibold tracking-tight truncate"
+                      className="text-[13px] md:text-[clamp(11.5px,1.45dvh,14px)] font-semibold leading-none tracking-tight truncate"
                       style={{ color: isLight ? '#1c1a1c' : '#fff' }}
                     >
                       {e.company}
                     </span>
                     <span
-                      className="text-[12px] md:text-[13px] tracking-tight truncate"
+                      className="hidden lg:inline text-[12px] md:text-[clamp(10.5px,1.35dvh,13px)] leading-none tracking-tight truncate"
                       style={{ color: palette.bodyText }}
                     >
                       {e.title}
@@ -1268,7 +1267,7 @@ function ExperienceTile({ onOpen }: { onOpen?: () => void }) {
                   </div>
                 </div>
                 <span
-                  className="text-[11px] md:text-[12px] tabular-nums tracking-tight flex-shrink-0 group-hover:opacity-100 opacity-80 transition-opacity"
+                  className="text-[11px] md:text-[clamp(10px,1.25dvh,12px)] leading-none tabular-nums tracking-tight flex-shrink-0 group-hover:opacity-100 opacity-80 transition-opacity"
                   style={{ color: palette.mutedText }}
                 >
                   {e.period}
@@ -1293,6 +1292,7 @@ const PROJECTS = [
 function ProjectsTile({ onOpen }: { onOpen?: () => void }) {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
+  const iconSize = 'clamp(30px, 3.55dvh, 36px)'
 
   return (
     <Tile
@@ -1303,19 +1303,21 @@ function ProjectsTile({ onOpen }: { onOpen?: () => void }) {
       modalLabel="Open Projects"
       className="min-h-[180px] md:min-h-0"
     >
-      <div className="px-5 md:px-6 pt-3 pb-4 md:pb-5 flex-1 flex flex-col">
-        <div className="space-y-2 md:space-y-2.5 flex-1">
+      <div className="px-5 md:px-[clamp(1rem,1.7vw,1.5rem)] pt-2 md:pt-[clamp(0.25rem,0.9dvh,0.75rem)] pb-3 md:pb-[clamp(0.5rem,1.4dvh,1.25rem)] flex-1 min-h-0 flex flex-col overflow-hidden">
+        <div className="flex-1 min-h-0 flex flex-col justify-evenly gap-[clamp(0.125rem,0.55dvh,0.625rem)]">
           {PROJECTS.map((p) => (
             <a
               key={p.name}
               href={p.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="relative z-10 group flex items-center gap-3 py-1"
+              className="relative z-10 group min-h-0 flex items-center gap-2.5 md:gap-3 py-[clamp(0.125rem,0.35dvh,0.375rem)]"
             >
               <div
-                className="w-9 h-9 rounded-lg overflow-hidden flex-shrink-0"
+                className="rounded-lg overflow-hidden flex-shrink-0"
                 style={{
+                  width: iconSize,
+                  height: iconSize,
                   border: palette.cardBorder,
                   background: isLight ? '#fff' : 'rgba(255,255,255,0.04)',
                 }}
@@ -1330,13 +1332,13 @@ function ProjectsTile({ onOpen }: { onOpen?: () => void }) {
               </div>
               <div className="flex-1 min-w-0">
                 <div
-                  className="text-[13px] md:text-[14px] font-semibold tracking-tight"
+                  className="text-[13px] md:text-[clamp(11.5px,1.45dvh,14px)] font-semibold leading-tight tracking-tight truncate"
                   style={{ color: isLight ? '#1c1a1c' : '#fff' }}
                 >
                   {p.name}
                 </div>
                 <div
-                  className="text-[11px] md:text-[12px] tracking-tight truncate"
+                  className="text-[11px] md:text-[clamp(10px,1.25dvh,12px)] leading-tight tracking-tight truncate"
                   style={{ color: palette.bodyText }}
                 >
                   {p.desc}
@@ -1359,7 +1361,7 @@ function ProjectsTile({ onOpen }: { onOpen?: () => void }) {
           href="https://www.hatchingpoint.com/"
           target="_blank"
           rel="noopener noreferrer"
-          className="relative z-10 mt-2 pt-2 inline-flex items-center gap-1 text-[11px] tracking-tight border-t hover:opacity-100 opacity-70 transition-opacity"
+          className="relative z-10 mt-[clamp(0.25rem,0.7dvh,0.5rem)] pt-[clamp(0.25rem,0.7dvh,0.5rem)] inline-flex items-center gap-1 text-[10px] md:text-[clamp(9.5px,1.15dvh,11px)] leading-none tracking-tight border-t hover:opacity-100 opacity-70 transition-opacity"
           style={{ color: palette.mutedText, borderColor: palette.hairline }}
         >
           More on the App Store
@@ -1460,10 +1462,10 @@ function MarathonTile({ onOpen }: { onOpen?: () => void }) {
         }}
       />
 
-      <div className="relative z-10 px-5 md:px-6 pt-4 pb-4 md:pb-5 h-full flex flex-col gap-3 md:gap-4">
+      <div className="relative z-10 px-5 md:px-[clamp(1rem,1.7vw,1.5rem)] pt-4 md:pt-[clamp(0.75rem,1.55dvh,1rem)] pb-4 md:pb-[clamp(0.65rem,1.45dvh,1.25rem)] h-full min-h-0 flex flex-col gap-3 md:gap-[clamp(0.45rem,1.15dvh,1rem)]">
         <div className="flex items-start justify-between gap-4">
           <div
-            className="inline-flex items-center justify-center rounded-xl px-3 py-2 self-start"
+            className="inline-flex items-center justify-center rounded-xl px-3 py-2 md:px-[clamp(0.55rem,1.1dvh,0.75rem)] md:py-[clamp(0.35rem,0.9dvh,0.5rem)] self-start"
             style={{
               background: '#fff',
               boxShadow: '0 6px 18px rgba(0,0,0,0.18)',
@@ -1474,12 +1476,12 @@ function MarathonTile({ onOpen }: { onOpen?: () => void }) {
               alt="2026 TCS New York City Marathon"
               width={140}
               height={100}
-              className="h-14 md:h-16 w-auto object-contain"
+              className="h-14 md:h-[clamp(42px,7dvh,64px)] w-auto object-contain"
             />
           </div>
 
           <div
-            className="text-[10px] font-bold uppercase tracking-[0.2em] px-2 py-1 rounded-full flex-shrink-0"
+            className="text-[10px] md:text-[clamp(8.5px,1.05dvh,10px)] font-bold uppercase tracking-[0.2em] px-2 py-1 md:py-[clamp(0.2rem,0.55dvh,0.25rem)] rounded-full flex-shrink-0"
             style={{
               background: isLight ? 'rgba(232,100,44,0.10)' : 'rgba(232,100,44,0.18)',
               color: isLight ? '#c63d1f' : '#ff8a4a',
@@ -1490,7 +1492,7 @@ function MarathonTile({ onOpen }: { onOpen?: () => void }) {
           </div>
         </div>
 
-        <div className="flex-1 min-h-0 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 md:gap-5">
+        <div className="flex-1 min-h-0 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 md:gap-[clamp(0.75rem,1.6dvh,1.25rem)]">
           <div className="flex flex-col min-w-0">
             <div className="flex items-baseline gap-2">
               <span
@@ -1503,19 +1505,19 @@ function MarathonTile({ onOpen }: { onOpen?: () => void }) {
                 }}
               />
               <div
-                className="text-[40px] md:text-[52px] font-bold leading-none tracking-tight tabular-nums"
+                className="text-[40px] md:text-[clamp(36px,6.2dvh,52px)] font-bold leading-none tracking-tight tabular-nums"
                 style={{ color: numberColor }}
               >
                 {days ?? '—'}
               </div>
               <div
-                className="text-[12px] md:text-[13px] font-bold uppercase tracking-[0.22em] pb-1.5"
+                className="text-[12px] md:text-[clamp(10px,1.35dvh,13px)] font-bold uppercase tracking-[0.22em] pb-1.5"
                 style={{ color: subtleText }}
               >
                 Days
               </div>
             </div>
-            <div className="text-[11.5px] md:text-[12px] tracking-tight mt-2" style={{ color: subtleText }}>
+            <div className="text-[11.5px] md:text-[clamp(9.5px,1.25dvh,12px)] tracking-tight mt-2 md:mt-[clamp(0.25rem,0.8dvh,0.5rem)]" style={{ color: subtleText }}>
               Running for <span className="font-semibold" style={{ color: numberColor }}>Team for Kids</span> · NYRR
             </div>
           </div>
@@ -1548,7 +1550,7 @@ function MarathonTile({ onOpen }: { onOpen?: () => void }) {
               <span aria-hidden="true" className="absolute -bottom-[3px] -right-[3px] w-3 h-3 border-b-2 border-r-2 rounded-br-md" style={{ borderColor: '#E8642C' }} />
             </div>
             <div
-              className="mt-1.5 text-[9.5px] font-bold uppercase tracking-[0.2em] text-center inline-flex items-center justify-center gap-1 w-full"
+              className="mt-1.5 md:mt-[clamp(0.25rem,0.75dvh,0.375rem)] text-[9.5px] md:text-[clamp(8px,0.95dvh,9.5px)] font-bold uppercase tracking-[0.2em] text-center inline-flex items-center justify-center gap-1 w-full"
               style={{ color: isLight ? '#c63d1f' : '#ff8a4a' }}
             >
               Scan · Donate
@@ -1559,8 +1561,8 @@ function MarathonTile({ onOpen }: { onOpen?: () => void }) {
           </a>
         </div>
 
-        <div className="pt-1 md:pt-2 mt-auto">
-          <div className="h-2.5 w-full rounded-full overflow-hidden" style={{ background: palette.trackBackground }}>
+        <div className="pt-1 md:pt-[clamp(0.25rem,0.75dvh,0.5rem)] mt-auto">
+          <div className="h-2.5 md:h-[clamp(0.4rem,0.9dvh,0.625rem)] w-full rounded-full overflow-hidden" style={{ background: palette.trackBackground }}>
             <div
               className="h-full rounded-full relative overflow-hidden"
               style={{
@@ -1581,14 +1583,14 @@ function MarathonTile({ onOpen }: { onOpen?: () => void }) {
               />
             </div>
           </div>
-          <div className="flex items-baseline justify-between mt-2">
-            <div className="text-[13px] font-bold tabular-nums tracking-tight" style={{ color: numberColor }}>
+          <div className="flex items-baseline justify-between mt-2 md:mt-[clamp(0.35rem,0.9dvh,0.5rem)]">
+            <div className="text-[13px] md:text-[clamp(10.5px,1.35dvh,13px)] font-bold tabular-nums tracking-tight" style={{ color: numberColor }}>
               ${raised.toLocaleString()}
               <span className="font-medium ml-1" style={{ color: subtleText }}>
                 / ${goal.toLocaleString()}
               </span>
             </div>
-            <div className="text-[10.5px] font-semibold uppercase tracking-[0.18em]" style={{ color: subtleText }}>
+            <div className="text-[10.5px] md:text-[clamp(8.5px,1.05dvh,10.5px)] font-semibold uppercase tracking-[0.18em]" style={{ color: subtleText }}>
               {pct}% funded
             </div>
           </div>
@@ -1674,204 +1676,33 @@ function ContactTile({ onOpen }: { onOpen?: () => void }) {
       modalLabel="Open Contact"
       className="min-h-[180px] md:min-h-0"
     >
-      <div className="px-5 md:px-5 pt-3 pb-3 flex-1 flex flex-col min-h-0">
-        <div className="grid grid-cols-2 gap-2 flex-1 min-h-0">
+      <div className="px-5 md:px-[clamp(0.9rem,1.45vw,1.25rem)] pt-3 md:pt-[clamp(0.35rem,1dvh,0.75rem)] pb-3 md:pb-[clamp(0.45rem,1.1dvh,0.75rem)] flex-1 flex flex-col min-h-0">
+        <div className="grid grid-cols-2 gap-2 md:gap-[clamp(0.35rem,0.95dvh,0.5rem)] flex-1 min-h-0">
           {CONTACTS.map((c) => (
             <a
               key={c.label}
               href={c.href}
               target={c.href.startsWith('mailto:') ? undefined : '_blank'}
               rel={c.href.startsWith('mailto:') ? undefined : 'noopener noreferrer'}
-              className="relative z-10 flex items-center justify-center gap-2 px-2 py-2 rounded-xl transition-all hover:scale-[1.02]"
+              className="relative z-10 flex items-center justify-center gap-2 md:gap-[clamp(0.35rem,0.8dvh,0.5rem)] px-2 py-2 md:py-[clamp(0.35rem,1.0dvh,0.5rem)] rounded-xl transition-all hover:scale-[1.02] min-h-0"
               style={{
                 background: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)',
                 border: palette.cardBorder,
                 color: isLight ? '#1c1a1c' : '#fff',
               }}
             >
-              <div className="w-[17px] h-[17px] opacity-90 flex-shrink-0">{c.icon}</div>
-              <div className="text-[11px] font-semibold tracking-tight truncate">{c.label}</div>
+              <div className="w-[17px] h-[17px] md:w-[clamp(13px,1.8dvh,17px)] md:h-[clamp(13px,1.8dvh,17px)] opacity-90 flex-shrink-0">{c.icon}</div>
+              <div className="text-[11px] md:text-[clamp(9.5px,1.15dvh,11px)] font-semibold tracking-tight truncate">{c.label}</div>
             </a>
           ))}
         </div>
         <div
-          className="mt-2 text-[9px] tracking-wide text-center"
+          className="mt-2 md:mt-[clamp(0.3rem,0.9dvh,0.5rem)] text-[9px] md:text-[clamp(7.5px,0.9dvh,9px)] tracking-wide text-center"
           style={{ color: palette.fadedText }}
         >
           © {new Date().getFullYear()} Andy Sottiaux
         </div>
       </div>
     </Tile>
-  )
-}
-
-/* ───────────────────── Chinchilla peek ──────────────────────── */
-
-/**
- * Mascot easter egg — picks a random `[data-peek-target="true"]` tile
- * every 8–18 s, slides the chinchilla in from one of its edges so it
- * looks like it's peeking out from behind that tile, holds for ~2.5 s,
- * then ducks back. Reduced-motion users see nothing. Pointer-events
- * disabled so it never intercepts clicks.
- *
- * Z-index is intentionally low — the tile's opaque glass background
- * obscures the body of the chinchilla; only the part that escapes the
- * tile boundary into the gutter is visible, which sells the "peeking"
- * illusion.
- */
-type PeekEdge = 'left' | 'right' | 'bottom'
-
-function ChinchillaPeek() {
-  type PeekState = {
-    rect: DOMRect | null
-    edge: PeekEdge
-    /** how visible the chinchilla is, 0 (hidden) → 1 (peeked out) */
-    out: number
-    /** monotonic counter so React re-renders even if values match */
-    seq: number
-  }
-
-  const [pose, setPose] = useState<PeekState>({
-    rect: null,
-    edge: 'right',
-    out: 0,
-    seq: 0,
-  })
-  const cancelledRef = useRef(false)
-
-  useEffect(() => {
-    cancelledRef.current = false
-    let timer: ReturnType<typeof setTimeout> | null = null
-
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    if (reduced) return
-
-    const cycle = () => {
-      if (cancelledRef.current) return
-      const targets = document.querySelectorAll<HTMLElement>(
-        '[data-peek-target="true"]',
-      )
-      if (targets.length === 0) {
-        timer = setTimeout(cycle, 5000)
-        return
-      }
-      const tile = targets[Math.floor(Math.random() * targets.length)]
-      const rect = tile.getBoundingClientRect()
-      // Skip very small / off-screen tiles.
-      if (rect.width < 80 || rect.height < 80) {
-        timer = setTimeout(cycle, 4000)
-        return
-      }
-      const edges: PeekEdge[] = ['left', 'right', 'bottom']
-      const edge = edges[Math.floor(Math.random() * edges.length)]
-      // Step 1 — peek out
-      setPose((p) => ({ rect, edge, out: 1, seq: p.seq + 1 }))
-      // Step 2 — hide after 2.4–3.6 s
-      timer = setTimeout(
-        () => {
-          if (cancelledRef.current) return
-          setPose((p) => ({ ...p, out: 0 }))
-          // Step 3 — schedule next peek 8–18 s later
-          timer = setTimeout(cycle, 8000 + Math.random() * 10000)
-        },
-        2400 + Math.random() * 1200,
-      )
-    }
-
-    // First peek arrives ~5–9 s after mount so the page has time to settle.
-    timer = setTimeout(cycle, 5000 + Math.random() * 4000)
-    return () => {
-      cancelledRef.current = true
-      if (timer) clearTimeout(timer)
-    }
-  }, [])
-
-  if (!pose.rect) return null
-
-  // Geometry. Tile-edge origin + transform-translate for the slide.
-  const size = 64
-  // How far past the tile edge the chinchilla pokes when fully out.
-  const protrude = 24
-  // Where the chinchilla parks when "in" (mostly hidden by tile bg).
-  const tuck = size - 6 // leave a 6px sliver, enough so the slide reads
-
-  const r = pose.rect
-  let left = 0
-  let top = 0
-  let translate = ''
-  let flipX = 1
-
-  if (pose.edge === 'right') {
-    // Anchored just outside the right edge of the tile, vertically lower-third.
-    left = r.right - tuck
-    top = r.top + r.height * 0.62 - size / 2
-    translate = `translateX(${pose.out ? protrude : 0}px)`
-    // Face the chinchilla looking toward the right (default).
-    flipX = -1
-  } else if (pose.edge === 'left') {
-    left = r.left - (size - tuck)
-    top = r.top + r.height * 0.62 - size / 2
-    translate = `translateX(${pose.out ? -protrude : 0}px)`
-    // Face left.
-    flipX = 1
-  } else {
-    // bottom — peek from under the tile, central horizontal.
-    left = r.left + r.width * 0.5 - size / 2
-    top = r.bottom - tuck
-    translate = `translateY(${pose.out ? protrude : 0}px)`
-  }
-
-  // Tiny tilt while peeking for personality.
-  const rotate = pose.out
-    ? pose.edge === 'right'
-      ? -8
-      : pose.edge === 'left'
-        ? 8
-        : 0
-    : 0
-
-  // Clamp to viewport so the sprite never lands behind the URL bar or
-  // off the right edge on narrow mobile screens. The translate can move
-  // the sprite up to `protrude` past `left`/`top`, so the safe window
-  // shrinks by that amount on each axis.
-  if (typeof window !== 'undefined') {
-    const margin = protrude + 4
-    const vw = window.innerWidth
-    const vh = window.innerHeight
-    const minLeft = margin
-    const maxLeft = vw - size - margin
-    const minTop = margin
-    const maxTop = vh - size - margin
-    if (maxLeft >= minLeft) left = Math.min(Math.max(left, minLeft), maxLeft)
-    if (maxTop >= minTop) top = Math.min(Math.max(top, minTop), maxTop)
-  }
-
-  return (
-    <div
-      aria-hidden="true"
-      className="pointer-events-none fixed"
-      style={{
-        left,
-        top,
-        width: size,
-        height: size,
-        zIndex: 0,
-        transform: `${translate} rotate(${rotate}deg) scaleX(${flipX})`,
-        transformOrigin: 'center',
-        transition:
-          'transform 0.7s cubic-bezier(0.34,1.56,0.64,1), opacity 0.4s linear',
-        opacity: pose.rect ? 1 : 0,
-        // Tiny shadow to ground the chinchilla against the tile edge.
-        filter: 'drop-shadow(0 6px 14px rgba(0,0,0,0.45))',
-      }}
-    >
-      <Image
-        src="/images/chinchilla-white.png"
-        alt=""
-        width={size}
-        height={size}
-        className="w-full h-full"
-      />
-    </div>
   )
 }
