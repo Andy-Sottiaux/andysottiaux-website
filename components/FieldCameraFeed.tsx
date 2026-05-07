@@ -26,6 +26,7 @@ const PLAYER_MODE = process.env.NEXT_PUBLIC_V3_PLAYER_MODE || 'webrtc,mse,mjpeg'
 const ENCODER_FPS = 20
 const ENCODER_CODEC = 'H.264'
 const ENCODER_MAX_KBPS = 4096
+const ENCODER_MAX_MBPS = ENCODER_MAX_KBPS / 1000
 
 const NATIVE_PLAYER_URL =
   `${CAMERA_HOST}/stream.html` +
@@ -368,7 +369,7 @@ function CameraSpecsOverlay({ data }: { data: CameraHealthOverlay }) {
           WebkitBackdropFilter: 'blur(8px)',
         }}
       >
-        {output} · {ENCODER_FPS}fps · {ENCODER_CODEC} · {ENCODER_MAX_KBPS}kbps
+        {output} · {ENCODER_FPS}fps · {ENCODER_CODEC} · {ENCODER_MAX_MBPS.toFixed(1)} Mbps
       </div>
       <div
         className="px-2.5 py-1 rounded-full opacity-80"
