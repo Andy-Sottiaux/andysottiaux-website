@@ -248,7 +248,7 @@ export default function FieldHealthCard({
 
   return (
     <div
-      className={`relative rounded-2xl h-full flex flex-col overflow-hidden ${compact ? 'p-5 md:p-6' : 'p-7 md:p-8'}`}
+      className={`relative rounded-2xl h-full flex flex-col overflow-hidden ${compact ? 'px-5 py-4 md:px-6 md:py-5' : 'p-7 md:p-8'}`}
       style={{
         background: palette.cardBackground,
         border: palette.cardBorder,
@@ -271,7 +271,7 @@ export default function FieldHealthCard({
         }}
       />
 
-      <div className={`flex items-center justify-between gap-3 ${compact ? 'mb-4' : 'mb-5'}`}>
+      <div className={`flex items-center justify-between gap-3 ${compact ? 'mb-3' : 'mb-5'}`}>
         <div
           className={`${compact ? 'text-[10px]' : 'text-[10.5px]'} font-semibold uppercase tracking-[0.22em]`}
           style={{ color: isLight ? '#0f9d4f' : 'rgba(74, 222, 128, 0.9)' }}
@@ -351,16 +351,16 @@ export default function FieldHealthCard({
         </div>
       )}
 
-      <dl className={`grid grid-cols-2 ${compact ? 'mt-1 gap-x-4 gap-y-3' : 'mt-auto gap-x-6 gap-y-4'}`}>
+      <dl className={`grid grid-cols-2 ${compact ? 'mt-0 gap-x-4 gap-y-2.5' : 'mt-auto gap-x-6 gap-y-4'}`}>
         <div>
           <dt
-            className={`${compact ? 'text-[9px]' : 'text-[10px]'} uppercase tracking-[0.18em] font-medium`}
+            className={`${compact ? 'text-[8.5px]' : 'text-[10px]'} uppercase tracking-[0.18em] font-medium`}
             style={{ color: palette.mutedText }}
           >
             Thermal
           </dt>
           <dd
-            className={`${compact ? 'text-[18px] md:text-[19px]' : 'text-[20px] sm:text-[22px]'} font-semibold tracking-tight tabular-nums mt-1`}
+            className={`${compact ? 'text-[17px] md:text-[18px]' : 'text-[20px] sm:text-[22px]'} font-semibold tracking-tight tabular-nums mt-1`}
             style={{ color: thermalColor }}
           >
             {thermalLabel}
@@ -368,13 +368,13 @@ export default function FieldHealthCard({
         </div>
         <div>
           <dt
-            className={`${compact ? 'text-[9px]' : 'text-[10px]'} uppercase tracking-[0.18em] font-medium`}
+            className={`${compact ? 'text-[8.5px]' : 'text-[10px]'} uppercase tracking-[0.18em] font-medium`}
             style={{ color: palette.mutedText }}
           >
             Camera
           </dt>
           <dd
-            className={`${compact ? 'text-[18px] md:text-[19px]' : 'text-[20px] sm:text-[22px]'} font-semibold tracking-tight mt-1`}
+            className={`${compact ? 'text-[17px] md:text-[18px]' : 'text-[20px] sm:text-[22px]'} font-semibold tracking-tight mt-1 truncate`}
             style={{ color: valueColor }}
           >
             {cameraLabel}
@@ -382,13 +382,13 @@ export default function FieldHealthCard({
         </div>
         <div>
           <dt
-            className={`${compact ? 'text-[9px]' : 'text-[10px]'} uppercase tracking-[0.18em] font-medium`}
+            className={`${compact ? 'text-[8.5px]' : 'text-[10px]'} uppercase tracking-[0.18em] font-medium`}
             style={{ color: palette.mutedText }}
           >
             RAM
           </dt>
           <dd
-            className={`${compact ? 'text-[18px] md:text-[19px]' : 'text-[20px] sm:text-[22px]'} font-semibold tracking-tight tabular-nums mt-1`}
+            className={`${compact ? 'text-[17px] md:text-[18px]' : 'text-[20px] sm:text-[22px]'} font-semibold tracking-tight tabular-nums mt-1`}
             style={{ color: ramColor }}
           >
             {ramAvailMB != null ? `${ramAvailMB}M` : '—'}
@@ -396,13 +396,13 @@ export default function FieldHealthCard({
         </div>
         <div>
           <dt
-            className={`${compact ? 'text-[9px]' : 'text-[10px]'} uppercase tracking-[0.18em] font-medium`}
+            className={`${compact ? 'text-[8.5px]' : 'text-[10px]'} uppercase tracking-[0.18em] font-medium`}
             style={{ color: palette.mutedText }}
           >
             Services
           </dt>
           <dd
-            className={`${compact ? 'text-[18px] md:text-[19px]' : 'text-[20px] sm:text-[22px]'} font-semibold tracking-tight tabular-nums mt-1`}
+            className={`${compact ? 'text-[17px] md:text-[18px]' : 'text-[20px] sm:text-[22px]'} font-semibold tracking-tight tabular-nums mt-1`}
             style={{ color: valueColor }}
           >
             {digest
@@ -412,9 +412,31 @@ export default function FieldHealthCard({
         </div>
       </dl>
 
-      {sys && (
+      {sys && compact && (
         <div
-          className={`${compact ? 'mt-3 pt-2' : 'mt-4 pt-3'} border-t grid grid-cols-3 gap-3 tabular-nums`}
+          className="mt-auto pt-2 border-t flex items-center justify-between gap-2 text-[10.5px] font-semibold tabular-nums min-w-0"
+          style={{
+            borderColor: palette.hairline,
+            color: palette.mutedText,
+          }}
+          aria-label={`Uptime ${uptimeText}, checked ${checkedText}, Tailnet ${tailnetText}`}
+        >
+          <span className="min-w-0 truncate">
+            <span style={{ color: palette.mutedText }}>up </span>
+            <span style={{ color: valueColor }}>{uptimeText}</span>
+          </span>
+          <span className="min-w-0 truncate" style={{ color: valueColor }}>
+            {checkedText}
+          </span>
+          <span className="min-w-0 truncate" style={{ color: tailnetColor }}>
+            {tailnetText}
+          </span>
+        </div>
+      )}
+
+      {sys && !compact && (
+        <div
+          className="mt-4 pt-3 border-t grid grid-cols-3 gap-3 tabular-nums"
           style={{
             borderColor: palette.hairline,
           }}
