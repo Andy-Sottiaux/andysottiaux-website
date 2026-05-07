@@ -1,17 +1,15 @@
 import { NextResponse } from 'next/server'
 
 /**
- * Server-side proxy for the field device's /api/solar endpoint.
+ * Server-side proxy for the field solar /api/solar endpoint.
  *
  * Hides the upstream hostname so the client bundle and DevTools Network
  * tab never see anything but `/api/v3/solar` on this origin.
  *
- * Behaviour: the upstream returns useful information even on non-2xx
- * (e.g. 503 + `{"error":"no telemetry yet"}` while the BMV is out of BLE
- * range). We pass that body and status through verbatim so the client
- * can distinguish "sensor inactive" (upstream said so) from "proxy/network
- * unreachable" (we never got a response). Masking 5xx with our own JSON
- * makes the card render "broken" when in fact things are working.
+ * The Raspberry Pi reads the Victron BLE data privately, cayley-relay
+ * normalizes it, and this route keeps the public site pinned to a same-origin
+ * API. Non-2xx upstream bodies are passed through so the client can
+ * distinguish "sensor inactive" from "proxy/network unreachable".
  */
 
 export const runtime = 'edge'
@@ -20,7 +18,7 @@ export const dynamic = 'force-dynamic'
 const UPSTREAM =
   process.env.V3_SOLAR_UPSTREAM_HOST ||
   process.env.V3_UPSTREAM_HOST ||
-  'https://cayley-v3-cam-1.tailc7d6b6.ts.net'
+  'https://cayley-relay.tailc7d6b6.ts.net'
 
 export async function GET() {
   try {

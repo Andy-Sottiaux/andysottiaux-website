@@ -7,7 +7,7 @@ const UPSTREAM =
   process.env.V3_SOLAR_HISTORY_UPSTREAM_HOST ||
   process.env.V3_SOLAR_UPSTREAM_HOST ||
   process.env.V3_UPSTREAM_HOST ||
-  'https://cayley-v3-cam-1.tailc7d6b6.ts.net'
+  'https://cayley-relay.tailc7d6b6.ts.net'
 
 export async function GET() {
   try {

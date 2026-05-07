@@ -461,7 +461,7 @@ export default function FieldSolarCard({
 }
 
 function normalizeHistory(data: unknown): SolarHistoryPoint[] {
-  const root = data as { points?: unknown; history?: unknown; data?: unknown }
+  const root = data as { points?: unknown; history?: unknown; data?: unknown; buckets?: unknown }
   const raw = Array.isArray(data)
     ? data
     : Array.isArray(root?.points)
@@ -470,7 +470,9 @@ function normalizeHistory(data: unknown): SolarHistoryPoint[] {
         ? root.history
         : Array.isArray(root?.data)
           ? root.data
-          : []
+          : Array.isArray(root?.buckets)
+            ? root.buckets
+            : []
   const cutoff = Date.now() / 1000 - 24 * 60 * 60
 
   return raw
