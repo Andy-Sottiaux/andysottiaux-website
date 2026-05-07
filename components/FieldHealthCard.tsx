@@ -231,6 +231,20 @@ export default function FieldHealthCard({
   const ramColor = ramAvailMB != null && ramAvailMB < 32
     ? (isLight ? '#b45309' : '#fcd34d')
     : valueColor
+  const uptimeText = digest
+    ? fmtUptime(digest.uptimeSec)
+    : (lastOk ? fmtUptime(lastOk.uptimeSec) : '—')
+  const checkedText = digest ? 'now' : (lastOk ? fmtAge(Date.now() - lastOk.fetchedAt) : '—')
+  const tailnetText = typeof sys?.tailscale_kicks_4h === 'number' && sys.tailscale_kicks_4h > 0
+    ? `${sys.tailscale_kicks_4h} kicks`
+    : sys?.tailnet?.ok === true
+      ? 'ok'
+      : sys?.tailnet?.state || '—'
+  const tailnetColor = typeof sys?.tailscale_kicks_4h === 'number' && sys.tailscale_kicks_4h > 0
+    ? (isLight ? '#b45309' : '#fcd34d')
+    : sys?.tailnet?.ok === true
+      ? valueColor
+      : palette.mutedText
 
   return (
     <div
@@ -400,25 +414,53 @@ export default function FieldHealthCard({
 
       {sys && (
         <div
-          className={`${compact ? 'mt-3 pt-2 gap-x-3 text-[10px]' : 'mt-4 pt-3 gap-x-4 text-[11px]'} border-t flex flex-wrap gap-y-1 tabular-nums`}
+          className={`${compact ? 'mt-3 pt-2' : 'mt-4 pt-3'} border-t grid grid-cols-3 gap-3 tabular-nums`}
           style={{
             borderColor: palette.hairline,
-            color: palette.mutedText,
           }}
         >
-          {typeof sys.cpu_temp_c === 'number' && sys.cpu_temp_c > 0 && (
-            <span>SoC {sys.cpu_temp_c.toFixed(0)}°C</span>
-          )}
-          <span>up {digest ? fmtUptime(digest.uptimeSec) : (lastOk ? fmtUptime(lastOk.uptimeSec) : '—')}</span>
-          <span>checked {digest ? 'now' : (lastOk ? fmtAge(Date.now() - lastOk.fetchedAt) : '—')}</span>
-          {sys.mem && typeof sys.mem.cma_free_kb === 'number' && (
-            <span>cma {Math.round((sys.mem.cma_free_kb || 0) / 1024)}M</span>
-          )}
-          {typeof sys.tailscale_kicks_4h === 'number' && sys.tailscale_kicks_4h > 0 && (
-            <span style={{ color: isLight ? '#b45309' : '#fcd34d' }}>
-              ts kicks {sys.tailscale_kicks_4h}/4h
-            </span>
-          )}
+          <div className="min-w-0">
+            <div
+              className="text-[8px] font-semibold uppercase tracking-[0.18em]"
+              style={{ color: palette.mutedText }}
+            >
+              Uptime
+            </div>
+            <div
+              className={`${compact ? 'text-[11px]' : 'text-[12px]'} mt-1 truncate font-semibold`}
+              style={{ color: valueColor }}
+            >
+              {uptimeText}
+            </div>
+          </div>
+          <div className="min-w-0">
+            <div
+              className="text-[8px] font-semibold uppercase tracking-[0.18em]"
+              style={{ color: palette.mutedText }}
+            >
+              Checked
+            </div>
+            <div
+              className={`${compact ? 'text-[11px]' : 'text-[12px]'} mt-1 truncate font-semibold`}
+              style={{ color: valueColor }}
+            >
+              {checkedText}
+            </div>
+          </div>
+          <div className="min-w-0">
+            <div
+              className="text-[8px] font-semibold uppercase tracking-[0.18em]"
+              style={{ color: palette.mutedText }}
+            >
+              Tailnet
+            </div>
+            <div
+              className={`${compact ? 'text-[11px]' : 'text-[12px]'} mt-1 truncate font-semibold`}
+              style={{ color: tailnetColor }}
+            >
+              {tailnetText}
+            </div>
+          </div>
         </div>
       )}
 

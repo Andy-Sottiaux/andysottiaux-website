@@ -384,7 +384,7 @@ export default function FieldSolarCard({
               <Sparkline
                 data={solarHistory}
                 isLight={isLight}
-                className="w-full flex-1 min-h-[50px]"
+                className="w-full flex-1 min-h-[76px]"
                 gradientId="solarSparkAreaCompact"
                 tone="solar"
               />
@@ -414,7 +414,7 @@ export default function FieldSolarCard({
               <Sparkline
                 data={voltageHistory}
                 isLight={isLight}
-                className="w-full flex-1 min-h-[50px]"
+                className="w-full flex-1 min-h-[76px]"
                 gradientId="voltageSparkAreaCompact"
                 tone="battery"
               />
@@ -532,7 +532,7 @@ function HistoryPlaceholder({ isLight, label }: { isLight: boolean; label: strin
 function Sparkline({
   data,
   isLight,
-  className = 'w-full h-9',
+  className = 'w-full h-24',
   gradientId = 'solarSparkArea',
   tone = 'solar',
 }: {
@@ -542,8 +542,14 @@ function Sparkline({
   gradientId?: string
   tone?: 'solar' | 'battery'
 }) {
-  const W = 280
-  const H = 36
+  const W = 320
+  const H = 112
+  const PAD_L = 38
+  const PAD_R = 8
+  const PAD_T = 10
+  const PAD_B = 24
+  const innerW = W - PAD_L - PAD_R
+  const innerH = H - PAD_T - PAD_B
   const strokeColor = tone === 'battery'
     ? (isLight ? '#0a8aa8' : '#67e8f9')
     : (isLight ? '#c2410c' : '#ffb84d')
@@ -554,24 +560,40 @@ function Sparkline({
     ? (isLight ? 'rgba(10,138,168,0)' : 'rgba(103,232,249,0)')
     : (isLight ? 'rgba(194,65,12,0)' : 'rgba(255,184,77,0)')
   const baselineColor = isLight ? 'rgba(0,0,0,0.18)' : 'rgba(255,255,255,0.12)'
+  const axisColor = isLight ? 'rgba(28,26,28,0.45)' : 'rgba(255,255,255,0.42)'
+  const gridColor = isLight ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.10)'
 
   if (data.length < 2) {
     return (
       <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className={className}>
-        <line x1="0" y1={H - 1} x2={W} y2={H - 1} stroke={baselineColor} strokeWidth="1" />
+        <line x1={PAD_L} y1={PAD_T + innerH} x2={W - PAD_R} y2={PAD_T + innerH} stroke={baselineColor} strokeWidth="1" />
       </svg>
     )
   }
-  const max = Math.max(...data)
-  const min = Math.min(...data)
-  const range = Math.max(0.1, max - min)
-  const stepX = W / (data.length - 1)
-  const points = data.map((v, i) => {
-    const x = i * stepX
-    const y = H - ((v - min) / range) * (H - 2) - 1
-    return `${x.toFixed(1)},${y.toFixed(1)}`
-  }).join(' ')
-  const areaPoints = `0,${H} ${points} ${W},${H}`
+
+  const rawMax = Math.max(...data)
+  const rawMin = Math.min(...data)
+  const yMin = tone === 'solar'
+    ? 0
+    : Math.floor((rawMin - 0.02) * 20) / 20
+  const yMax = tone === 'solar'
+    ? niceCeil(Math.max(5, rawMax))
+    : Math.ceil((rawMax + 0.02) * 20) / 20
+  const range = Math.max(tone === 'solar' ? 1 : 0.05, yMax - yMin)
+  const stepX = innerW / (data.length - 1)
+  const yFor = (v: number) => PAD_T + innerH - ((v - yMin) / range) * innerH
+  const linePath = buildSmoothPath(data.map((v, i) => [
+    PAD_L + i * stepX,
+    yFor(v),
+  ]))
+  const areaPath = `${linePath} L ${PAD_L + innerW} ${PAD_T + innerH} L ${PAD_L} ${PAD_T + innerH} Z`
+  const tickValues = tone === 'solar'
+    ? [yMax, yMax / 2, 0]
+    : [yMax, yMin + range / 2, yMin]
+  const current = data[data.length - 1]
+  const currentX = PAD_L + innerW
+  const currentY = yFor(current)
+
   return (
     <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className={className} aria-hidden="true">
       <defs>
@@ -580,15 +602,89 @@ function Sparkline({
           <stop offset="100%" stopColor={areaBottom} />
         </linearGradient>
       </defs>
-      <polygon points={areaPoints} fill={`url(#${gradientId})`} />
-      <polyline
-        points={points}
+      {tickValues.map((value, index) => {
+        const y = yFor(value)
+        return (
+          <g key={`${value}-${index}`}>
+            <line
+              x1={PAD_L}
+              y1={y}
+              x2={W - PAD_R}
+              y2={y}
+              stroke={gridColor}
+              strokeWidth={index === tickValues.length - 1 ? 1.1 : 0.8}
+            />
+            <text
+              x={PAD_L - 5}
+              y={y + 3}
+              textAnchor="end"
+              fontSize="9"
+              fontWeight="650"
+              fill={axisColor}
+            >
+              {formatTick(value, tone)}
+            </text>
+          </g>
+        )
+      })}
+      {['24h', '12h', 'now'].map((label, index) => {
+        const x = PAD_L + (index / 2) * innerW
+        return (
+          <text
+            key={label}
+            x={x}
+            y={H - 5}
+            textAnchor={index === 0 ? 'start' : index === 2 ? 'end' : 'middle'}
+            fontSize="9"
+            fontWeight="650"
+            fill={axisColor}
+          >
+            {label}
+          </text>
+        )
+      })}
+      <path d={areaPath} fill={`url(#${gradientId})`} />
+      <path
+        d={linePath}
         fill="none"
         stroke={strokeColor}
-        strokeWidth="1.5"
+        strokeWidth="1.8"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
+      <circle
+        cx={currentX}
+        cy={currentY}
+        r="3"
+        fill={strokeColor}
+        stroke={isLight ? 'rgba(255,255,255,0.92)' : 'rgba(12,12,14,0.92)'}
+        strokeWidth="1.4"
+      />
     </svg>
   )
+}
+
+function niceCeil(value: number): number {
+  if (value <= 10) return 10
+  if (value <= 25) return 25
+  if (value <= 50) return 50
+  if (value <= 100) return 100
+  return Math.ceil(value / 50) * 50
+}
+
+function formatTick(value: number, tone: 'solar' | 'battery'): string {
+  if (tone === 'solar') return `${Math.round(value)}`
+  return value.toFixed(2)
+}
+
+function buildSmoothPath(points: Array<[number, number]>): string {
+  if (points.length === 0) return ''
+  let d = `M ${points[0][0].toFixed(1)} ${points[0][1].toFixed(1)}`
+  for (let i = 1; i < points.length; i++) {
+    const [x0, y0] = points[i - 1]
+    const [x1, y1] = points[i]
+    const cx = (x0 + x1) / 2
+    d += ` C ${cx.toFixed(1)} ${y0.toFixed(1)}, ${cx.toFixed(1)} ${y1.toFixed(1)}, ${x1.toFixed(1)} ${y1.toFixed(1)}`
+  }
+  return d
 }
