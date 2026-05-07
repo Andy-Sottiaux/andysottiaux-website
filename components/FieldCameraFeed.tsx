@@ -12,7 +12,7 @@
  * Scaling that page made the timestamp/status overlays too large and caused
  * awkward crops in the homepage card. The board now allows CORS for the API, so
  * the site loads go2rtc's `video-stream` web component directly and keeps the
- * full 704x576 camera frame visible inside responsive cards.
+ * full relay-facing camera frame visible inside responsive cards.
  */
 
 import { type CSSProperties, useEffect, useRef, useState } from 'react'
@@ -23,9 +23,9 @@ const CAMERA_HOST =
   'https://cayley-relay.tailc7d6b6.ts.net'
 const FEED_STREAM = process.env.NEXT_PUBLIC_V3_FEED_STREAM || 'cayley-sub'
 const PLAYER_MODE = process.env.NEXT_PUBLIC_V3_PLAYER_MODE || 'webrtc,mse,mjpeg'
-const ENCODER_FPS = 10
+const ENCODER_FPS = 15
 const ENCODER_CODEC = 'H.264'
-const ENCODER_MAX_KBPS = 768
+const ENCODER_MAX_KBPS = 1536
 
 const NATIVE_PLAYER_URL =
   `${CAMERA_HOST}/stream.html` +
@@ -351,7 +351,7 @@ function useCameraHealthOverlay(): CameraHealthOverlay {
 }
 
 function CameraSpecsOverlay({ data }: { data: CameraHealthOverlay }) {
-  const output = data.outputSize || '704x576'
+  const output = data.outputSize || '960x720'
   const temp = typeof data.tempC === 'number' ? `SoC ${Math.round(data.tempC)}°C` : null
   const camera = data.cameraState || 'calibrated'
 
