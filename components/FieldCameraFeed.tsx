@@ -41,19 +41,13 @@ type Phase = 'paused' | 'connecting' | 'live' | 'offline'
 type VideoFit = 'contain' | 'cover' | 'fill'
 
 type CameraHealthOverlay = {
-  cameraState?: string
   outputSize?: string
-  tempC?: number
 }
 
 type HealthPayload = {
   system?: {
-    cpu_temp_c?: number
     media_graph?: {
       output_size?: string
-      state?: string
-      visual_quality?: string
-      working?: boolean
     }
   }
 }
@@ -324,12 +318,6 @@ function useCameraHealthOverlay(): CameraHealthOverlay {
           const health = (await healthRes.json()) as HealthPayload
           const media = health.system?.media_graph
           next.outputSize = media?.output_size
-          next.cameraState = media?.working
-            ? media.visual_quality === 'calibrated'
-              ? 'calibrated'
-              : media.state || 'working'
-            : media?.state
-          next.tempC = health.system?.cpu_temp_c
         }
       } catch {
         // Overlay is informational only; never affect video playback.
@@ -353,8 +341,6 @@ function useCameraHealthOverlay(): CameraHealthOverlay {
 
 function CameraSpecsOverlay({ data }: { data: CameraHealthOverlay }) {
   const output = data.outputSize || '1920x1440'
-  const temp = typeof data.tempC === 'number' ? `SoC ${Math.round(data.tempC)}°C` : null
-  const camera = data.cameraState || 'calibrated'
 
   return (
     <div
@@ -370,17 +356,6 @@ function CameraSpecsOverlay({ data }: { data: CameraHealthOverlay }) {
         }}
       >
         {output} · {ENCODER_FPS}fps · {ENCODER_CODEC} · {ENCODER_MAX_MBPS.toFixed(1)} Mbps
-      </div>
-      <div
-        className="px-2.5 py-1 rounded-full opacity-80"
-        style={{
-          background: 'rgba(0,0,0,0.46)',
-          backdropFilter: 'blur(8px)',
-          WebkitBackdropFilter: 'blur(8px)',
-        }}
-      >
-        {camera}
-        {temp && ` · ${temp}`}
       </div>
     </div>
   )
