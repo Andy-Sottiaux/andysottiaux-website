@@ -32,8 +32,19 @@ type ServiceLoose = {
 
 type SystemLoose = {
   loadavg?: { '1m'?: number; '5m'?: number; '15m'?: number }
-  mem?: { free_kb?: number; avail_kb?: number; cma_free_kb?: number; total_kb?: number }
+  mem?: {
+    free_kb?: number
+    avail_kb?: number
+    cma_free_kb?: number
+    cma_total_kb?: number
+    total_kb?: number
+  }
   cpu_temp_c?: number
+  performance?: {
+    cma_allocated_pct?: number
+    swap_used_pct?: number
+    status?: string
+  }
   media_graph?: {
     state?: string
     working?: boolean
@@ -245,6 +256,15 @@ export default function FieldHealthCard({
     : sys?.tailnet?.ok === true
       ? valueColor
       : palette.mutedText
+  const cmaPct = typeof sys?.performance?.cma_allocated_pct === 'number'
+    ? Math.round(sys.performance.cma_allocated_pct)
+    : typeof sys?.mem?.cma_total_kb === 'number' && sys.mem.cma_total_kb > 0 && typeof sys.mem.cma_free_kb === 'number'
+      ? Math.round(((sys.mem.cma_total_kb - sys.mem.cma_free_kb) / sys.mem.cma_total_kb) * 100)
+      : null
+  const cmaText = cmaPct != null ? `CMA ${cmaPct}%` : checkedText
+  const cmaColor = cmaPct != null && cmaPct >= 80
+    ? (isLight ? '#b45309' : '#fcd34d')
+    : valueColor
 
   return (
     <div
@@ -419,14 +439,14 @@ export default function FieldHealthCard({
             borderColor: palette.hairline,
             color: palette.mutedText,
           }}
-          aria-label={`Uptime ${uptimeText}, SoC temperature ${thermalLabel}, Tailnet ${tailnetText}`}
+          aria-label={`Uptime ${uptimeText}, camera memory ${cmaText}, Tailnet ${tailnetText}`}
         >
           <span className="min-w-0 truncate">
             <span style={{ color: palette.mutedText }}>up </span>
             <span style={{ color: valueColor }}>{uptimeText}</span>
           </span>
-          <span className="min-w-0 truncate" style={{ color: thermalColor }}>
-            SoC {thermalLabel}
+          <span className="min-w-0 truncate" style={{ color: cmaColor }}>
+            {cmaText}
           </span>
           <span className="min-w-0 truncate" style={{ color: tailnetColor }}>
             {tailnetText}

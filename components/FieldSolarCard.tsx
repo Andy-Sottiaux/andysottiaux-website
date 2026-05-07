@@ -190,6 +190,7 @@ export default function FieldSolarCard({
   const hasHistory = history.length >= 2
   const solarHistory = history.map((p) => p.solar_power)
   const voltageHistory = history.map((p) => p.battery_voltage)
+  const loadWatts = solar ? Math.max(0, solar.battery_voltage * solar.load_current) : null
 
   return (
     <div
@@ -359,8 +360,8 @@ export default function FieldSolarCard({
             className={`${compact ? 'text-[20px]' : 'text-[24px] sm:text-[26px]'} font-semibold tracking-tight tabular-nums mt-1`}
             style={{ color: valueColor, opacity: state === 'stale' ? 0.7 : 1 }}
           >
-            {hasValues ? solar.load_current.toFixed(1) : '—'}
-            <span className="text-[12px] font-medium ml-1" style={{ color: palette.mutedText }}>A</span>
+            {hasValues && loadWatts != null ? loadWatts.toFixed(1) : '—'}
+            <span className="text-[12px] font-medium ml-1" style={{ color: palette.mutedText }}>W</span>
           </div>
         </div>
         <div>
