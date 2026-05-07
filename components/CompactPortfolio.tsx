@@ -10,7 +10,8 @@
  *      single shared `useBoardLive()` hook with hysteresis (see lib).
  *      Camera stays visible even when health is unreachable, so visitors see
  *      the stream's own offline state instead of the feed disappearing. Solar
- *      and health still swap to fallback content when the board is stale.
+ *      is independent now because it comes from the Raspberry Pi/Victron path;
+ *      only health swaps to fallback content when the camera board is stale.
  *
  *   2. Modal expansion. Clicking a tile body opens an in-place modal with
  *      an expanded view of that section instead of navigating off to
@@ -210,11 +211,7 @@ function Bento({
       </div>
 
       <div className="col-span-12 md:col-span-3 md:col-start-10 md:row-start-1 md:row-span-3">
-        <CrossfadeTile
-          showLive={boardLive}
-          live={<SolarTile onOpen={() => onOpen('live')} />}
-          fallback={<MoreProjectsTile onOpen={onOpen} />}
-        />
+        <SolarTile onOpen={() => onOpen('live')} />
       </div>
 
       <div className="col-span-12 md:col-span-3 md:col-start-1 md:row-start-2">
