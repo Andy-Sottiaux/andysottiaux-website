@@ -401,12 +401,14 @@ function IdentityTile({ onOpen }: { onOpen?: () => void }) {
       modalLabel="Open About"
       className="min-h-[170px] md:min-h-0"
     >
-      <div className="flex-1 min-h-0 flex flex-col px-5 md:px-[clamp(1rem,1.7vw,1.5rem)] py-5 md:py-[clamp(0.85rem,2.0dvh,1.5rem)]">
+      <div className="flex-1 min-h-0 flex flex-col items-center justify-center px-5 md:px-[clamp(1rem,1.7vw,1.5rem)] py-5 md:py-[clamp(0.75rem,1.7dvh,1.25rem)] gap-[clamp(0.35rem,1.05dvh,0.8rem)]">
         {/* Hero portrait — square card with a subtle ring + soft drop. */}
-        <div className="flex justify-center">
+        <div className="flex justify-center flex-shrink-0">
           <div
-            className="relative w-[108px] h-[108px] md:w-[clamp(72px,10.8dvh,116px)] md:h-[clamp(72px,10.8dvh,116px)] rounded-2xl overflow-hidden"
+            className="relative rounded-2xl overflow-hidden"
             style={{
+              width: 'clamp(64px, min(9.2dvh, 7.2vw), 108px)',
+              height: 'clamp(64px, min(9.2dvh, 7.2vw), 108px)',
               boxShadow: isLight
                 ? '0 12px 32px rgba(28,26,28,0.18), 0 0 0 1px rgba(0,0,0,0.05)'
                 : '0 16px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06)',
@@ -424,7 +426,7 @@ function IdentityTile({ onOpen }: { onOpen?: () => void }) {
         </div>
 
         <div
-          className="text-center text-[24px] md:text-[clamp(17px,2.35dvh,22px)] font-semibold leading-tight tracking-tight mt-4 md:mt-[clamp(0.55rem,1.5dvh,1rem)]"
+          className="text-center text-[24px] md:text-[clamp(17px,2.2dvh,22px)] font-semibold leading-none tracking-tight max-w-full truncate"
           style={{
             backgroundImage: palette.headlineGradient,
             WebkitBackgroundClip: 'text',
@@ -435,23 +437,16 @@ function IdentityTile({ onOpen }: { onOpen?: () => void }) {
           Andy Sottiaux
         </div>
         <div
-          className="text-center text-[10.5px] md:text-[clamp(8.5px,1.15dvh,11px)] uppercase tracking-[0.18em] mt-1.5 md:mt-[clamp(0.2rem,0.7dvh,0.375rem)]"
+          className="text-center text-[10.5px] md:text-[clamp(8.5px,1.05dvh,11px)] uppercase tracking-[0.18em] leading-none"
           style={{ color: palette.mutedText }}
         >
           Dallas, TX
         </div>
 
-        <div
-          className="text-center text-[12.5px] md:text-[clamp(10.5px,1.35dvh,13px)] leading-snug tracking-tight mt-3 md:mt-[clamp(0.35rem,1.1dvh,0.75rem)] px-1"
-          style={{ color: palette.bodyText }}
-        >
-          Aerospace hardware · Production software
-        </div>
-
-        <div className="mt-auto pt-4 md:pt-[clamp(0.45rem,1.3dvh,1rem)] flex justify-center">
+        <div className="flex justify-center flex-shrink-0">
           <a
             href="mailto:andrewsottiaux@gmail.com"
-            className="relative z-10 inline-flex items-center gap-1.5 text-[12px] md:text-[clamp(10px,1.25dvh,12px)] font-semibold tracking-tight hover:gap-2 transition-all px-3 py-1.5 md:py-[clamp(0.25rem,0.75dvh,0.375rem)] rounded-full"
+            className="relative z-10 inline-flex items-center gap-1.5 text-[12px] md:text-[clamp(10px,1.15dvh,12px)] font-semibold tracking-tight hover:gap-2 transition-all px-3 py-1.5 md:py-[clamp(0.25rem,0.7dvh,0.375rem)] rounded-full"
             style={{
               color: isLight ? '#0a8aa8' : 'rgb(103, 232, 249)',
               background: isLight
