@@ -23,6 +23,7 @@ const CAMERA_HOST =
   'https://cayley-relay.tailc7d6b6.ts.net'
 const FEED_STREAM = process.env.NEXT_PUBLIC_V3_FEED_STREAM || 'cayley-sub'
 const PLAYER_MODE = process.env.NEXT_PUBLIC_V3_PLAYER_MODE || 'webrtc,mse,mjpeg'
+const PLAYER_ASSET_VERSION = '20260508-video-rtc'
 
 const NATIVE_PLAYER_URL =
   `${CAMERA_HOST}/stream.html` +
@@ -221,6 +222,17 @@ export default function FieldCameraFeed({
     }
   }, [active, reloadNonce, fit, position])
 
+  useEffect(() => {
+    if (!active || phase !== 'offline') return
+
+    const retryTimer = window.setTimeout(() => {
+      setPhase('connecting')
+      setReloadNonce((n) => n + 1)
+    }, 8_000)
+
+    return () => window.clearTimeout(retryTimer)
+  }, [active, phase])
+
   const reload = () => {
     setPhase('connecting')
     setReloadNonce((n) => n + 1)
@@ -400,7 +412,7 @@ function loadVideoStreamScript(): Promise<void> {
     const script = document.createElement('script')
     script.type = 'module'
     script.crossOrigin = 'anonymous'
-    script.src = `${CAMERA_HOST}/video-stream.js`
+    script.src = `${CAMERA_HOST}/video-stream.js?v=${PLAYER_ASSET_VERSION}`
     script.onload = () => {
       window.customElements.whenDefined('video-stream').then(() => resolve(), reject)
     }
