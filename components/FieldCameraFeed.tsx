@@ -22,8 +22,8 @@ const CAMERA_HOST =
   process.env.NEXT_PUBLIC_V3_CAMERA_HOST ||
   'https://cayley-relay.tailc7d6b6.ts.net'
 const FEED_STREAM = process.env.NEXT_PUBLIC_V3_FEED_STREAM || 'cayley-sub'
-const PLAYER_MODE = process.env.NEXT_PUBLIC_V3_PLAYER_MODE || 'webrtc,mse,mjpeg'
-const PLAYER_ASSET_VERSION = '20260508-video-rtc'
+const PLAYER_MODE = process.env.NEXT_PUBLIC_V3_PLAYER_MODE || 'webrtc'
+const PLAYER_ASSET_VERSION = '20260513-webrtc-only'
 
 const NATIVE_PLAYER_URL =
   `${CAMERA_HOST}/stream.html` +
