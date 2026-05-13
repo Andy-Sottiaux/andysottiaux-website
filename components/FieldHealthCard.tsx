@@ -70,6 +70,18 @@ type SystemLoose = {
     mode?: string
     age_s?: number
   }
+  rknn_detector?: {
+    available?: boolean
+    ok?: boolean
+    state?: string
+    status?: string
+    stale?: boolean
+    detections?: number
+    actual_fps?: number
+    target_fps?: number
+    duration_ms?: number
+    age_s?: number
+  }
   victron_advert_age_s?: number
   victron_hearing?: boolean
   tailscale_kicks_4h?: number
@@ -117,6 +129,57 @@ function fmtAge(ms: number): string {
   if (m < 60) return `${m} min ago`
   const h = Math.floor(m / 60)
   return `${h}h ago`
+}
+
+function CompactStatus({
+  label,
+  value,
+  color,
+  muted,
+  border,
+}: {
+  label: string
+  value: string
+  color: string
+  muted: string
+  border: string
+}) {
+  return (
+    <div
+      className="min-w-0 rounded-xl border px-3 py-2"
+      style={{ borderColor: border, background: 'rgba(255,255,255,0.025)' }}
+    >
+      <div className="text-[7.5px] uppercase tracking-[0.18em] font-semibold" style={{ color: muted }}>
+        {label}
+      </div>
+      <div className="mt-1 text-[14px] md:text-[clamp(11.5px,1.55dvh,14px)] font-semibold tracking-tight truncate" style={{ color }}>
+        {value}
+      </div>
+    </div>
+  )
+}
+
+function CompactChip({
+  label,
+  value,
+  color,
+  muted,
+}: {
+  label: string
+  value: string
+  color: string
+  muted: string
+}) {
+  return (
+    <div className="min-w-0">
+      <div className="text-[7px] uppercase tracking-[0.16em]" style={{ color: muted }}>
+        {label}
+      </div>
+      <div className="truncate" style={{ color }}>
+        {value}
+      </div>
+    </div>
+  )
 }
 
 export default function FieldHealthCard({
@@ -304,6 +367,175 @@ export default function FieldHealthCard({
   const cmaColor = cmaPct != null && cmaPct >= 80
     ? (isLight ? '#b45309' : '#fcd34d')
     : valueColor
+  const rknn = sys?.rknn_detector
+  const rknnOk = rknn?.ok === true || rknn?.state === 'ok' || rknn?.status === 'ok'
+  const rknnFps = typeof rknn?.actual_fps === 'number' && Number.isFinite(rknn.actual_fps)
+    ? rknn.actual_fps
+    : typeof rknn?.target_fps === 'number' && Number.isFinite(rknn.target_fps)
+      ? rknn.target_fps
+      : null
+  const rknnText = rknn?.available === false
+    ? 'off'
+    : rknnOk
+      ? `${rknnFps != null ? rknnFps.toFixed(rknnFps >= 10 ? 0 : 1) : '1.0'} FPS`
+      : rknn?.state || 'check'
+  const rknnColor = rknnOk ? valueColor : palette.mutedText
+  const thermalPct = typeof sys?.cpu_temp_c === 'number'
+    ? Math.max(0, Math.min(100, ((sys.cpu_temp_c - 35) / 45) * 100))
+    : 0
+
+  if (compact) {
+    return (
+      <div
+        className="relative rounded-2xl h-full min-h-0 flex flex-col overflow-hidden px-5 py-4 md:px-[clamp(1rem,1.7vw,1.35rem)] md:py-[clamp(0.8rem,1.55dvh,1.05rem)]"
+        style={{
+          background: palette.cardBackground,
+          border: palette.cardBorder,
+          backdropFilter: 'blur(24px)',
+          WebkitBackdropFilter: 'blur(24px)',
+          boxShadow: palette.cardShadow,
+        }}
+        role="region"
+        aria-label="System health"
+      >
+        <div
+          className="pointer-events-none absolute -top-20 -right-20 w-56 h-56 rounded-full"
+          style={{
+            background: connecting
+              ? `radial-gradient(circle, rgba(142,142,147,${isLight ? 0.08 : 0.12}), transparent 70%)`
+              : online
+                ? `radial-gradient(circle, rgba(48,209,88,${isLight ? 0.12 : 0.18}), transparent 70%)`
+                : `radial-gradient(circle, rgba(255,69,58,${isLight ? 0.08 : 0.12}), transparent 70%)`,
+          }}
+        />
+
+        <div className="relative flex items-center justify-between gap-3">
+          <div
+            className="text-[10px] md:text-[clamp(8.5px,1.1dvh,10px)] font-semibold uppercase tracking-[0.22em]"
+            style={{ color: isLight ? '#0f9d4f' : 'rgba(74, 222, 128, 0.9)' }}
+          >
+            Health
+          </div>
+          <div
+            className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[9px] md:text-[clamp(7.5px,0.9dvh,9px)] font-bold uppercase tracking-[0.18em]"
+            style={{
+              color: online ? (isLight ? '#0f9d4f' : '#86efac') : connecting ? palette.mutedText : '#ff8a80',
+              background: online
+                ? (isLight ? 'rgba(15,157,79,0.08)' : 'rgba(134,239,172,0.10)')
+                : (isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.06)'),
+              border: palette.cardBorder,
+            }}
+          >
+            <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full" style={{ background: dotColor, boxShadow: dotGlow }} />
+            {headlineLabel}
+          </div>
+        </div>
+
+        {degraded && digest && (
+          <div
+            className="relative mt-2 text-[10px] md:text-[clamp(8.5px,1dvh,10px)] truncate"
+            style={{ color: isLight ? '#b45309' : '#fcd34d' }}
+          >
+            {digest.servicesDown.join(', ')}
+          </div>
+        )}
+
+        <div className="relative mt-3 grid grid-cols-2 gap-2.5 md:gap-[clamp(0.45rem,0.95dvh,0.75rem)]">
+          <div
+            className="min-w-0 rounded-xl border p-3 md:p-[clamp(0.55rem,1.1dvh,0.8rem)]"
+            style={{ borderColor: palette.hairline, background: 'rgba(255,255,255,0.025)' }}
+          >
+            <div className="text-[7.5px] uppercase tracking-[0.18em] font-semibold" style={{ color: palette.mutedText }}>
+              Thermal
+            </div>
+            <div className="mt-1 text-[26px] md:text-[clamp(20px,3dvh,27px)] font-semibold tracking-tight tabular-nums leading-none" style={{ color: thermalColor }}>
+              {thermalLabel}
+            </div>
+            <div className="mt-2.5 h-1.5 rounded-full overflow-hidden" style={{ background: palette.trackBackground }}>
+              <div
+                className="h-full rounded-full"
+                style={{
+                  width: `${thermalPct}%`,
+                  background: typeof sys?.cpu_temp_c === 'number' && sys.cpu_temp_c >= 70
+                    ? 'linear-gradient(90deg, #ff9f0a, #ff453a)'
+                    : 'linear-gradient(90deg, #30d158, #67e8f9)',
+                }}
+              />
+            </div>
+          </div>
+          <div
+            className="min-w-0 rounded-xl border p-3 md:p-[clamp(0.55rem,1.1dvh,0.8rem)]"
+            style={{ borderColor: palette.hairline, background: 'rgba(255,255,255,0.025)' }}
+          >
+            <div className="text-[7.5px] uppercase tracking-[0.18em] font-semibold" style={{ color: palette.mutedText }}>
+              Fan
+            </div>
+            <div className="mt-1 text-[20px] md:text-[clamp(16px,2.15dvh,20px)] font-semibold tracking-tight tabular-nums leading-none truncate" style={{ color: fanColor }}>
+              {fanRpm != null ? `${fanRpm.toLocaleString()} RPM` : fanText}
+            </div>
+            <div className="mt-2 flex items-center gap-2">
+              <div className="h-1.5 flex-1 rounded-full overflow-hidden" style={{ background: palette.trackBackground }}>
+                <div className="h-full rounded-full" style={{ width: `${fanPct ?? 0}%`, background: 'linear-gradient(90deg, #67e8f9, #30d158)' }} />
+              </div>
+              <div className="text-[10px] font-semibold tabular-nums" style={{ color: palette.mutedText }}>
+                {fanPct != null ? `${fanPct}%` : '—'}
+              </div>
+            </div>
+          </div>
+          <div
+            className="min-w-0 rounded-xl border p-3 md:p-[clamp(0.55rem,1.05dvh,0.75rem)]"
+            style={{ borderColor: palette.hairline, background: 'rgba(255,255,255,0.02)' }}
+          >
+            <div className="text-[7.5px] uppercase tracking-[0.18em] font-semibold" style={{ color: palette.mutedText }}>
+              Camera
+            </div>
+            <div className="mt-1 text-[15px] md:text-[clamp(12px,1.55dvh,15px)] font-semibold tracking-tight truncate" style={{ color: valueColor }}>
+              {cameraLabel}
+            </div>
+            <div className="mt-1 text-[9px] font-semibold tabular-nums truncate" style={{ color: palette.fadedText }}>
+              {sys?.media_graph?.output_size || '1280x720'}
+            </div>
+          </div>
+          <div
+            className="min-w-0 rounded-xl border p-3 md:p-[clamp(0.55rem,1.05dvh,0.75rem)]"
+            style={{ borderColor: palette.hairline, background: 'rgba(255,255,255,0.02)' }}
+          >
+            <div className="text-[7.5px] uppercase tracking-[0.18em] font-semibold" style={{ color: palette.mutedText }}>
+              RKNN
+            </div>
+            <div className="mt-1 text-[15px] md:text-[clamp(12px,1.55dvh,15px)] font-semibold tracking-tight truncate" style={{ color: rknnColor }}>
+              {rknnText}
+            </div>
+            <div className="mt-1 text-[9px] font-semibold tabular-nums truncate" style={{ color: palette.fadedText }}>
+              {typeof rknn?.duration_ms === 'number' ? `${Math.round(rknn.duration_ms)} ms` : `${rknn?.detections ?? 0} objects`}
+            </div>
+          </div>
+        </div>
+
+        <div
+          className="relative mt-auto pt-2.5 border-t grid gap-x-3 gap-y-1.5 text-[9.5px] md:text-[clamp(7.7px,0.9dvh,9.5px)] font-semibold tabular-nums min-w-0"
+          style={{
+            borderColor: palette.hairline,
+            gridTemplateColumns: 'repeat(auto-fit, minmax(3.8rem, 1fr))',
+          }}
+        >
+          <CompactChip label="Svc" value={digest ? `${digest.servicesUp}/${digest.servicesTotal}` : (lastOk ? `${lastOk.servicesUp}/${lastOk.servicesTotal}` : '—')} color={valueColor} muted={palette.fadedText} />
+          <CompactChip label="Up" value={uptimeText} color={valueColor} muted={palette.fadedText} />
+          <CompactChip label="RAM" value={ramAvailMB != null ? `${ramAvailMB}M` : '—'} color={ramColor} muted={palette.fadedText} />
+          <CompactChip label="CMA" value={cmaPct != null ? `${cmaPct}%` : '—'} color={cmaColor} muted={palette.fadedText} />
+          <CompactChip label="Net" value={tailnetText} color={tailnetColor} muted={palette.fadedText} />
+        </div>
+
+        <style jsx global>{`
+          @keyframes fldHealthPing {
+            0%   { transform: scale(1);   opacity: 0.55; }
+            80%  { transform: scale(2.4); opacity: 0;    }
+            100% { transform: scale(2.4); opacity: 0;    }
+          }
+        `}</style>
+      </div>
+    )
+  }
 
   return (
     <div

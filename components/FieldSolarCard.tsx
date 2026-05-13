@@ -189,7 +189,6 @@ export default function FieldSolarCard({
           : 'offline'
   const hasHistory = history.length >= 2
   const solarHistory = history.map((p) => p.solar_power)
-  const voltageHistory = history.map((p) => p.battery_voltage)
   const loadWatts = solar ? Math.max(0, solar.battery_voltage * solar.load_current) : null
 
   return (
@@ -213,7 +212,7 @@ export default function FieldSolarCard({
         }}
       />
 
-      <div className={`flex items-center justify-between gap-3 ${compact ? 'mb-4 md:mb-[clamp(0.45rem,1.25dvh,1rem)]' : 'mb-5'}`}>
+      <div className={`flex items-center justify-between gap-3 ${compact ? 'mb-3 md:mb-[clamp(0.35rem,0.9dvh,0.75rem)]' : 'mb-5'}`}>
         <div
           className={`${compact ? 'text-[10px] md:text-[clamp(8.5px,1.1dvh,10px)]' : 'text-[10.5px]'} font-semibold uppercase tracking-[0.22em]`}
           style={{ color: isLight ? '#b45309' : 'rgba(252, 211, 77, 0.9)' /* amber-300/90 */ }}
@@ -245,7 +244,7 @@ export default function FieldSolarCard({
       {/* Hero number — battery voltage */}
       <div className="flex items-baseline gap-2 mb-1">
         <div
-          className={`${compact ? 'text-[54px] md:text-[clamp(42px,7dvh,58px)]' : 'text-[56px] sm:text-[68px]'} font-semibold leading-none tracking-tight tabular-nums`}
+          className={`${compact ? 'text-[48px] md:text-[clamp(38px,5.5dvh,50px)]' : 'text-[56px] sm:text-[68px]'} font-semibold leading-none tracking-tight tabular-nums`}
           style={{
             // backgroundImage longhand — `background:` shorthand resets
             // background-clip back to default and the gradient renders as
@@ -266,7 +265,7 @@ export default function FieldSolarCard({
         </div>
       </div>
       <div
-        className={`${compact ? 'text-[12px] md:text-[clamp(10px,1.3dvh,12px)] mb-4 md:mb-[clamp(0.45rem,1.25dvh,1rem)]' : 'text-[13px] mb-6'} tracking-tight flex items-center gap-2`}
+        className={`${compact ? 'text-[12px] md:text-[clamp(9.5px,1.15dvh,12px)] mb-3 md:mb-[clamp(0.35rem,0.9dvh,0.75rem)]' : 'text-[13px] mb-6'} tracking-tight flex items-center gap-2`}
         style={{ color: palette.bodyText, minHeight: '1.25rem' }}
       >
         {hasValues ? (
@@ -310,7 +309,7 @@ export default function FieldSolarCard({
       </div>
 
       {/* SOC bar — bigger, with depth */}
-      <div className={`relative ${compact ? 'mb-5 md:mb-[clamp(0.55rem,1.4dvh,1.25rem)]' : 'mb-7'}`}>
+      <div className={`relative ${compact ? 'mb-4 md:mb-[clamp(0.4rem,1dvh,0.9rem)]' : 'mb-7'}`}>
         <div
           className="h-2.5 md:h-[clamp(0.4rem,0.9dvh,0.625rem)] w-full rounded-full overflow-hidden"
           style={{ background: palette.trackBackground }}
@@ -328,7 +327,7 @@ export default function FieldSolarCard({
       </div>
 
       {/* Secondary stats */}
-      <div className={`grid grid-cols-3 ${compact ? 'gap-3 md:gap-[clamp(0.45rem,1dvh,0.75rem)] mb-4 md:mb-[clamp(0.45rem,1.2dvh,1rem)]' : 'gap-5 mb-5'}`}>
+      <div className={`grid grid-cols-3 ${compact ? 'gap-3 md:gap-[clamp(0.4rem,0.85dvh,0.7rem)] mb-3 md:mb-[clamp(0.35rem,0.9dvh,0.75rem)]' : 'gap-5 mb-5'}`}>
         <div>
           <div
             className={`${compact ? 'text-[9px] md:text-[clamp(7.5px,0.9dvh,9px)]' : 'text-[10px]'} uppercase tracking-[0.18em] font-medium`}
@@ -337,7 +336,7 @@ export default function FieldSolarCard({
             Solar in
           </div>
           <div
-            className={`${compact ? 'text-[20px] md:text-[clamp(15px,2.05dvh,20px)]' : 'text-[24px] sm:text-[26px]'} font-semibold tracking-tight tabular-nums mt-1 md:mt-[clamp(0.15rem,0.55dvh,0.25rem)]`}
+            className={`${compact ? 'text-[19px] md:text-[clamp(14px,1.85dvh,19px)]' : 'text-[24px] sm:text-[26px]'} font-semibold tracking-tight tabular-nums mt-1 md:mt-[clamp(0.15rem,0.55dvh,0.25rem)]`}
             style={{
               color: hasValues && solar.solar_power > 0
                 ? (isLight ? '#c2410c' : '#ffb84d')
@@ -357,7 +356,7 @@ export default function FieldSolarCard({
             Load
           </div>
           <div
-            className={`${compact ? 'text-[20px] md:text-[clamp(15px,2.05dvh,20px)]' : 'text-[24px] sm:text-[26px]'} font-semibold tracking-tight tabular-nums mt-1 md:mt-[clamp(0.15rem,0.55dvh,0.25rem)]`}
+            className={`${compact ? 'text-[19px] md:text-[clamp(14px,1.85dvh,19px)]' : 'text-[24px] sm:text-[26px]'} font-semibold tracking-tight tabular-nums mt-1 md:mt-[clamp(0.15rem,0.55dvh,0.25rem)]`}
             style={{ color: valueColor, opacity: state === 'stale' ? 0.7 : 1 }}
           >
             {hasValues && loadWatts != null ? loadWatts.toFixed(1) : '—'}
@@ -372,7 +371,7 @@ export default function FieldSolarCard({
             Yield today
           </div>
           <div
-            className={`${compact ? 'text-[20px] md:text-[clamp(15px,2.05dvh,20px)]' : 'text-[24px] sm:text-[26px]'} font-semibold tracking-tight tabular-nums mt-1 md:mt-[clamp(0.15rem,0.55dvh,0.25rem)]`}
+            className={`${compact ? 'text-[19px] md:text-[clamp(14px,1.85dvh,19px)]' : 'text-[24px] sm:text-[26px]'} font-semibold tracking-tight tabular-nums mt-1 md:mt-[clamp(0.15rem,0.55dvh,0.25rem)]`}
             style={{ color: valueColor, opacity: state === 'stale' ? 0.7 : 1 }}
           >
             {hasValues ? solar.yield_today : '—'}
@@ -383,69 +382,38 @@ export default function FieldSolarCard({
 
       {compact ? (
         <div
-          className="mt-1 md:mt-[clamp(0.2rem,0.8dvh,0.75rem)] grid gap-3 md:gap-[clamp(0.45rem,1.1dvh,0.75rem)] min-h-0 content-start"
-          style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(11rem, 100%), 1fr))' }}
+          className="mt-auto rounded-xl border p-3 md:p-[clamp(0.55rem,1.1dvh,0.75rem)] flex flex-col min-h-[178px] flex-1"
+          style={{
+            borderColor: isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)',
+            background: isLight ? 'rgba(255,255,255,0.34)' : 'rgba(255,255,255,0.025)',
+          }}
         >
-          <div
-            className="rounded-xl border p-3 md:p-[clamp(0.55rem,1.1dvh,0.75rem)] flex flex-col min-h-0 h-[clamp(92px,11dvh,144px)]"
-            style={{
-              borderColor: isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)',
-              background: isLight ? 'rgba(255,255,255,0.36)' : 'rgba(255,255,255,0.025)',
-            }}
-          >
-            <div className="flex items-center justify-between mb-2 md:mb-[clamp(0.35rem,0.9dvh,0.5rem)]">
+          <div className="flex items-center justify-between gap-3 mb-2 md:mb-[clamp(0.35rem,0.9dvh,0.5rem)]">
+            <div className="min-w-0">
               <div
                 className="text-[9px] md:text-[clamp(7.5px,0.9dvh,9px)] uppercase tracking-[0.18em] font-medium"
                 style={{ color: palette.mutedText }}
               >
-                Solar input · 24h
+                24h trend
               </div>
-              <div className="text-[10px] tabular-nums" style={{ color: palette.fadedText }}>
-                {hasValues ? `${Math.round(solar.solar_power)} W` : 'waiting'}
-              </div>
-            </div>
-            {hasHistory ? (
-              <Sparkline
-                data={solarHistory}
-                isLight={isLight}
-                className="w-full flex-1 min-h-0 self-center"
-                gradientId="solarSparkAreaCompact"
-                tone="solar"
-              />
-            ) : (
-              <HistoryPlaceholder isLight={isLight} label="Pi 24h source pending" />
-            )}
-          </div>
-          <div
-            className="rounded-xl border p-3 md:p-[clamp(0.55rem,1.1dvh,0.75rem)] flex flex-col min-h-0 h-[clamp(92px,11dvh,144px)]"
-            style={{
-              borderColor: isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)',
-              background: isLight ? 'rgba(255,255,255,0.28)' : 'rgba(255,255,255,0.02)',
-            }}
-          >
-            <div className="flex items-center justify-between mb-2 md:mb-[clamp(0.35rem,0.9dvh,0.5rem)]">
-              <div
-                className="text-[9px] md:text-[clamp(7.5px,0.9dvh,9px)] uppercase tracking-[0.18em] font-medium"
-                style={{ color: palette.mutedText }}
-              >
-                Battery voltage · 24h
-              </div>
-              <div className="text-[10px] tabular-nums" style={{ color: palette.fadedText }}>
-                {hasValues ? `${solar.battery_voltage.toFixed(2)} V` : 'waiting'}
+              <div className="mt-1 flex items-center gap-3 text-[9.5px] font-semibold uppercase tracking-[0.14em]">
+                <span style={{ color: isLight ? '#c2410c' : '#ffb84d' }}>Solar</span>
+                <span style={{ color: isLight ? '#0a8aa8' : '#67e8f9' }}>Battery</span>
               </div>
             </div>
-            {hasHistory ? (
-              <Sparkline
-                data={voltageHistory}
-                isLight={isLight}
-                className="w-full flex-1 min-h-0 self-center"
-                gradientId="voltageSparkAreaCompact"
-                tone="battery"
-              />
-            ) : (
-              <HistoryPlaceholder isLight={isLight} label="Waiting for Pi history" />
-            )}
+            <div className="text-[10px] tabular-nums text-right" style={{ color: palette.fadedText }}>
+              {hasValues ? `${Math.round(solar.solar_power)} W · ${solar.battery_voltage.toFixed(2)} V` : 'waiting'}
+            </div>
           </div>
+          {hasHistory ? (
+            <CombinedEnergyChart
+              points={history}
+              isLight={isLight}
+              className="w-full flex-1 min-h-0 self-center"
+            />
+          ) : (
+            <HistoryPlaceholder isLight={isLight} label="Waiting for Pi history" />
+          )}
         </div>
       ) : (
         <div
@@ -550,6 +518,91 @@ function HistoryPlaceholder({ isLight, label }: { isLight: boolean; label: strin
         {label}
       </div>
     </div>
+  )
+}
+
+function CombinedEnergyChart({
+  points,
+  isLight,
+  className,
+}: {
+  points: SolarHistoryPoint[]
+  isLight: boolean
+  className: string
+}) {
+  const W = 340
+  const H = 170
+  const PAD_L = 34
+  const PAD_R = 10
+  const PAD_T = 8
+  const PAD_B = 22
+  const innerW = W - PAD_L - PAD_R
+  const innerH = H - PAD_T - PAD_B
+  const solar = points.map((p) => p.solar_power)
+  const volts = points.map((p) => p.battery_voltage)
+  const solarMax = niceCeil(Math.max(5, ...solar))
+  const vMinRaw = Math.min(...volts)
+  const vMaxRaw = Math.max(...volts)
+  const vMin = Math.floor((vMinRaw - 0.02) * 20) / 20
+  const vMax = Math.ceil((vMaxRaw + 0.02) * 20) / 20
+  const vRange = Math.max(0.05, vMax - vMin)
+  const stepX = innerW / Math.max(1, points.length - 1)
+  const xFor = (i: number) => PAD_L + i * stepX
+  const solarY = (v: number) => PAD_T + innerH - (v / Math.max(1, solarMax)) * innerH
+  const voltY = (v: number) => PAD_T + innerH - ((v - vMin) / vRange) * innerH
+  const solarPath = buildSmoothPath(solar.map((v, i) => [xFor(i), solarY(v)]))
+  const voltPath = buildSmoothPath(volts.map((v, i) => [xFor(i), voltY(v)]))
+  const areaPath = `${solarPath} L ${PAD_L + innerW} ${PAD_T + innerH} L ${PAD_L} ${PAD_T + innerH} Z`
+  const gridColor = isLight ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.10)'
+  const axisColor = isLight ? 'rgba(28,26,28,0.46)' : 'rgba(255,255,255,0.42)'
+  const solarColor = isLight ? '#c2410c' : '#ffb84d'
+  const voltColor = isLight ? '#0a8aa8' : '#67e8f9'
+  const areaTop = isLight ? 'rgba(194,65,12,0.24)' : 'rgba(255,184,77,0.30)'
+  const areaBottom = isLight ? 'rgba(194,65,12,0)' : 'rgba(255,184,77,0)'
+  const currentSolarY = solarY(solar[solar.length - 1] ?? 0)
+  const currentVoltY = voltY(volts[volts.length - 1] ?? vMin)
+  const currentX = PAD_L + innerW
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet" className={className} aria-hidden="true">
+      <defs>
+        <linearGradient id="combinedSolarArea" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={areaTop} />
+          <stop offset="100%" stopColor={areaBottom} />
+        </linearGradient>
+      </defs>
+      {[solarMax, solarMax / 2, 0].map((value, index) => {
+        const y = solarY(value)
+        return (
+          <g key={`${value}-${index}`}>
+            <line x1={PAD_L} y1={y} x2={W - PAD_R} y2={y} stroke={gridColor} strokeWidth={index === 2 ? 1.1 : 0.8} />
+            <text x={PAD_L - 5} y={y + 3} textAnchor="end" fontSize="8.5" fontWeight="650" fill={axisColor}>
+              {Math.round(value)}
+            </text>
+          </g>
+        )
+      })}
+      {[0, 1, 2].map((index) => {
+        const x = PAD_L + (index / 2) * innerW
+        const label = index === 0 ? '24h' : index === 1 ? '12h' : 'now'
+        return (
+          <text key={label} x={x} y={H - 5} textAnchor={index === 0 ? 'start' : index === 2 ? 'end' : 'middle'} fontSize="8.5" fontWeight="650" fill={axisColor}>
+            {label}
+          </text>
+        )
+      })}
+      <text x={W - PAD_R} y={PAD_T + 3} textAnchor="end" fontSize="8.5" fontWeight="650" fill={voltColor}>
+        {vMax.toFixed(2)}V
+      </text>
+      <text x={W - PAD_R} y={PAD_T + innerH + 3} textAnchor="end" fontSize="8.5" fontWeight="650" fill={voltColor}>
+        {vMin.toFixed(2)}V
+      </text>
+      <path d={areaPath} fill="url(#combinedSolarArea)" />
+      <path d={solarPath} fill="none" stroke={solarColor} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+      <path d={voltPath} fill="none" stroke={voltColor} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx={currentX} cy={currentSolarY} r="2.8" fill={solarColor} stroke={isLight ? 'rgba(255,255,255,0.92)' : 'rgba(12,12,14,0.92)'} strokeWidth="1.2" />
+      <circle cx={currentX} cy={currentVoltY} r="2.8" fill={voltColor} stroke={isLight ? 'rgba(255,255,255,0.92)' : 'rgba(12,12,14,0.92)'} strokeWidth="1.2" />
+    </svg>
   )
 }
 

@@ -23,10 +23,11 @@ const CAMERA_HOST =
   'https://cayley-relay.tailc7d6b6.ts.net'
 const PRIMARY_FEED_STREAM = process.env.NEXT_PUBLIC_V3_FEED_STREAM || 'cayley-sub'
 const FEED_STREAMS = uniqueStreamNames([PRIMARY_FEED_STREAM, 'cayley-sub'])
-const PLAYER_MODE = process.env.NEXT_PUBLIC_V3_PLAYER_MODE || 'webrtc,mse'
-const PLAYER_ASSET_VERSION = '20260513-stream-fallbacks'
+const PLAYER_MODE = process.env.NEXT_PUBLIC_V3_PLAYER_MODE || 'webrtc'
+const PLAYER_ASSET_VERSION = '20260513-low-latency-ai'
 
 const SNAPSHOT_URL = `${CAMERA_HOST}/api/camera/snapshot.jpeg`
+const DETECTIONS_URL = '/api/v3/detections?window_sec=300'
 
 const LOAD_TIMEOUT_MS = 10_000
 
@@ -36,6 +37,25 @@ type VideoFit = 'contain' | 'cover' | 'fill'
 type CameraHealthOverlay = {
   outputSize?: string
   profile?: CameraStreamProfile
+}
+
+type DetectionItem = {
+  ts?: number
+  class?: string
+  conf?: number
+  bbox?: {
+    x?: number
+    y?: number
+    w?: number
+    h?: number
+  }
+}
+
+type DetectionPayload = {
+  now?: number
+  counts?: Record<string, number>
+  recent?: DetectionItem[]
+  error?: string
 }
 
 type CameraStreamProfile = {
@@ -90,6 +110,7 @@ export default function FieldCameraFeed({
   const isLight = palette.mode === 'light'
   const debugMode = useDebugFlag()
   const overlay = useCameraHealthOverlay()
+  const detections = useDetectionOverlay()
   const containerRef = useRef<HTMLDivElement>(null)
   const mountRef = useRef<HTMLDivElement>(null)
 
@@ -305,6 +326,7 @@ export default function FieldCameraFeed({
 
       {debugMode && <DevHUD phase={phase} stream={activeStream} />}
       {phase === 'live' && <CameraSpecsOverlay data={overlay} />}
+      {phase === 'live' && <DetectionOverlay data={detections} />}
 
       <a
         href={nativePlayerUrl(activeStream)}
@@ -392,6 +414,36 @@ function useCameraHealthOverlay(): CameraHealthOverlay {
   return overlay
 }
 
+function useDetectionOverlay(): DetectionPayload {
+  const [data, setData] = useState<DetectionPayload>({})
+
+  useEffect(() => {
+    let cancelled = false
+    let timer: ReturnType<typeof setTimeout> | null = null
+
+    const tick = async () => {
+      try {
+        const res = await fetch(DETECTIONS_URL, { cache: 'no-store' })
+        if (res.ok) {
+          const next = (await res.json()) as DetectionPayload
+          if (!cancelled) setData(next)
+        }
+      } catch {
+        if (!cancelled) setData((prev) => ({ ...prev, error: 'unreachable' }))
+      }
+      if (!cancelled) timer = setTimeout(tick, 2_000)
+    }
+
+    tick()
+    return () => {
+      cancelled = true
+      if (timer) clearTimeout(timer)
+    }
+  }, [])
+
+  return data
+}
+
 function CameraSpecsOverlay({ data }: { data: CameraHealthOverlay }) {
   const profile = data.profile
   const output = profile?.output_size ||
@@ -429,6 +481,84 @@ function CameraSpecsOverlay({ data }: { data: CameraHealthOverlay }) {
       </div>
     </div>
   )
+}
+
+function DetectionOverlay({ data }: { data: DetectionPayload }) {
+  const recent = Array.isArray(data.recent) ? data.recent : []
+  const now = typeof data.now === 'number' ? data.now : Date.now() / 1000
+  const latest = recent
+    .filter((item) => typeof item.ts === 'number')
+    .sort((a, b) => (a.ts ?? 0) - (b.ts ?? 0))
+    .at(-1)
+  const age = latest?.ts ? Math.max(0, now - latest.ts) : null
+  const fresh = age != null && age <= 12
+  const counts = data.counts ?? {}
+  const total = Object.values(counts).reduce((sum, n) => sum + (Number.isFinite(n) ? n : 0), 0)
+  const label = fresh && latest?.class
+    ? `${latest.class}${typeof latest.conf === 'number' ? ` ${(latest.conf * 100).toFixed(0)}%` : ''}`
+    : total > 0
+      ? `${total} detections / 5m`
+      : 'scanning 1 fps'
+  const boxes = fresh
+    ? recent.filter((item) => item.bbox && typeof item.bbox.x === 'number' && typeof item.bbox.y === 'number')
+    : []
+
+  return (
+    <>
+      {boxes.map((item, index) => {
+        const b = item.bbox
+        if (!b) return null
+        const left = clamp01(b.x ?? 0) * 100
+        const top = clamp01(b.y ?? 0) * 100
+        const width = clamp01(b.w ?? 0) * 100
+        const height = clamp01(b.h ?? 0) * 100
+        return (
+          <div
+            key={`${item.ts}-${index}`}
+            className="pointer-events-none absolute rounded-[6px] border"
+            style={{
+              left: `${left}%`,
+              top: `${top}%`,
+              width: `${width}%`,
+              height: `${height}%`,
+              borderColor: '#ffb84d',
+              boxShadow: '0 0 0 1px rgba(0,0,0,0.45), 0 0 16px rgba(255,184,77,0.35)',
+            }}
+          >
+            <div
+              className="absolute -top-6 left-0 rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.14em]"
+              style={{ background: 'rgba(0,0,0,0.72)', color: '#ffdd99' }}
+            >
+              {item.class ?? 'object'}
+            </div>
+          </div>
+        )
+      })}
+      <div
+        className="pointer-events-none absolute bottom-3 left-3 flex items-center gap-2 rounded-full px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.16em]"
+        style={{
+          background: fresh ? 'rgba(83, 45, 13, 0.72)' : 'rgba(0,0,0,0.58)',
+          color: fresh ? '#ffdd99' : 'rgba(255,255,255,0.72)',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+        }}
+      >
+        <span
+          aria-hidden="true"
+          className="h-1.5 w-1.5 rounded-full"
+          style={{
+            background: fresh ? '#ffb84d' : '#8e8e93',
+            boxShadow: fresh ? '0 0 8px rgba(255,184,77,0.8)' : undefined,
+          }}
+        />
+        RKNN · {label}
+      </div>
+    </>
+  )
+}
+
+function clamp01(value: number): number {
+  return Math.max(0, Math.min(1, value))
 }
 
 function loadVideoStreamScript(): Promise<void> {
