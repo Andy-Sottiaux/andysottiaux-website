@@ -31,6 +31,7 @@ const NATIVE_PLAYER_URL =
   `&mode=${encodeURIComponent(PLAYER_MODE)}` +
   '&background=false' +
   '&width=100%'
+const SNAPSHOT_URL = `${CAMERA_HOST}/api/camera/snapshot.jpeg`
 
 const LOAD_TIMEOUT_MS = 10_000
 
@@ -249,6 +250,21 @@ export default function FieldCameraFeed({
     >
       <div ref={mountRef} className="absolute inset-0 bg-black" aria-label="Cayley field camera live stream" />
 
+      {phase !== 'live' && (
+        <img
+          src={SNAPSHOT_URL}
+          alt=""
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 h-full w-full"
+          style={{
+            objectFit: fit,
+            objectPosition: position,
+            opacity: 0.62,
+            filter: 'saturate(0.9) contrast(1.04) brightness(0.72)',
+          }}
+        />
+      )}
+
       {phase === 'connecting' && <FeedShimmer label="opening live stream..." isLight={isLight} />}
       {phase === 'paused' && <FeedPaused />}
       {phase === 'offline' && <FeedOffline isLight={isLight} onRetry={reload} />}
@@ -454,10 +470,12 @@ function FeedShimmer({ label, isLight }: { label: string; isLight: boolean }) {
       className="absolute inset-0 flex items-center justify-center"
       style={{
         background: isLight
-          ? 'linear-gradient(105deg, #ececef 25%, #f6f6f8 50%, #ececef 75%)'
-          : 'linear-gradient(105deg, #0a0a0c 25%, #16161a 50%, #0a0a0c 75%)',
+          ? 'linear-gradient(105deg, rgba(236,236,239,0.72) 25%, rgba(246,246,248,0.86) 50%, rgba(236,236,239,0.72) 75%)'
+          : 'linear-gradient(105deg, rgba(10,10,12,0.66) 25%, rgba(22,22,26,0.78) 50%, rgba(10,10,12,0.66) 75%)',
         backgroundSize: '200% 100%',
         animation: 'fldShimmer 2.4s linear infinite',
+        backdropFilter: 'blur(2px)',
+        WebkitBackdropFilter: 'blur(2px)',
       }}
     >
       <div className="flex flex-col items-center gap-3">
@@ -477,7 +495,7 @@ function FeedPaused() {
   return (
     <div
       className="absolute inset-0 flex items-center justify-center"
-      style={{ background: '#000' }}
+      style={{ background: 'rgba(0,0,0,0.58)' }}
     >
       <div className="flex flex-col items-center gap-2 px-6 text-center">
         <CameraGlyph dim isLight={false} />
@@ -496,7 +514,11 @@ function FeedOffline({ isLight, onRetry }: { isLight: boolean; onRetry: () => vo
   return (
     <div
       className="absolute inset-0 flex items-center justify-center"
-      style={{ background: isLight ? '#f1f1f3' : '#050506' }}
+      style={{
+        background: isLight ? 'rgba(241,241,243,0.82)' : 'rgba(5,5,6,0.78)',
+        backdropFilter: 'blur(2px)',
+        WebkitBackdropFilter: 'blur(2px)',
+      }}
     >
       <div className="flex flex-col items-center gap-3 px-6 text-center">
         <CameraGlyph dim isLight={isLight} />

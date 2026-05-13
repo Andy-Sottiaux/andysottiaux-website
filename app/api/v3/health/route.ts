@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 
 /**
- * Server-side proxy for the field device's /api/health endpoint.
+ * Server-side proxy for the field relay's /api/health endpoint.
  *
  * Keeps the upstream hostname out of the client bundle and DevTools
  * Network tab. The browser only ever sees `/api/v3/health` on this
@@ -11,7 +11,9 @@ import { NextResponse } from 'next/server'
 export const runtime = 'edge'
 export const dynamic = 'force-dynamic'
 
-const UPSTREAM = process.env.V3_UPSTREAM_HOST || 'https://cayley-v3-cam-1.tailc7d6b6.ts.net'
+const UPSTREAM =
+  process.env.V3_HEALTH_UPSTREAM_HOST ||
+  'https://cayley-relay.tailc7d6b6.ts.net'
 
 export async function GET() {
   try {
