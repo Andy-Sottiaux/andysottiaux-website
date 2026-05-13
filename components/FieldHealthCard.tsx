@@ -410,7 +410,7 @@ export default function FieldHealthCard({
         </div>
       )}
 
-      <dl className={`grid grid-cols-2 min-h-0 ${compact ? 'mt-0 gap-x-4 gap-y-2.5 md:gap-y-[clamp(0.35rem,1.05dvh,0.625rem)]' : 'mt-auto gap-x-6 gap-y-4'}`}>
+      <dl className={`grid grid-cols-2 min-h-0 ${compact ? 'mt-0 content-start gap-x-4 gap-y-2 md:gap-y-[clamp(0.3rem,0.85dvh,0.5rem)]' : 'mt-auto gap-x-6 gap-y-4'}`}>
         <div>
           <dt
             className={`${compact ? 'text-[8.5px] md:text-[clamp(7.5px,0.9dvh,8.5px)]' : 'text-[10px]'} uppercase tracking-[0.18em] font-medium`}
@@ -468,43 +468,56 @@ export default function FieldHealthCard({
             {ramAvailMB != null ? `${ramAvailMB}M` : '—'}
           </dd>
         </div>
-        <div>
-          <dt
-            className={`${compact ? 'text-[8.5px] md:text-[clamp(7.5px,0.9dvh,8.5px)]' : 'text-[10px]'} uppercase tracking-[0.18em] font-medium`}
-            style={{ color: palette.mutedText }}
-          >
-            Services
-          </dt>
-          <dd
-            className={`${compact ? 'text-[17px] md:text-[clamp(14px,2dvh,18px)]' : 'text-[20px] sm:text-[22px]'} font-semibold tracking-tight tabular-nums mt-1 md:mt-[clamp(0.15rem,0.55dvh,0.25rem)]`}
-            style={{ color: valueColor }}
-          >
-            {digest
-              ? `${digest.servicesUp}/${digest.servicesTotal}`
-              : (lastOk ? `${lastOk.servicesUp}/${lastOk.servicesTotal}` : '—')}
-          </dd>
-        </div>
+        {!compact && (
+          <div>
+            <dt
+              className="text-[10px] uppercase tracking-[0.18em] font-medium"
+              style={{ color: palette.mutedText }}
+            >
+              Services
+            </dt>
+            <dd
+              className="text-[20px] sm:text-[22px] font-semibold tracking-tight tabular-nums mt-1 md:mt-[clamp(0.15rem,0.55dvh,0.25rem)]"
+              style={{ color: valueColor }}
+            >
+              {digest
+                ? `${digest.servicesUp}/${digest.servicesTotal}`
+                : (lastOk ? `${lastOk.servicesUp}/${lastOk.servicesTotal}` : '—')}
+            </dd>
+          </div>
+        )}
       </dl>
 
       {sys && compact && (
         <div
-          className="mt-auto pt-2 md:pt-[clamp(0.35rem,0.95dvh,0.5rem)] border-t flex items-center justify-between gap-2 text-[10.5px] md:text-[clamp(8.5px,1.05dvh,10.5px)] font-semibold tabular-nums min-w-0"
+          className="mt-auto pt-2 md:pt-[clamp(0.35rem,0.85dvh,0.5rem)] border-t grid gap-x-2 gap-y-1.5 text-[10.5px] md:text-[clamp(8px,0.95dvh,10px)] font-semibold tabular-nums min-w-0 flex-shrink-0"
           style={{
             borderColor: palette.hairline,
             color: palette.mutedText,
+            gridTemplateColumns: 'repeat(auto-fit, minmax(4.1rem, 1fr))',
           }}
-          aria-label={`Uptime ${uptimeText}, camera memory ${cmaText}, Tailnet ${tailnetText}`}
+          aria-label={`Services ${digest ? `${digest.servicesUp}/${digest.servicesTotal}` : (lastOk ? `${lastOk.servicesUp}/${lastOk.servicesTotal}` : 'unknown')}, uptime ${uptimeText}, camera memory ${cmaText}, Tailnet ${tailnetText}`}
         >
-          <span className="min-w-0 truncate">
-            <span style={{ color: palette.mutedText }}>up </span>
-            <span style={{ color: valueColor }}>{uptimeText}</span>
-          </span>
-          <span className="min-w-0 truncate" style={{ color: cmaColor }}>
-            {cmaText}
-          </span>
-          <span className="min-w-0 truncate" style={{ color: tailnetColor }}>
-            {tailnetText}
-          </span>
+          <div className="min-w-0">
+            <div className="text-[7px] uppercase tracking-[0.16em]" style={{ color: palette.fadedText }}>Svc</div>
+            <div className="truncate" style={{ color: valueColor }}>
+              {digest
+                ? `${digest.servicesUp}/${digest.servicesTotal}`
+                : (lastOk ? `${lastOk.servicesUp}/${lastOk.servicesTotal}` : '—')}
+            </div>
+          </div>
+          <div className="min-w-0">
+            <div className="text-[7px] uppercase tracking-[0.16em]" style={{ color: palette.fadedText }}>Up</div>
+            <div className="truncate" style={{ color: valueColor }}>{uptimeText}</div>
+          </div>
+          <div className="min-w-0">
+            <div className="text-[7px] uppercase tracking-[0.16em]" style={{ color: palette.fadedText }}>Mem</div>
+            <div className="truncate" style={{ color: cmaColor }}>{cmaText}</div>
+          </div>
+          <div className="min-w-0">
+            <div className="text-[7px] uppercase tracking-[0.16em]" style={{ color: palette.fadedText }}>Net</div>
+            <div className="truncate" style={{ color: tailnetColor }}>{tailnetText}</div>
+          </div>
         </div>
       )}
 

@@ -206,7 +206,7 @@ function Bento({
         <CameraTile enabled={cameraEnabled} onOpen={() => onOpen('live')} />
       </div>
 
-      <div className="col-span-12 md:col-span-3 md:col-start-10 md:row-start-1 md:row-span-3">
+      <div className="col-span-12 md:col-span-3 md:col-start-10 md:row-start-1 md:row-span-2">
         <SolarTile onOpen={() => onOpen('live')} />
       </div>
 
@@ -227,7 +227,7 @@ function Bento({
       <div className="col-span-12 md:col-span-4 md:col-start-6 md:row-start-3 md:row-span-2">
         <MarathonTile onOpen={() => onOpen('marathon')} />
       </div>
-      <div className="col-span-12 md:col-span-3 md:col-start-10 md:row-start-4">
+      <div className="col-span-12 md:col-span-3 md:col-start-10 md:row-start-3 md:row-span-2">
         <ContactTile onOpen={() => onOpen('contact')} />
       </div>
     </div>
@@ -511,7 +511,7 @@ function SolarTile({ onOpen }: { onOpen?: () => void }) {
         onClick={() => { haptic('open'); onOpen() }}
         aria-haspopup="dialog"
         aria-label="Open Field Live"
-        className="block w-full h-full min-h-[360px] md:min-h-0 [&>div]:h-full hover:scale-[1.005] transition-transform duration-300 text-left"
+        className="block w-full h-full min-h-[520px] sm:min-h-[430px] md:min-h-0 [&>div]:h-full hover:scale-[1.005] transition-transform duration-300 text-left"
       >
         <FieldSolarCard variant="compact" />
       </button>
@@ -521,7 +521,7 @@ function SolarTile({ onOpen }: { onOpen?: () => void }) {
     <a
       href="/#now"
       aria-label="Open Field Live on the full site"
-      className="block h-full min-h-[360px] md:min-h-0 [&>div]:h-full hover:scale-[1.005] transition-transform duration-300"
+      className="block h-full min-h-[520px] sm:min-h-[430px] md:min-h-0 [&>div]:h-full hover:scale-[1.005] transition-transform duration-300"
     >
       <FieldSolarCard variant="compact" />
     </a>

@@ -382,9 +382,12 @@ export default function FieldSolarCard({
       </div>
 
       {compact ? (
-        <div className="mt-auto grid grid-rows-2 gap-3 md:gap-[clamp(0.45rem,1.2dvh,0.75rem)] min-h-0">
+        <div
+          className="mt-1 md:mt-[clamp(0.2rem,0.8dvh,0.75rem)] grid gap-3 md:gap-[clamp(0.45rem,1.1dvh,0.75rem)] min-h-0 content-start"
+          style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(11rem, 100%), 1fr))' }}
+        >
           <div
-            className="rounded-xl border p-3 md:p-[clamp(0.55rem,1.1dvh,0.75rem)] flex flex-col min-h-0 h-[clamp(104px,17dvh,138px)]"
+            className="rounded-xl border p-3 md:p-[clamp(0.55rem,1.1dvh,0.75rem)] flex flex-col min-h-0 h-[clamp(92px,11dvh,144px)]"
             style={{
               borderColor: isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)',
               background: isLight ? 'rgba(255,255,255,0.36)' : 'rgba(255,255,255,0.025)',
@@ -414,7 +417,7 @@ export default function FieldSolarCard({
             )}
           </div>
           <div
-            className="rounded-xl border p-3 md:p-[clamp(0.55rem,1.1dvh,0.75rem)] flex flex-col min-h-0 h-[clamp(104px,17dvh,138px)]"
+            className="rounded-xl border p-3 md:p-[clamp(0.55rem,1.1dvh,0.75rem)] flex flex-col min-h-0 h-[clamp(92px,11dvh,144px)]"
             style={{
               borderColor: isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)',
               background: isLight ? 'rgba(255,255,255,0.28)' : 'rgba(255,255,255,0.02)',

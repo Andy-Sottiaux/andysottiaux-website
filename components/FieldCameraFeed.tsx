@@ -21,16 +21,11 @@ import { useFieldTheme } from './fieldTheme'
 const CAMERA_HOST =
   process.env.NEXT_PUBLIC_V3_CAMERA_HOST ||
   'https://cayley-relay.tailc7d6b6.ts.net'
-const FEED_STREAM = process.env.NEXT_PUBLIC_V3_FEED_STREAM || 'cayley-sub'
-const PLAYER_MODE = process.env.NEXT_PUBLIC_V3_PLAYER_MODE || 'webrtc'
-const PLAYER_ASSET_VERSION = '20260513-webrtc-only'
+const PRIMARY_FEED_STREAM = process.env.NEXT_PUBLIC_V3_FEED_STREAM || 'cayley-sub'
+const FEED_STREAMS = uniqueStreamNames([PRIMARY_FEED_STREAM, 'cayley-sub'])
+const PLAYER_MODE = process.env.NEXT_PUBLIC_V3_PLAYER_MODE || 'webrtc,mse'
+const PLAYER_ASSET_VERSION = '20260513-stream-fallbacks'
 
-const NATIVE_PLAYER_URL =
-  `${CAMERA_HOST}/stream.html` +
-  `?src=${encodeURIComponent(FEED_STREAM)}` +
-  `&mode=${encodeURIComponent(PLAYER_MODE)}` +
-  '&background=false' +
-  '&width=100%'
 const SNAPSHOT_URL = `${CAMERA_HOST}/api/camera/snapshot.jpeg`
 
 const LOAD_TIMEOUT_MS = 10_000
@@ -101,6 +96,8 @@ export default function FieldCameraFeed({
   const [active, setActive] = useState<boolean>(() => enabled && initialActive())
   const [phase, setPhase] = useState<Phase>(() => (enabled && initialActive() ? 'connecting' : 'paused'))
   const [reloadNonce, setReloadNonce] = useState(0)
+  const [streamIndex, setStreamIndex] = useState(0)
+  const activeStream = FEED_STREAMS[streamIndex] ?? FEED_STREAMS[0]
 
   useEffect(() => {
     const el = containerRef.current
@@ -144,14 +141,25 @@ export default function FieldCameraFeed({
     let player: Go2RTCPlayerElement | null = null
     let video: HTMLVideoElement | null = null
     let bindTimer = 0
+    let loadTimer = 0
+    let reachedLive = false
     const cleanups: Array<() => void> = []
 
     setPhase('connecting')
     mount.replaceChildren()
 
-    const timeout = window.setTimeout(() => {
-      setPhase((p) => (p === 'connecting' ? 'offline' : p))
-    }, LOAD_TIMEOUT_MS)
+    const markPlaybackFailure = (timeoutOnly = false) => {
+      if (disposed || (timeoutOnly && reachedLive)) return
+      if (streamIndex < FEED_STREAMS.length - 1) {
+        setPhase('connecting')
+        setStreamIndex(streamIndex + 1)
+        setReloadNonce((n) => n + 1)
+        return
+      }
+      setPhase('offline')
+    }
+
+    loadTimer = window.setTimeout(() => markPlaybackFailure(true), LOAD_TIMEOUT_MS)
 
     loadVideoStreamScript()
       .then(() => {
@@ -170,7 +178,7 @@ export default function FieldCameraFeed({
         player.mode = PLAYER_MODE
         player.visibilityCheck = true
         player.visibilityThreshold = 0.1
-        player.src = playerWsUrl(reloadNonce)
+        player.src = playerWsUrl(activeStream, reloadNonce)
 
         const bindVideo = () => {
           if (disposed || !player) return
@@ -189,11 +197,13 @@ export default function FieldCameraFeed({
           video.style.objectPosition = position
 
           const markLive = () => {
-            if (!disposed) setPhase('live')
+            if (!disposed) {
+              reachedLive = true
+              window.clearTimeout(loadTimer)
+              setPhase('live')
+            }
           }
-          const markOffline = () => {
-            if (!disposed) setPhase('offline')
-          }
+          const markOffline = () => markPlaybackFailure()
 
           video.addEventListener('loadeddata', markLive)
           video.addEventListener('playing', markLive)
@@ -210,24 +220,25 @@ export default function FieldCameraFeed({
         bindVideo()
       })
       .catch(() => {
-        if (!disposed) setPhase('offline')
+        markPlaybackFailure()
       })
 
     return () => {
       disposed = true
-      window.clearTimeout(timeout)
+      window.clearTimeout(loadTimer)
       window.clearTimeout(bindTimer)
       cleanups.forEach((cleanup) => cleanup())
       player?.remove()
       if (mountRef.current === mount) mount.replaceChildren()
     }
-  }, [active, reloadNonce, fit, position])
+  }, [active, activeStream, streamIndex, reloadNonce, fit, position])
 
   useEffect(() => {
     if (!active || phase !== 'offline') return
 
     const retryTimer = window.setTimeout(() => {
       setPhase('connecting')
+      setStreamIndex(0)
       setReloadNonce((n) => n + 1)
     }, 8_000)
 
@@ -236,6 +247,7 @@ export default function FieldCameraFeed({
 
   const reload = () => {
     setPhase('connecting')
+    setStreamIndex(0)
     setReloadNonce((n) => n + 1)
   }
 
@@ -291,11 +303,11 @@ export default function FieldCameraFeed({
         </div>
       )}
 
-      {debugMode && <DevHUD phase={phase} />}
+      {debugMode && <DevHUD phase={phase} stream={activeStream} />}
       {phase === 'live' && <CameraSpecsOverlay data={overlay} />}
 
       <a
-        href={NATIVE_PLAYER_URL}
+        href={nativePlayerUrl(activeStream)}
         target="_blank"
         rel="noreferrer"
         className="absolute bottom-3 right-3 px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-widest opacity-70 hover:opacity-100 transition-opacity"
@@ -442,11 +454,30 @@ function loadVideoStreamScript(): Promise<void> {
   return window.__cayleyVideoStreamScript
 }
 
-function playerWsUrl(reloadNonce: number): URL {
+function playerWsUrl(stream: string, reloadNonce: number): URL {
   const url = new URL('/api/ws', CAMERA_HOST)
-  url.searchParams.set('src', FEED_STREAM)
+  url.searchParams.set('src', stream)
   url.searchParams.set('_', String(reloadNonce))
   return url
+}
+
+function nativePlayerUrl(stream: string): string {
+  return `${CAMERA_HOST}/stream.html` +
+    `?src=${encodeURIComponent(stream)}` +
+    `&mode=${encodeURIComponent(PLAYER_MODE)}` +
+    '&background=false' +
+    '&width=100%'
+}
+
+function uniqueStreamNames(names: string[]): string[] {
+  const seen = new Set<string>()
+  return names
+    .map((name) => name.trim())
+    .filter((name) => {
+      if (!name || seen.has(name)) return false
+      seen.add(name)
+      return true
+    })
 }
 
 function initialActive(): boolean {
@@ -567,7 +598,7 @@ function CameraGlyph({ dim = false, isLight }: { dim?: boolean; isLight: boolean
   )
 }
 
-function DevHUD({ phase }: { phase: Phase }) {
+function DevHUD({ phase, stream }: { phase: Phase; stream: string }) {
   return (
     <div
       className="absolute bottom-3 left-3 rounded-lg px-2.5 py-2 text-[10px] font-mono leading-relaxed"
@@ -580,6 +611,7 @@ function DevHUD({ phase }: { phase: Phase }) {
     >
       <div>tier:native-go2rtc</div>
       <div>mode:direct {PLAYER_MODE}</div>
+      <div>stream:{stream}</div>
       <div>phase:{phase}</div>
     </div>
   )
