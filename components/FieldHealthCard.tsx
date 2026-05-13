@@ -440,18 +440,18 @@ export default function FieldHealthCard({
           </div>
         )}
 
-        <div className="relative mt-3 grid grid-cols-2 gap-2.5 md:gap-[clamp(0.45rem,0.95dvh,0.75rem)]">
+        <div className="relative mt-3 grid grid-cols-2 gap-2">
           <div
-            className="min-w-0 rounded-xl border p-3 md:p-[clamp(0.55rem,1.1dvh,0.8rem)]"
+            className="min-w-0 rounded-xl border px-3 py-2.5 md:px-[clamp(0.6rem,1vw,0.85rem)] md:py-[clamp(0.45rem,0.95dvh,0.65rem)]"
             style={{ borderColor: palette.hairline, background: 'rgba(255,255,255,0.025)' }}
           >
             <div className="text-[7.5px] uppercase tracking-[0.18em] font-semibold" style={{ color: palette.mutedText }}>
               Thermal
             </div>
-            <div className="mt-1 text-[26px] md:text-[clamp(20px,3dvh,27px)] font-semibold tracking-tight tabular-nums leading-none" style={{ color: thermalColor }}>
+            <div className="mt-1 text-[25px] md:text-[clamp(19px,2.75dvh,25px)] font-semibold tracking-tight tabular-nums leading-none" style={{ color: thermalColor }}>
               {thermalLabel}
             </div>
-            <div className="mt-2.5 h-1.5 rounded-full overflow-hidden" style={{ background: palette.trackBackground }}>
+            <div className="mt-2 h-1.5 rounded-full overflow-hidden" style={{ background: palette.trackBackground }}>
               <div
                 className="h-full rounded-full"
                 style={{
@@ -464,13 +464,13 @@ export default function FieldHealthCard({
             </div>
           </div>
           <div
-            className="min-w-0 rounded-xl border p-3 md:p-[clamp(0.55rem,1.1dvh,0.8rem)]"
+            className="min-w-0 rounded-xl border px-3 py-2.5 md:px-[clamp(0.6rem,1vw,0.85rem)] md:py-[clamp(0.45rem,0.95dvh,0.65rem)]"
             style={{ borderColor: palette.hairline, background: 'rgba(255,255,255,0.025)' }}
           >
             <div className="text-[7.5px] uppercase tracking-[0.18em] font-semibold" style={{ color: palette.mutedText }}>
               Fan
             </div>
-            <div className="mt-1 text-[20px] md:text-[clamp(16px,2.15dvh,20px)] font-semibold tracking-tight tabular-nums leading-none truncate" style={{ color: fanColor }}>
+            <div className="mt-1 text-[19px] md:text-[clamp(15px,2.0dvh,19px)] font-semibold tracking-tight tabular-nums leading-none truncate" style={{ color: fanColor }}>
               {fanRpm != null ? `${fanRpm.toLocaleString()} RPM` : fanText}
             </div>
             <div className="mt-2 flex items-center gap-2">
@@ -482,41 +482,40 @@ export default function FieldHealthCard({
               </div>
             </div>
           </div>
-          <div
-            className="min-w-0 rounded-xl border p-3 md:p-[clamp(0.55rem,1.05dvh,0.75rem)]"
-            style={{ borderColor: palette.hairline, background: 'rgba(255,255,255,0.02)' }}
-          >
-            <div className="text-[7.5px] uppercase tracking-[0.18em] font-semibold" style={{ color: palette.mutedText }}>
+        </div>
+
+        <div
+          className="relative mt-2 rounded-xl border px-3 py-2 grid grid-cols-2 gap-x-4 gap-y-1.5 min-w-0"
+          style={{ borderColor: palette.hairline, background: 'rgba(255,255,255,0.02)' }}
+        >
+          <div className="min-w-0">
+            <div className="text-[7px] uppercase tracking-[0.16em] font-semibold" style={{ color: palette.mutedText }}>
               Camera
             </div>
-            <div className="mt-1 text-[15px] md:text-[clamp(12px,1.55dvh,15px)] font-semibold tracking-tight truncate" style={{ color: valueColor }}>
+            <div className="mt-0.5 text-[13px] md:text-[clamp(10.5px,1.35dvh,13px)] font-semibold tracking-tight truncate" style={{ color: valueColor }}>
               {cameraLabel}
             </div>
-            <div className="mt-1 text-[9px] font-semibold tabular-nums truncate" style={{ color: palette.fadedText }}>
+            <div className="mt-0.5 text-[8.5px] font-semibold tabular-nums truncate" style={{ color: palette.fadedText }}>
               {sys?.media_graph?.output_size || '1280x720'}
             </div>
           </div>
-          <div
-            className="min-w-0 rounded-xl border p-3 md:p-[clamp(0.55rem,1.05dvh,0.75rem)]"
-            style={{ borderColor: palette.hairline, background: 'rgba(255,255,255,0.02)' }}
-          >
-            <div className="text-[7.5px] uppercase tracking-[0.18em] font-semibold" style={{ color: palette.mutedText }}>
+          <div className="min-w-0">
+            <div className="text-[7px] uppercase tracking-[0.16em] font-semibold" style={{ color: palette.mutedText }}>
               RKNN
             </div>
-            <div className="mt-1 text-[15px] md:text-[clamp(12px,1.55dvh,15px)] font-semibold tracking-tight truncate" style={{ color: rknnColor }}>
+            <div className="mt-0.5 text-[13px] md:text-[clamp(10.5px,1.35dvh,13px)] font-semibold tracking-tight truncate" style={{ color: rknnColor }}>
               {rknnText}
             </div>
-            <div className="mt-1 text-[9px] font-semibold tabular-nums truncate" style={{ color: palette.fadedText }}>
+            <div className="mt-0.5 text-[8.5px] font-semibold tabular-nums truncate" style={{ color: palette.fadedText }}>
               {typeof rknn?.duration_ms === 'number' ? `${Math.round(rknn.duration_ms)} ms` : `${rknn?.detections ?? 0} objects`}
             </div>
           </div>
         </div>
 
         <div
-          className="relative mt-auto pt-2.5 border-t grid gap-x-3 gap-y-1.5 text-[9.5px] md:text-[clamp(7.7px,0.9dvh,9.5px)] font-semibold tabular-nums min-w-0"
+          className="relative mt-auto pt-2 border-t grid grid-cols-5 gap-x-2 text-[8.8px] md:text-[clamp(7px,0.82dvh,8.8px)] font-semibold tabular-nums min-w-0"
           style={{
             borderColor: palette.hairline,
-            gridTemplateColumns: 'repeat(auto-fit, minmax(3.8rem, 1fr))',
           }}
         >
           <CompactChip label="Svc" value={digest ? `${digest.servicesUp}/${digest.servicesTotal}` : (lastOk ? `${lastOk.servicesUp}/${lastOk.servicesTotal}` : '—')} color={valueColor} muted={palette.fadedText} />

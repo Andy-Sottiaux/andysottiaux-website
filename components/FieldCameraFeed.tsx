@@ -486,32 +486,45 @@ function CameraSpecsOverlay({ data }: { data: CameraHealthOverlay }) {
 function DetectionOverlay({ data }: { data: DetectionPayload }) {
   const recent = Array.isArray(data.recent) ? data.recent : []
   const now = typeof data.now === 'number' ? data.now : Date.now() / 1000
-  const latest = recent
+  const withAge = recent
     .filter((item) => typeof item.ts === 'number')
-    .sort((a, b) => (a.ts ?? 0) - (b.ts ?? 0))
-    .at(-1)
-  const age = latest?.ts ? Math.max(0, now - latest.ts) : null
-  const fresh = age != null && age <= 12
+    .map((item) => ({ item, age: Math.max(0, now - (item.ts ?? now)) }))
+    .sort((a, b) => (a.item.ts ?? 0) - (b.item.ts ?? 0))
+  const latest = withAge.at(-1)
+  const age = latest?.age ?? null
+  const fresh = age != null && age <= 15
   const counts = data.counts ?? {}
   const total = Object.values(counts).reduce((sum, n) => sum + (Number.isFinite(n) ? n : 0), 0)
-  const label = fresh && latest?.class
-    ? `${latest.class}${typeof latest.conf === 'number' ? ` ${(latest.conf * 100).toFixed(0)}%` : ''}`
+  const latestItem = latest?.item
+  const latestLabel = latestItem?.class
+    ? `${latestItem.class}${typeof latestItem.conf === 'number' ? ` ${(latestItem.conf * 100).toFixed(0)}%` : ''}`
+    : null
+  const label = latestLabel
+    ? fresh
+      ? latestLabel
+      : `${latestLabel} · ${formatDetectionAge(age ?? 0)} ago`
     : total > 0
       ? `${total} detections / 5m`
       : 'scanning 1 fps'
-  const boxes = fresh
-    ? recent.filter((item) => item.bbox && typeof item.bbox.x === 'number' && typeof item.bbox.y === 'number')
-    : []
+  const boxes = withAge
+    .filter(({ item, age }) => (
+      age <= 300 &&
+      item.bbox &&
+      typeof item.bbox.x === 'number' &&
+      typeof item.bbox.y === 'number'
+    ))
+    .slice(-4)
 
   return (
     <>
-      {boxes.map((item, index) => {
+      {boxes.map(({ item, age }, index) => {
         const b = item.bbox
         if (!b) return null
         const left = clamp01(b.x ?? 0) * 100
         const top = clamp01(b.y ?? 0) * 100
         const width = clamp01(b.w ?? 0) * 100
         const height = clamp01(b.h ?? 0) * 100
+        const opacity = fresh ? 1 : Math.max(0.38, 1 - age / 360)
         return (
           <div
             key={`${item.ts}-${index}`}
@@ -521,15 +534,17 @@ function DetectionOverlay({ data }: { data: DetectionPayload }) {
               top: `${top}%`,
               width: `${width}%`,
               height: `${height}%`,
-              borderColor: '#ffb84d',
-              boxShadow: '0 0 0 1px rgba(0,0,0,0.45), 0 0 16px rgba(255,184,77,0.35)',
+              opacity,
+              borderColor: '#34d399',
+              borderStyle: fresh ? 'solid' : 'dashed',
+              boxShadow: '0 0 0 1px rgba(0,0,0,0.45), 0 0 16px rgba(52,211,153,0.35)',
             }}
           >
             <div
               className="absolute -top-6 left-0 rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.14em]"
-              style={{ background: 'rgba(0,0,0,0.72)', color: '#ffdd99' }}
+              style={{ background: 'rgba(0,0,0,0.72)', color: '#bbf7d0' }}
             >
-              {item.class ?? 'object'}
+              {item.class ?? 'object'}{fresh ? '' : ` · ${formatDetectionAge(age)}`}
             </div>
           </div>
         )
@@ -537,8 +552,8 @@ function DetectionOverlay({ data }: { data: DetectionPayload }) {
       <div
         className="pointer-events-none absolute bottom-3 left-3 flex items-center gap-2 rounded-full px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.16em]"
         style={{
-          background: fresh ? 'rgba(83, 45, 13, 0.72)' : 'rgba(0,0,0,0.58)',
-          color: fresh ? '#ffdd99' : 'rgba(255,255,255,0.72)',
+          background: latestItem ? 'rgba(6, 78, 59, 0.72)' : 'rgba(0,0,0,0.58)',
+          color: latestItem ? '#bbf7d0' : 'rgba(255,255,255,0.72)',
           backdropFilter: 'blur(8px)',
           WebkitBackdropFilter: 'blur(8px)',
         }}
@@ -547,8 +562,8 @@ function DetectionOverlay({ data }: { data: DetectionPayload }) {
           aria-hidden="true"
           className="h-1.5 w-1.5 rounded-full"
           style={{
-            background: fresh ? '#ffb84d' : '#8e8e93',
-            boxShadow: fresh ? '0 0 8px rgba(255,184,77,0.8)' : undefined,
+            background: latestItem ? '#34d399' : '#8e8e93',
+            boxShadow: latestItem ? '0 0 8px rgba(52,211,153,0.8)' : undefined,
           }}
         />
         RKNN · {label}
@@ -559,6 +574,11 @@ function DetectionOverlay({ data }: { data: DetectionPayload }) {
 
 function clamp01(value: number): number {
   return Math.max(0, Math.min(1, value))
+}
+
+function formatDetectionAge(seconds: number): string {
+  if (seconds < 60) return `${Math.round(seconds)}s`
+  return `${Math.round(seconds / 60)}m`
 }
 
 function loadVideoStreamScript(): Promise<void> {

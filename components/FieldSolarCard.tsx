@@ -12,6 +12,7 @@
  */
 
 import { useEffect, useState } from 'react'
+import type { ReactNode } from 'react'
 import { useFieldTheme } from './fieldTheme'
 
 const SOLAR_URL = '/api/v3/solar'
@@ -189,6 +190,7 @@ export default function FieldSolarCard({
           : 'offline'
   const hasHistory = history.length >= 2
   const solarHistory = history.map((p) => p.solar_power)
+  const voltageHistory = history.map((p) => p.battery_voltage)
   const loadWatts = solar ? Math.max(0, solar.battery_voltage * solar.load_current) : null
 
   return (
@@ -381,36 +383,26 @@ export default function FieldSolarCard({
       </div>
 
       {compact ? (
-        <div
-          className="mt-auto rounded-xl border p-3 md:p-[clamp(0.55rem,1.1dvh,0.75rem)] flex flex-col min-h-[178px] flex-1"
-          style={{
-            borderColor: isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)',
-            background: isLight ? 'rgba(255,255,255,0.34)' : 'rgba(255,255,255,0.025)',
-          }}
-        >
-          <div className="flex items-center justify-between gap-3 mb-2 md:mb-[clamp(0.35rem,0.9dvh,0.5rem)]">
-            <div className="min-w-0">
-              <div
-                className="text-[9px] md:text-[clamp(7.5px,0.9dvh,9px)] uppercase tracking-[0.18em] font-medium"
-                style={{ color: palette.mutedText }}
-              >
-                24h trend
-              </div>
-              <div className="mt-1 flex items-center gap-3 text-[9.5px] font-semibold uppercase tracking-[0.14em]">
-                <span style={{ color: isLight ? '#c2410c' : '#ffb84d' }}>Solar</span>
-                <span style={{ color: isLight ? '#0a8aa8' : '#67e8f9' }}>Battery</span>
-              </div>
-            </div>
-            <div className="text-[10px] tabular-nums text-right" style={{ color: palette.fadedText }}>
-              {hasValues ? `${Math.round(solar.solar_power)} W · ${solar.battery_voltage.toFixed(2)} V` : 'waiting'}
-            </div>
-          </div>
+        <div className="mt-auto grid grid-rows-2 gap-2 min-h-[176px] flex-1">
           {hasHistory ? (
-            <CombinedEnergyChart
-              points={history}
-              isLight={isLight}
-              className="w-full flex-1 min-h-0 self-center"
-            />
+            <>
+              <CompactTrendPanel
+                title="Solar input"
+                value={hasValues ? `${Math.round(solar.solar_power)} W` : 'waiting'}
+                isLight={isLight}
+                tone="solar"
+              >
+                <MiniTrendChart data={solarHistory} isLight={isLight} tone="solar" />
+              </CompactTrendPanel>
+              <CompactTrendPanel
+                title="Battery voltage"
+                value={hasValues ? `${solar.battery_voltage.toFixed(2)} V` : 'waiting'}
+                isLight={isLight}
+                tone="battery"
+              >
+                <MiniTrendChart data={voltageHistory} isLight={isLight} tone="battery" />
+              </CompactTrendPanel>
+            </>
           ) : (
             <HistoryPlaceholder isLight={isLight} label="Waiting for Pi history" />
           )}
@@ -518,6 +510,99 @@ function HistoryPlaceholder({ isLight, label }: { isLight: boolean; label: strin
         {label}
       </div>
     </div>
+  )
+}
+
+function CompactTrendPanel({
+  title,
+  value,
+  isLight,
+  tone,
+  children,
+}: {
+  title: string
+  value: string
+  isLight: boolean
+  tone: 'solar' | 'battery'
+  children: ReactNode
+}) {
+  const accent = tone === 'solar'
+    ? (isLight ? '#c2410c' : '#ffb84d')
+    : (isLight ? '#0a8aa8' : '#67e8f9')
+
+  return (
+    <div
+      className="rounded-xl border px-3 py-2 md:px-[clamp(0.6rem,1vw,0.85rem)] md:py-[clamp(0.45rem,0.95dvh,0.65rem)] flex flex-col min-h-0"
+      style={{
+        borderColor: isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)',
+        background: isLight ? 'rgba(255,255,255,0.34)' : 'rgba(255,255,255,0.025)',
+      }}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div className="text-[8px] uppercase tracking-[0.16em] font-semibold truncate" style={{ color: accent }}>
+          {title}
+        </div>
+        <div className="text-[9px] font-semibold tabular-nums whitespace-nowrap" style={{ color: isLight ? 'rgba(28,26,28,0.58)' : 'rgba(255,255,255,0.52)' }}>
+          {value}
+        </div>
+      </div>
+      <div className="mt-1 flex-1 min-h-0">
+        {children}
+      </div>
+    </div>
+  )
+}
+
+function MiniTrendChart({
+  data,
+  isLight,
+  tone,
+}: {
+  data: number[]
+  isLight: boolean
+  tone: 'solar' | 'battery'
+}) {
+  const W = 300
+  const H = 58
+  const PAD_X = 4
+  const PAD_T = 5
+  const PAD_B = 6
+  const innerW = W - PAD_X * 2
+  const innerH = H - PAD_T - PAD_B
+  const strokeColor = tone === 'solar'
+    ? (isLight ? '#c2410c' : '#ffb84d')
+    : (isLight ? '#0a8aa8' : '#67e8f9')
+  const gridColor = isLight ? 'rgba(0,0,0,0.09)' : 'rgba(255,255,255,0.09)'
+
+  if (data.length < 2) {
+    return (
+      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="w-full h-full" aria-hidden="true">
+        <line x1={PAD_X} y1={PAD_T + innerH} x2={W - PAD_X} y2={PAD_T + innerH} stroke={gridColor} strokeWidth="1" />
+      </svg>
+    )
+  }
+
+  const rawMin = Math.min(...data)
+  const rawMax = Math.max(...data)
+  const yMin = tone === 'solar' ? 0 : Math.floor((rawMin - 0.02) * 20) / 20
+  const yMax = tone === 'solar' ? niceCeil(Math.max(5, rawMax)) : Math.ceil((rawMax + 0.02) * 20) / 20
+  const range = Math.max(tone === 'solar' ? 1 : 0.05, yMax - yMin)
+  const stepX = innerW / Math.max(1, data.length - 1)
+  const yFor = (value: number) => PAD_T + innerH - ((value - yMin) / range) * innerH
+  const points = data.map((value, index) => [PAD_X + index * stepX, yFor(value)] as [number, number])
+  const linePath = buildSmoothPath(points)
+  const areaPath = `${linePath} L ${PAD_X + innerW} ${PAD_T + innerH} L ${PAD_X} ${PAD_T + innerH} Z`
+  const areaColor = tone === 'solar'
+    ? (isLight ? 'rgba(194,65,12,0.12)' : 'rgba(255,184,77,0.15)')
+    : (isLight ? 'rgba(10,138,168,0.12)' : 'rgba(103,232,249,0.14)')
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="w-full h-full" aria-hidden="true">
+      <line x1={PAD_X} y1={PAD_T + innerH} x2={W - PAD_X} y2={PAD_T + innerH} stroke={gridColor} strokeWidth="1" />
+      <line x1={PAD_X} y1={PAD_T + innerH / 2} x2={W - PAD_X} y2={PAD_T + innerH / 2} stroke={gridColor} strokeWidth="0.8" />
+      <path d={areaPath} fill={areaColor} />
+      <path d={linePath} fill="none" stroke={strokeColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   )
 }
 
