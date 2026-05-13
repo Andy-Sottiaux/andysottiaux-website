@@ -159,7 +159,7 @@ function CompactStatus({
   )
 }
 
-function CompactChip({
+function CompactStat({
   label,
   value,
   color,
@@ -171,13 +171,13 @@ function CompactChip({
   muted: string
 }) {
   return (
-    <div className="min-w-0">
-      <div className="text-[7px] uppercase tracking-[0.16em]" style={{ color: muted }}>
+    <div className="min-w-0 shrink">
+      <span style={{ color: muted }}>
         {label}
-      </div>
-      <div className="truncate" style={{ color }}>
+      </span>{' '}
+      <span className="normal-case tracking-normal" style={{ color }}>
         {value}
-      </div>
+      </span>
     </div>
   )
 }
@@ -387,7 +387,7 @@ export default function FieldHealthCard({
   if (compact) {
     return (
       <div
-        className="relative rounded-2xl h-full min-h-0 flex flex-col overflow-hidden px-5 py-4 md:px-[clamp(1rem,1.7vw,1.35rem)] md:py-[clamp(0.8rem,1.55dvh,1.05rem)]"
+        className="relative rounded-2xl h-full min-h-0 flex flex-col overflow-hidden px-4 py-3 md:px-[clamp(0.75rem,1.25vw,1rem)] md:py-[clamp(0.55rem,1.05dvh,0.75rem)]"
         style={{
           background: palette.cardBackground,
           border: palette.cardBorder,
@@ -440,18 +440,18 @@ export default function FieldHealthCard({
           </div>
         )}
 
-        <div className="relative mt-3 grid grid-cols-2 gap-2">
+        <div className="relative mt-2 grid grid-cols-2 gap-2">
           <div
-            className="min-w-0 rounded-xl border px-3 py-2.5 md:px-[clamp(0.6rem,1vw,0.85rem)] md:py-[clamp(0.45rem,0.95dvh,0.65rem)]"
+            className="min-w-0 rounded-xl border px-2.5 py-2 md:px-[clamp(0.55rem,0.9vw,0.7rem)] md:py-[clamp(0.35rem,0.7dvh,0.5rem)]"
             style={{ borderColor: palette.hairline, background: 'rgba(255,255,255,0.025)' }}
           >
             <div className="text-[7.5px] uppercase tracking-[0.18em] font-semibold" style={{ color: palette.mutedText }}>
               Thermal
             </div>
-            <div className="mt-1 text-[25px] md:text-[clamp(19px,2.75dvh,25px)] font-semibold tracking-tight tabular-nums leading-none" style={{ color: thermalColor }}>
+            <div className="mt-1 text-[22px] md:text-[clamp(17px,2.25dvh,22px)] font-semibold tracking-tight tabular-nums leading-none" style={{ color: thermalColor }}>
               {thermalLabel}
             </div>
-            <div className="mt-2 h-1.5 rounded-full overflow-hidden" style={{ background: palette.trackBackground }}>
+            <div className="mt-1.5 h-1 rounded-full overflow-hidden" style={{ background: palette.trackBackground }}>
               <div
                 className="h-full rounded-full"
                 style={{
@@ -464,20 +464,20 @@ export default function FieldHealthCard({
             </div>
           </div>
           <div
-            className="min-w-0 rounded-xl border px-3 py-2.5 md:px-[clamp(0.6rem,1vw,0.85rem)] md:py-[clamp(0.45rem,0.95dvh,0.65rem)]"
+            className="min-w-0 rounded-xl border px-2.5 py-2 md:px-[clamp(0.55rem,0.9vw,0.7rem)] md:py-[clamp(0.35rem,0.7dvh,0.5rem)]"
             style={{ borderColor: palette.hairline, background: 'rgba(255,255,255,0.025)' }}
           >
             <div className="text-[7.5px] uppercase tracking-[0.18em] font-semibold" style={{ color: palette.mutedText }}>
               Fan
             </div>
-            <div className="mt-1 text-[19px] md:text-[clamp(15px,2.0dvh,19px)] font-semibold tracking-tight tabular-nums leading-none truncate" style={{ color: fanColor }}>
+            <div className="mt-1 text-[17px] md:text-[clamp(13px,1.75dvh,17px)] font-semibold tracking-tight tabular-nums leading-none truncate" style={{ color: fanColor }}>
               {fanRpm != null ? `${fanRpm.toLocaleString()} RPM` : fanText}
             </div>
-            <div className="mt-2 flex items-center gap-2">
-              <div className="h-1.5 flex-1 rounded-full overflow-hidden" style={{ background: palette.trackBackground }}>
+            <div className="mt-1.5 flex items-center gap-2">
+              <div className="h-1 flex-1 rounded-full overflow-hidden" style={{ background: palette.trackBackground }}>
                 <div className="h-full rounded-full" style={{ width: `${fanPct ?? 0}%`, background: 'linear-gradient(90deg, #67e8f9, #30d158)' }} />
               </div>
-              <div className="text-[10px] font-semibold tabular-nums" style={{ color: palette.mutedText }}>
+              <div className="text-[9px] font-semibold tabular-nums" style={{ color: palette.mutedText }}>
                 {fanPct != null ? `${fanPct}%` : '—'}
               </div>
             </div>
@@ -485,17 +485,17 @@ export default function FieldHealthCard({
         </div>
 
         <div
-          className="relative mt-2 rounded-xl border px-3 py-2 grid grid-cols-2 gap-x-4 gap-y-1.5 min-w-0"
+          className="relative mt-2 rounded-xl border px-2.5 py-1.5 grid grid-cols-2 gap-x-3 min-w-0"
           style={{ borderColor: palette.hairline, background: 'rgba(255,255,255,0.02)' }}
         >
           <div className="min-w-0">
             <div className="text-[7px] uppercase tracking-[0.16em] font-semibold" style={{ color: palette.mutedText }}>
               Camera
             </div>
-            <div className="mt-0.5 text-[13px] md:text-[clamp(10.5px,1.35dvh,13px)] font-semibold tracking-tight truncate" style={{ color: valueColor }}>
+            <div className="mt-0.5 text-[12px] md:text-[clamp(9.5px,1.18dvh,12px)] font-semibold tracking-tight truncate" style={{ color: valueColor }}>
               {cameraLabel}
             </div>
-            <div className="mt-0.5 text-[8.5px] font-semibold tabular-nums truncate" style={{ color: palette.fadedText }}>
+            <div className="mt-0.5 text-[7.5px] font-semibold tabular-nums truncate" style={{ color: palette.fadedText }}>
               {sys?.media_graph?.output_size || '1280x720'}
             </div>
           </div>
@@ -503,26 +503,26 @@ export default function FieldHealthCard({
             <div className="text-[7px] uppercase tracking-[0.16em] font-semibold" style={{ color: palette.mutedText }}>
               RKNN
             </div>
-            <div className="mt-0.5 text-[13px] md:text-[clamp(10.5px,1.35dvh,13px)] font-semibold tracking-tight truncate" style={{ color: rknnColor }}>
+            <div className="mt-0.5 text-[12px] md:text-[clamp(9.5px,1.18dvh,12px)] font-semibold tracking-tight truncate" style={{ color: rknnColor }}>
               {rknnText}
             </div>
-            <div className="mt-0.5 text-[8.5px] font-semibold tabular-nums truncate" style={{ color: palette.fadedText }}>
+            <div className="mt-0.5 text-[7.5px] font-semibold tabular-nums truncate" style={{ color: palette.fadedText }}>
               {typeof rknn?.duration_ms === 'number' ? `${Math.round(rknn.duration_ms)} ms` : `${rknn?.detections ?? 0} objects`}
             </div>
           </div>
         </div>
 
         <div
-          className="relative mt-auto pt-2 border-t grid grid-cols-5 gap-x-2 text-[8.8px] md:text-[clamp(7px,0.82dvh,8.8px)] font-semibold tabular-nums min-w-0"
+          className="relative mt-2 pt-1.5 border-t flex items-center justify-between gap-1.5 text-[7.5px] md:text-[clamp(6.2px,0.68dvh,7.5px)] font-semibold uppercase tracking-[0.06em] tabular-nums min-w-0 whitespace-nowrap"
           style={{
             borderColor: palette.hairline,
           }}
         >
-          <CompactChip label="Svc" value={digest ? `${digest.servicesUp}/${digest.servicesTotal}` : (lastOk ? `${lastOk.servicesUp}/${lastOk.servicesTotal}` : '—')} color={valueColor} muted={palette.fadedText} />
-          <CompactChip label="Up" value={uptimeText} color={valueColor} muted={palette.fadedText} />
-          <CompactChip label="RAM" value={ramAvailMB != null ? `${ramAvailMB}M` : '—'} color={ramColor} muted={palette.fadedText} />
-          <CompactChip label="CMA" value={cmaPct != null ? `${cmaPct}%` : '—'} color={cmaColor} muted={palette.fadedText} />
-          <CompactChip label="Net" value={tailnetText} color={tailnetColor} muted={palette.fadedText} />
+          <CompactStat label="Svc" value={digest ? `${digest.servicesUp}/${digest.servicesTotal}` : (lastOk ? `${lastOk.servicesUp}/${lastOk.servicesTotal}` : '—')} color={valueColor} muted={palette.fadedText} />
+          <CompactStat label="Up" value={uptimeText} color={valueColor} muted={palette.fadedText} />
+          <CompactStat label="RAM" value={ramAvailMB != null ? `${ramAvailMB}M` : '—'} color={ramColor} muted={palette.fadedText} />
+          <CompactStat label="CMA" value={cmaPct != null ? `${cmaPct}%` : '—'} color={cmaColor} muted={palette.fadedText} />
+          <CompactStat label="Net" value={tailnetText} color={tailnetColor} muted={palette.fadedText} />
         </div>
 
         <style jsx global>{`

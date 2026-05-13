@@ -27,7 +27,8 @@ const PLAYER_MODE = process.env.NEXT_PUBLIC_V3_PLAYER_MODE || 'webrtc'
 const PLAYER_ASSET_VERSION = '20260513-low-latency-ai'
 
 const SNAPSHOT_URL = `${CAMERA_HOST}/api/camera/snapshot.jpeg`
-const DETECTIONS_URL = '/api/v3/detections?window_sec=300'
+const DETECTION_WINDOW_SEC = 60
+const DETECTIONS_URL = `/api/v3/detections?window_sec=${DETECTION_WINDOW_SEC}`
 
 const LOAD_TIMEOUT_MS = 10_000
 
@@ -504,16 +505,21 @@ function DetectionOverlay({ data }: { data: DetectionPayload }) {
       ? latestLabel
       : `${latestLabel} · ${formatDetectionAge(age ?? 0)} ago`
     : total > 0
-      ? `${total} detections / 5m`
+      ? `${total} detections / ${DETECTION_WINDOW_SEC}s`
       : 'scanning 1 fps'
   const boxes = withAge
     .filter(({ item, age }) => (
-      age <= 300 &&
+      age <= 20 &&
       item.bbox &&
       typeof item.bbox.x === 'number' &&
       typeof item.bbox.y === 'number'
     ))
-    .slice(-4)
+    .sort((a, b) => {
+      const tsDelta = (b.item.ts ?? 0) - (a.item.ts ?? 0)
+      if (Math.abs(tsDelta) > 1) return tsDelta
+      return (b.item.conf ?? 0) - (a.item.conf ?? 0)
+    })
+    .slice(0, 4)
 
   return (
     <>
@@ -524,7 +530,8 @@ function DetectionOverlay({ data }: { data: DetectionPayload }) {
         const top = clamp01(b.y ?? 0) * 100
         const width = clamp01(b.w ?? 0) * 100
         const height = clamp01(b.h ?? 0) * 100
-        const opacity = fresh ? 1 : Math.max(0.38, 1 - age / 360)
+        const boxFresh = age <= 15
+        const opacity = boxFresh ? 1 : Math.max(0.45, 1 - age / 24)
         return (
           <div
             key={`${item.ts}-${index}`}
@@ -536,7 +543,7 @@ function DetectionOverlay({ data }: { data: DetectionPayload }) {
               height: `${height}%`,
               opacity,
               borderColor: '#34d399',
-              borderStyle: fresh ? 'solid' : 'dashed',
+              borderStyle: boxFresh ? 'solid' : 'dashed',
               boxShadow: '0 0 0 1px rgba(0,0,0,0.45), 0 0 16px rgba(52,211,153,0.35)',
             }}
           >
@@ -544,7 +551,7 @@ function DetectionOverlay({ data }: { data: DetectionPayload }) {
               className="absolute -top-6 left-0 rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.14em]"
               style={{ background: 'rgba(0,0,0,0.72)', color: '#bbf7d0' }}
             >
-              {item.class ?? 'object'}{fresh ? '' : ` · ${formatDetectionAge(age)}`}
+              {item.class ?? 'object'}{typeof item.conf === 'number' ? ` ${(item.conf * 100).toFixed(0)}%` : ''}{boxFresh ? '' : ` · ${formatDetectionAge(age)}`}
             </div>
           </div>
         )
