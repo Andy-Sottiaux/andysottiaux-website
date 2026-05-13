@@ -498,7 +498,7 @@ function DetectionOverlay({ data }: { data: DetectionPayload }) {
   const total = Object.values(counts).reduce((sum, n) => sum + (Number.isFinite(n) ? n : 0), 0)
   const latestItem = latest?.item
   const latestLabel = latestItem?.class
-    ? `${latestItem.class}${typeof latestItem.conf === 'number' ? ` ${(latestItem.conf * 100).toFixed(0)}%` : ''}`
+    ? `${displayDetectionClass(latestItem.class)}${typeof latestItem.conf === 'number' ? ` ${(latestItem.conf * 100).toFixed(0)}%` : ''}`
     : null
   const label = latestLabel
     ? fresh
@@ -551,7 +551,7 @@ function DetectionOverlay({ data }: { data: DetectionPayload }) {
               className="absolute -top-6 left-0 rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.14em]"
               style={{ background: 'rgba(0,0,0,0.72)', color: '#bbf7d0' }}
             >
-              {item.class ?? 'object'}{typeof item.conf === 'number' ? ` ${(item.conf * 100).toFixed(0)}%` : ''}{boxFresh ? '' : ` · ${formatDetectionAge(age)}`}
+              {displayDetectionClass(item.class)}{typeof item.conf === 'number' ? ` ${(item.conf * 100).toFixed(0)}%` : ''}{boxFresh ? '' : ` · ${formatDetectionAge(age)}`}
             </div>
           </div>
         )
@@ -581,6 +581,19 @@ function DetectionOverlay({ data }: { data: DetectionPayload }) {
 
 function clamp01(value: number): number {
   return Math.max(0, Math.min(1, value))
+}
+
+function displayDetectionClass(value?: string): string {
+  switch (value) {
+    case 'tv':
+      return 'monitor'
+    case 'cell phone':
+      return 'phone'
+    case 'potted plant':
+      return 'plant'
+    default:
+      return value || 'object'
+  }
 }
 
 function formatDetectionAge(seconds: number): string {
