@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * FieldHealthCard — board liveness, camera state, thermal, memory, services.
+ * FieldHealthCard — board liveness, camera state, thermal, fan, memory, services.
  *
  * Polls a same-origin health proxy every 15s, measures wall-clock RTT
  * against the fetch (this is end-to-end, browser → proxy → device), and
@@ -56,6 +56,19 @@ type SystemLoose = {
     ok?: boolean
     state?: string
     tailnet_route_ok?: boolean
+  }
+  argon_fan?: {
+    available?: boolean
+    ok?: boolean
+    state?: string
+    stale?: boolean
+    speed?: number
+    rpm_estimate?: number
+    estimated_rpm?: number
+    max_rpm?: number
+    rpm_estimated?: boolean
+    mode?: string
+    age_s?: number
   }
   victron_advert_age_s?: number
   victron_hearing?: boolean
@@ -242,6 +255,32 @@ export default function FieldHealthCard({
   const ramColor = ramAvailMB != null && ramAvailMB < 32
     ? (isLight ? '#b45309' : '#fcd34d')
     : valueColor
+  const fan = sys?.argon_fan
+  const fanPct = typeof fan?.speed === 'number' && Number.isFinite(fan.speed)
+    ? Math.max(0, Math.min(100, Math.round(fan.speed)))
+    : null
+  const fanMaxRpm = typeof fan?.max_rpm === 'number' && Number.isFinite(fan.max_rpm) && fan.max_rpm > 0
+    ? fan.max_rpm
+    : 5000
+  const fanRpmRaw = typeof fan?.rpm_estimate === 'number' && Number.isFinite(fan.rpm_estimate)
+    ? fan.rpm_estimate
+    : typeof fan?.estimated_rpm === 'number' && Number.isFinite(fan.estimated_rpm)
+      ? fan.estimated_rpm
+      : fanPct != null
+        ? (fanPct * fanMaxRpm) / 100
+        : null
+  const fanRpm = fanRpmRaw != null
+    ? Math.max(0, Math.round(fanRpmRaw))
+    : null
+  const fanStale = fan?.stale === true || fan?.state === 'stale'
+  const fanText = fanPct != null && fanRpm != null
+    ? `${fanRpm.toLocaleString()} RPM / ${fanPct}%`
+    : fan?.available === false
+      ? '—'
+      : fan?.state || '—'
+  const fanColor = fanStale || fan?.state === 'error'
+    ? palette.mutedText
+    : valueColor
   const uptimeText = digest
     ? fmtUptime(digest.uptimeSec)
     : (lastOk ? fmtUptime(lastOk.uptimeSec) : '—')
@@ -384,6 +423,21 @@ export default function FieldHealthCard({
             style={{ color: thermalColor }}
           >
             {thermalLabel}
+          </dd>
+        </div>
+        <div>
+          <dt
+            className={`${compact ? 'text-[8.5px] md:text-[clamp(7.5px,0.9dvh,8.5px)]' : 'text-[10px]'} uppercase tracking-[0.18em] font-medium`}
+            style={{ color: palette.mutedText }}
+          >
+            Fan
+          </dt>
+          <dd
+            className={`${compact ? 'text-[14px] md:text-[clamp(12px,1.7dvh,15.5px)]' : 'text-[18px] sm:text-[20px]'} font-semibold tracking-tight tabular-nums mt-1 md:mt-[clamp(0.15rem,0.55dvh,0.25rem)] truncate`}
+            style={{ color: fanColor }}
+            title={fanPct != null ? `Estimated from ${fanPct}% of ${fanMaxRpm.toLocaleString()} RPM max` : undefined}
+          >
+            {fanText}
           </dd>
         </div>
         <div>
