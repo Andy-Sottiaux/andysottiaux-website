@@ -533,15 +533,11 @@ function SolarTile({ onOpen }: { onOpen?: () => void }) {
 function HealthTile({ onOpen }: { onOpen?: () => void }) {
   if (onOpen) {
     return (
-      <button
-        type="button"
-        onClick={() => { haptic('open'); onOpen() }}
-        aria-haspopup="dialog"
-        aria-label="Open Field Live"
-        className="block w-full h-full min-h-[260px] md:min-h-0 [&>div]:h-full hover:scale-[1.005] transition-transform duration-300 text-left"
+      <div
+        className="block w-full h-full min-h-[260px] md:min-h-0 [&>div]:h-full transition-transform duration-300 text-left"
       >
         <FieldHealthCard variant="compact" />
-      </button>
+      </div>
     )
   }
   return (

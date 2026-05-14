@@ -14,10 +14,12 @@
  * online/offline accent (emerald/red) stays constant in both themes.
  */
 
-import { useEffect, useRef, useState } from 'react'
+import { type CSSProperties, useEffect, useRef, useState } from 'react'
 import { useFieldTheme } from './fieldTheme'
 
 const HEALTH_URL = '/api/v3/health'
+const FAN_URL = '/api/v3/fan'
+const FAN_OVERRIDE_TTL_SEC = 90
 
 // Defensive: the upstream /api/health JSON shape has evolved. Accept a
 // few field-name variants without exploding.
@@ -63,11 +65,16 @@ type SystemLoose = {
     state?: string
     stale?: boolean
     speed?: number
+    auto_speed?: number
+    manual_speed?: number
     rpm_estimate?: number
     estimated_rpm?: number
     max_rpm?: number
     rpm_estimated?: boolean
     mode?: string
+    override_active?: boolean
+    override_remaining_s?: number
+    override_expires_at?: number
     age_s?: number
   }
   rknn_detector?: {
@@ -182,6 +189,95 @@ function CompactStat({
   )
 }
 
+function FanControl({
+  value,
+  disabled,
+  pending,
+  status,
+  compact,
+  muted,
+  valueColor,
+  track,
+  onChange,
+  onCommit,
+}: {
+  value: number
+  disabled: boolean
+  pending: boolean
+  status: string
+  compact?: boolean
+  muted: string
+  valueColor: string
+  track: string
+  onChange: (value: number) => void
+  onCommit: (value: number) => void
+}) {
+  const pct = Math.max(0, Math.min(100, Math.round(value)))
+  const spinSec = Math.max(0.35, 1.6 - pct / 85)
+  const lastCommitRef = useRef(0)
+  const commitFromInput = (input: HTMLInputElement) => {
+    const now = Date.now()
+    if (now - lastCommitRef.current < 600) return
+    lastCommitRef.current = now
+    onCommit(Number(input.value))
+  }
+
+  return (
+    <div
+      className={compact ? 'mt-1 min-w-0' : 'mt-3 min-w-0'}
+      onClick={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
+    >
+      {!compact && (
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <div className="text-[9px] uppercase tracking-[0.18em] font-semibold" style={{ color: muted }}>
+            Fan override
+          </div>
+          <div className="text-[10px] font-semibold tabular-nums" style={{ color: pending ? valueColor : muted }}>
+            {status}
+          </div>
+        </div>
+      )}
+      <div className="flex min-w-0 items-center gap-2">
+        <span
+          aria-hidden="true"
+          className="field-fan-rotor"
+          style={{
+            '--fan-spin': `${spinSec}s`,
+            opacity: disabled ? 0.38 : 0.95,
+          } as CSSProperties}
+        />
+        <input
+          type="range"
+          min={0}
+          max={100}
+          step={1}
+          value={pct}
+          disabled={disabled}
+          aria-label="Fan speed override"
+          title={`${pct}% · ${status}`}
+          className="field-fan-range"
+          style={{
+            '--fan-pct': `${pct}%`,
+            '--fan-track': track,
+          } as CSSProperties}
+          onChange={(e) => onChange(Number(e.currentTarget.value))}
+          onPointerUp={(e) => commitFromInput(e.currentTarget)}
+          onKeyUp={(e) => {
+            if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Enter', ' '].includes(e.key)) {
+              commitFromInput(e.currentTarget)
+            }
+          }}
+          onBlur={(e) => commitFromInput(e.currentTarget)}
+        />
+        <span className="w-7 shrink-0 text-right text-[8.5px] font-semibold tabular-nums" style={{ color: compact ? muted : valueColor }}>
+          {pct}%
+        </span>
+      </div>
+    </div>
+  )
+}
+
 export default function FieldHealthCard({
   variant = 'default',
 }: {
@@ -196,6 +292,9 @@ export default function FieldHealthCard({
   // or 'offline'. Avoids a "broken-looking" Offline flash on first paint.
   const [phase, setPhase] = useState<'connecting' | 'resolved'>('connecting')
   const [, forceTick] = useState(0) // re-render every 30s for "X min ago"
+  const [fanDraft, setFanDraft] = useState<number | null>(null)
+  const [fanPending, setFanPending] = useState(false)
+  const [fanError, setFanError] = useState<string | null>(null)
   const lastOkRef = useRef<HealthDigest | null>(null)
 
   useEffect(() => {
@@ -344,6 +443,18 @@ export default function FieldHealthCard({
   const fanColor = fanStale || fan?.state === 'error'
     ? palette.mutedText
     : valueColor
+  const fanOverrideRemaining = typeof fan?.override_remaining_s === 'number'
+    ? Math.max(0, Math.ceil(fan.override_remaining_s))
+    : typeof fan?.override_expires_at === 'number'
+      ? Math.max(0, Math.ceil(fan.override_expires_at - Date.now() / 1000))
+      : null
+  const fanSliderValue = fanDraft ?? fanPct ?? 0
+  const fanControlDisabled = !online || fan?.available === false || fanStale || fanPending
+  const fanControlStatus = fanPending
+    ? 'Setting'
+    : fan?.override_active
+      ? `Auto ${fanOverrideRemaining ?? FAN_OVERRIDE_TTL_SEC}s`
+      : fanError ?? 'Auto'
   const uptimeText = digest
     ? fmtUptime(digest.uptimeSec)
     : (lastOk ? fmtUptime(lastOk.uptimeSec) : '—')
@@ -383,6 +494,48 @@ export default function FieldHealthCard({
   const thermalPct = typeof sys?.cpu_temp_c === 'number'
     ? Math.max(0, Math.min(100, ((sys.cpu_temp_c - 35) / 45) * 100))
     : 0
+
+  useEffect(() => {
+    if (!fanPending && fanPct != null) {
+      setFanDraft(fanPct)
+    }
+  }, [fanPct, fanPending])
+
+  const commitFanSpeed = async (rawSpeed: number) => {
+    const speed = Math.max(0, Math.min(100, Math.round(rawSpeed)))
+    setFanDraft(speed)
+    if (fanControlDisabled && !fanPending) return
+
+    setFanPending(true)
+    setFanError(null)
+    try {
+      const res = await fetch(FAN_URL, {
+        method: 'POST',
+        cache: 'no-store',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ speed, ttl_sec: FAN_OVERRIDE_TTL_SEC }),
+      })
+      const data = await res.json().catch(() => null) as { ok?: boolean; fan?: SystemLoose['argon_fan']; error?: string } | null
+      if (!res.ok || data?.ok === false) {
+        throw new Error(data?.error || 'fan_command_failed')
+      }
+      if (data?.fan) {
+        setDigest((prev) => prev
+          ? {
+              ...prev,
+              system: {
+                ...(prev.system ?? {}),
+                argon_fan: data.fan,
+              },
+            }
+          : prev)
+      }
+    } catch {
+      setFanError('Retry')
+    } finally {
+      setFanPending(false)
+    }
+  }
 
   if (compact) {
     return (
@@ -440,18 +593,18 @@ export default function FieldHealthCard({
           </div>
         )}
 
-        <div className="relative mt-2 grid grid-cols-2 gap-2">
+        <div className="relative mt-1.5 grid grid-cols-2 gap-1.5 md:gap-[clamp(0.3rem,0.75dvh,0.45rem)] min-h-0">
           <div
-            className="min-w-0 rounded-xl border px-2.5 py-2 md:px-[clamp(0.55rem,0.9vw,0.7rem)] md:py-[clamp(0.35rem,0.7dvh,0.5rem)]"
+            className="min-w-0 rounded-xl border px-2.5 py-1.5 md:px-[clamp(0.5rem,0.9vw,0.7rem)] md:py-[clamp(0.3rem,0.65dvh,0.45rem)]"
             style={{ borderColor: palette.hairline, background: 'rgba(255,255,255,0.025)' }}
           >
             <div className="text-[7.5px] uppercase tracking-[0.18em] font-semibold" style={{ color: palette.mutedText }}>
               Thermal
             </div>
-            <div className="mt-1 text-[22px] md:text-[clamp(17px,2.25dvh,22px)] font-semibold tracking-tight tabular-nums leading-none" style={{ color: thermalColor }}>
+            <div className="mt-1 text-[20px] md:text-[clamp(15px,2dvh,20px)] font-semibold tracking-tight tabular-nums leading-none" style={{ color: thermalColor }}>
               {thermalLabel}
             </div>
-            <div className="mt-1.5 h-1 rounded-full overflow-hidden" style={{ background: palette.trackBackground }}>
+            <div className="mt-1 h-1 rounded-full overflow-hidden" style={{ background: palette.trackBackground }}>
               <div
                 className="h-full rounded-full"
                 style={{
@@ -464,31 +617,37 @@ export default function FieldHealthCard({
             </div>
           </div>
           <div
-            className="min-w-0 rounded-xl border px-2.5 py-2 md:px-[clamp(0.55rem,0.9vw,0.7rem)] md:py-[clamp(0.35rem,0.7dvh,0.5rem)]"
+            className="min-w-0 rounded-xl border px-2.5 py-1.5 md:px-[clamp(0.5rem,0.9vw,0.7rem)] md:py-[clamp(0.3rem,0.65dvh,0.45rem)]"
             style={{ borderColor: palette.hairline, background: 'rgba(255,255,255,0.025)' }}
           >
-            <div className="text-[7.5px] uppercase tracking-[0.18em] font-semibold" style={{ color: palette.mutedText }}>
-              Fan
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-[7.5px] uppercase tracking-[0.18em] font-semibold" style={{ color: palette.mutedText }}>
+                Fan
+              </div>
+              <div className="text-[7.5px] font-semibold tabular-nums truncate" style={{ color: palette.fadedText }}>
+                {fanControlStatus}
+              </div>
             </div>
-            <div className="mt-1 text-[17px] md:text-[clamp(13px,1.75dvh,17px)] font-semibold tracking-tight tabular-nums leading-none truncate" style={{ color: fanColor }}>
+            <div className="mt-1 text-[15px] md:text-[clamp(11.5px,1.55dvh,15px)] font-semibold tracking-tight tabular-nums leading-none truncate" style={{ color: fanColor }}>
               {fanRpm != null ? `${fanRpm.toLocaleString()} RPM` : fanText}
             </div>
-            <div className="mt-1.5 flex items-center gap-2">
-              <div className="h-1 flex-1 rounded-full overflow-hidden" style={{ background: palette.trackBackground }}>
-                <div className="h-full rounded-full" style={{ width: `${fanPct ?? 0}%`, background: 'linear-gradient(90deg, #67e8f9, #30d158)' }} />
-              </div>
-              <div className="text-[9px] font-semibold tabular-nums" style={{ color: palette.mutedText }}>
-                {fanPct != null ? `${fanPct}%` : '—'}
-              </div>
-            </div>
+            <FanControl
+              compact
+              value={fanSliderValue}
+              disabled={fanControlDisabled}
+              pending={fanPending}
+              status={fanControlStatus}
+              muted={palette.mutedText}
+              valueColor={valueColor}
+              track={palette.trackBackground}
+              onChange={setFanDraft}
+              onCommit={commitFanSpeed}
+            />
           </div>
-        </div>
-
-        <div
-          className="relative mt-2 rounded-xl border px-2.5 py-1.5 grid grid-cols-2 gap-x-3 min-w-0"
-          style={{ borderColor: palette.hairline, background: 'rgba(255,255,255,0.02)' }}
-        >
-          <div className="min-w-0">
+          <div
+            className="min-w-0 rounded-xl border px-2.5 py-1.5 md:px-[clamp(0.5rem,0.9vw,0.7rem)] md:py-[clamp(0.3rem,0.65dvh,0.45rem)]"
+            style={{ borderColor: palette.hairline, background: 'rgba(255,255,255,0.02)' }}
+          >
             <div className="text-[7px] uppercase tracking-[0.16em] font-semibold" style={{ color: palette.mutedText }}>
               Camera
             </div>
@@ -499,7 +658,10 @@ export default function FieldHealthCard({
               {sys?.media_graph?.output_size || '1280x720'}
             </div>
           </div>
-          <div className="min-w-0">
+          <div
+            className="min-w-0 rounded-xl border px-2.5 py-1.5 md:px-[clamp(0.5rem,0.9vw,0.7rem)] md:py-[clamp(0.3rem,0.65dvh,0.45rem)]"
+            style={{ borderColor: palette.hairline, background: 'rgba(255,255,255,0.02)' }}
+          >
             <div className="text-[7px] uppercase tracking-[0.16em] font-semibold" style={{ color: palette.mutedText }}>
               RKNN
             </div>
@@ -513,7 +675,7 @@ export default function FieldHealthCard({
         </div>
 
         <div
-          className="relative mt-2 pt-1.5 border-t flex items-center justify-between gap-1.5 text-[7.5px] md:text-[clamp(6.2px,0.68dvh,7.5px)] font-semibold uppercase tracking-[0.06em] tabular-nums min-w-0 whitespace-nowrap"
+          className="relative mt-auto pt-1.5 border-t flex items-center justify-between gap-1.5 text-[7px] md:text-[clamp(5.8px,0.66dvh,7px)] font-semibold uppercase tracking-[0.05em] tabular-nums min-w-0 whitespace-nowrap"
           style={{
             borderColor: palette.hairline,
           }}
@@ -526,6 +688,64 @@ export default function FieldHealthCard({
         </div>
 
         <style jsx global>{`
+          .field-fan-rotor {
+            --fan-spin: 1s;
+            width: 14px;
+            height: 14px;
+            flex: 0 0 auto;
+            border-radius: 999px;
+            background:
+              radial-gradient(circle at center, rgba(255,255,255,0.95) 0 16%, transparent 17%),
+              conic-gradient(from 25deg, #67e8f9 0 18%, transparent 18% 33%, #30d158 33% 51%, transparent 51% 66%, #67e8f9 66% 84%, transparent 84% 100%);
+            filter: drop-shadow(0 0 5px rgba(103,232,249,0.42));
+            animation: fldFanSpin var(--fan-spin) linear infinite;
+          }
+          .field-fan-range {
+            --fan-pct: 0%;
+            --fan-track: rgba(255,255,255,0.12);
+            appearance: none;
+            -webkit-appearance: none;
+            width: 100%;
+            min-width: 0;
+            height: 14px;
+            background: transparent;
+            cursor: pointer;
+          }
+          .field-fan-range:disabled {
+            cursor: not-allowed;
+            opacity: 0.48;
+          }
+          .field-fan-range::-webkit-slider-runnable-track {
+            height: 5px;
+            border-radius: 999px;
+            background: linear-gradient(90deg, #67e8f9 0 var(--fan-pct), var(--fan-track) var(--fan-pct) 100%);
+          }
+          .field-fan-range::-moz-range-track {
+            height: 5px;
+            border-radius: 999px;
+            background: linear-gradient(90deg, #67e8f9 0 var(--fan-pct), var(--fan-track) var(--fan-pct) 100%);
+          }
+          .field-fan-range::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 13px;
+            height: 13px;
+            margin-top: -4px;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.86);
+            background: #30d158;
+            box-shadow: 0 0 0 3px rgba(48,209,88,0.14), 0 0 10px rgba(103,232,249,0.38);
+          }
+          .field-fan-range::-moz-range-thumb {
+            width: 13px;
+            height: 13px;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.86);
+            background: #30d158;
+            box-shadow: 0 0 0 3px rgba(48,209,88,0.14), 0 0 10px rgba(103,232,249,0.38);
+          }
+          @keyframes fldFanSpin {
+            to { transform: rotate(360deg); }
+          }
           @keyframes fldHealthPing {
             0%   { transform: scale(1);   opacity: 0.55; }
             80%  { transform: scale(2.4); opacity: 0;    }
@@ -719,6 +939,25 @@ export default function FieldHealthCard({
         )}
       </dl>
 
+      {sys && !compact && (
+        <div
+          className="mt-5 rounded-xl border px-4 py-3"
+          style={{ borderColor: palette.hairline, background: 'rgba(255,255,255,0.025)' }}
+        >
+          <FanControl
+            value={fanSliderValue}
+            disabled={fanControlDisabled}
+            pending={fanPending}
+            status={fanControlStatus}
+            muted={palette.mutedText}
+            valueColor={valueColor}
+            track={palette.trackBackground}
+            onChange={setFanDraft}
+            onCommit={commitFanSpeed}
+          />
+        </div>
+      )}
+
       {sys && compact && (
         <div
           className="mt-auto pt-2 md:pt-[clamp(0.35rem,0.85dvh,0.5rem)] border-t grid gap-x-2 gap-y-1.5 text-[10.5px] md:text-[clamp(8px,0.95dvh,10px)] font-semibold tabular-nums min-w-0 flex-shrink-0"
@@ -805,6 +1044,64 @@ export default function FieldHealthCard({
       )}
 
       <style jsx global>{`
+        .field-fan-rotor {
+          --fan-spin: 1s;
+          width: 14px;
+          height: 14px;
+          flex: 0 0 auto;
+          border-radius: 999px;
+          background:
+            radial-gradient(circle at center, rgba(255,255,255,0.95) 0 16%, transparent 17%),
+            conic-gradient(from 25deg, #67e8f9 0 18%, transparent 18% 33%, #30d158 33% 51%, transparent 51% 66%, #67e8f9 66% 84%, transparent 84% 100%);
+          filter: drop-shadow(0 0 5px rgba(103,232,249,0.42));
+          animation: fldFanSpin var(--fan-spin) linear infinite;
+        }
+        .field-fan-range {
+          --fan-pct: 0%;
+          --fan-track: rgba(255,255,255,0.12);
+          appearance: none;
+          -webkit-appearance: none;
+          width: 100%;
+          min-width: 0;
+          height: 14px;
+          background: transparent;
+          cursor: pointer;
+        }
+        .field-fan-range:disabled {
+          cursor: not-allowed;
+          opacity: 0.48;
+        }
+        .field-fan-range::-webkit-slider-runnable-track {
+          height: 5px;
+          border-radius: 999px;
+          background: linear-gradient(90deg, #67e8f9 0 var(--fan-pct), var(--fan-track) var(--fan-pct) 100%);
+        }
+        .field-fan-range::-moz-range-track {
+          height: 5px;
+          border-radius: 999px;
+          background: linear-gradient(90deg, #67e8f9 0 var(--fan-pct), var(--fan-track) var(--fan-pct) 100%);
+        }
+        .field-fan-range::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          width: 13px;
+          height: 13px;
+          margin-top: -4px;
+          border-radius: 999px;
+          border: 1px solid rgba(255,255,255,0.86);
+          background: #30d158;
+          box-shadow: 0 0 0 3px rgba(48,209,88,0.14), 0 0 10px rgba(103,232,249,0.38);
+        }
+        .field-fan-range::-moz-range-thumb {
+          width: 13px;
+          height: 13px;
+          border-radius: 999px;
+          border: 1px solid rgba(255,255,255,0.86);
+          background: #30d158;
+          box-shadow: 0 0 0 3px rgba(48,209,88,0.14), 0 0 10px rgba(103,232,249,0.38);
+        }
+        @keyframes fldFanSpin {
+          to { transform: rotate(360deg); }
+        }
         @keyframes fldHealthPing {
           0%   { transform: scale(1);   opacity: 0.55; }
           80%  { transform: scale(2.4); opacity: 0;    }

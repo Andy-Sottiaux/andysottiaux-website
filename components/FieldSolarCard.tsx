@@ -573,6 +573,7 @@ function MiniTrendChart({
     ? (isLight ? '#c2410c' : '#ffb84d')
     : (isLight ? '#0a8aa8' : '#67e8f9')
   const gridColor = isLight ? 'rgba(0,0,0,0.09)' : 'rgba(255,255,255,0.09)'
+  const axisColor = isLight ? 'rgba(28,26,28,0.46)' : 'rgba(255,255,255,0.44)'
 
   if (data.length < 2) {
     return (
@@ -595,13 +596,57 @@ function MiniTrendChart({
   const areaColor = tone === 'solar'
     ? (isLight ? 'rgba(194,65,12,0.12)' : 'rgba(255,184,77,0.15)')
     : (isLight ? 'rgba(10,138,168,0.12)' : 'rgba(103,232,249,0.14)')
+  const tickValues = tone === 'solar'
+    ? [yMax, yMax / 2, 0]
+    : [yMax, yMin + range / 2, yMin]
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="w-full h-full" aria-hidden="true">
-      <line x1={PAD_X} y1={PAD_T + innerH} x2={W - PAD_X} y2={PAD_T + innerH} stroke={gridColor} strokeWidth="1" />
-      <line x1={PAD_X} y1={PAD_T + innerH / 2} x2={W - PAD_X} y2={PAD_T + innerH / 2} stroke={gridColor} strokeWidth="0.8" />
+      {tickValues.map((value, index) => {
+        const y = yFor(value)
+        return (
+          <g key={`${value}-${index}`}>
+            <line x1={PAD_X} y1={y} x2={W - PAD_X} y2={y} stroke={gridColor} strokeWidth={index === tickValues.length - 1 ? 1 : 0.8} />
+          </g>
+        )
+      })}
       <path d={areaPath} fill={areaColor} />
       <path d={linePath} fill="none" stroke={strokeColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      {tickValues.map((value, index) => {
+        const y = yFor(value)
+        const clampedY = Math.max(PAD_T + 5, Math.min(H - 9, y + 2.2))
+        return (
+          <text
+            key={`label-${value}-${index}`}
+            x={PAD_X + 3}
+            y={clampedY}
+            textAnchor="start"
+            fontSize="6.7"
+            fontWeight="700"
+            fill={axisColor}
+          >
+            {formatTick(value, tone)}
+          </text>
+        )
+      })}
+      {['24h', '12h', 'now'].map((label, index) => {
+        const x = PAD_X + (index / 2) * innerW
+        return (
+          <g key={label}>
+            <line x1={x} y1={PAD_T + innerH - 2.5} x2={x} y2={PAD_T + innerH + 1.5} stroke={axisColor} strokeWidth="0.65" opacity="0.72" />
+            <text
+              x={x}
+              y={H - 1.5}
+              textAnchor={index === 0 ? 'start' : index === 2 ? 'end' : 'middle'}
+              fontSize="6.5"
+              fontWeight="700"
+              fill={axisColor}
+            >
+              {label}
+            </text>
+          </g>
+        )
+      })}
     </svg>
   )
 }
