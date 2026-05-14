@@ -35,6 +35,13 @@ const LOAD_TIMEOUT_MS = 10_000
 type Phase = 'paused' | 'connecting' | 'live' | 'offline'
 type VideoFit = 'contain' | 'cover' | 'fill'
 
+type VideoOverlayLayout = {
+  left: number
+  top: number
+  width: number
+  height: number
+}
+
 type CameraHealthOverlay = {
   outputSize?: string
   profile?: CameraStreamProfile
@@ -119,6 +126,7 @@ export default function FieldCameraFeed({
   const [phase, setPhase] = useState<Phase>(() => (enabled && initialActive() ? 'connecting' : 'paused'))
   const [reloadNonce, setReloadNonce] = useState(0)
   const [streamIndex, setStreamIndex] = useState(0)
+  const [videoLayout, setVideoLayout] = useState<VideoOverlayLayout | null>(null)
   const activeStream = FEED_STREAMS[streamIndex] ?? FEED_STREAMS[0]
 
   useEffect(() => {
@@ -165,9 +173,11 @@ export default function FieldCameraFeed({
     let bindTimer = 0
     let loadTimer = 0
     let reachedLive = false
+    let resizeObserver: ResizeObserver | null = null
     const cleanups: Array<() => void> = []
 
     setPhase('connecting')
+    setVideoLayout(null)
     mount.replaceChildren()
 
     const markPlaybackFailure = (timeoutOnly = false) => {
@@ -218,11 +228,29 @@ export default function FieldCameraFeed({
           video.style.objectFit = fit
           video.style.objectPosition = position
 
+          const updateVideoLayout = () => {
+            const container = containerRef.current
+            if (!container || !video) return
+            const containerWidth = container.clientWidth
+            const containerHeight = container.clientHeight
+            const mediaWidth = video.videoWidth || 1280
+            const mediaHeight = video.videoHeight || 720
+            setVideoLayout(computeVideoOverlayLayout({
+              containerWidth,
+              containerHeight,
+              mediaWidth,
+              mediaHeight,
+              fit,
+              position,
+            }))
+          }
+
           const markLive = () => {
             if (!disposed) {
               reachedLive = true
               window.clearTimeout(loadTimer)
               setPhase('live')
+              updateVideoLayout()
             }
           }
           const markOffline = () => markPlaybackFailure()
@@ -233,6 +261,12 @@ export default function FieldCameraFeed({
           video.addEventListener('playing', markLive)
           video.addEventListener('timeupdate', markLive)
           video.addEventListener('error', markOffline)
+          video.addEventListener('loadedmetadata', updateVideoLayout)
+          window.addEventListener('resize', updateVideoLayout)
+          if (typeof ResizeObserver !== 'undefined') {
+            resizeObserver = new ResizeObserver(updateVideoLayout)
+            resizeObserver.observe(containerRef.current ?? mount)
+          }
           cleanups.push(() => {
             video?.removeEventListener('loadedmetadata', markLive)
             video?.removeEventListener('loadeddata', markLive)
@@ -240,8 +274,12 @@ export default function FieldCameraFeed({
             video?.removeEventListener('playing', markLive)
             video?.removeEventListener('timeupdate', markLive)
             video?.removeEventListener('error', markOffline)
+            video?.removeEventListener('loadedmetadata', updateVideoLayout)
+            window.removeEventListener('resize', updateVideoLayout)
+            resizeObserver?.disconnect()
           })
 
+          updateVideoLayout()
           if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) markLive()
         }
 
@@ -256,6 +294,7 @@ export default function FieldCameraFeed({
       window.clearTimeout(loadTimer)
       window.clearTimeout(bindTimer)
       cleanups.forEach((cleanup) => cleanup())
+      setVideoLayout(null)
       player?.remove()
       if (mountRef.current === mount) mount.replaceChildren()
     }
@@ -333,7 +372,7 @@ export default function FieldCameraFeed({
 
       {debugMode && <DevHUD phase={phase} stream={activeStream} />}
       {phase === 'live' && <CameraSpecsOverlay data={overlay} />}
-      {phase === 'live' && <DetectionOverlay data={detections} />}
+      {phase === 'live' && <DetectionOverlay data={detections} layout={videoLayout} />}
 
       <a
         href={nativePlayerUrl(activeStream)}
@@ -490,7 +529,7 @@ function CameraSpecsOverlay({ data }: { data: CameraHealthOverlay }) {
   )
 }
 
-function DetectionOverlay({ data }: { data: DetectionPayload }) {
+function DetectionOverlay({ data, layout }: { data: DetectionPayload; layout: VideoOverlayLayout | null }) {
   const recent = Array.isArray(data.recent) ? data.recent : []
   const now = typeof data.now === 'number' ? data.now : Date.now() / 1000
   const withAge = recent
@@ -513,9 +552,13 @@ function DetectionOverlay({ data }: { data: DetectionPayload }) {
     : total > 0
       ? `${total} detections / ${DETECTION_WINDOW_SEC}s`
       : 'scanning 1 fps'
+  const latestTs = latest?.item.ts
   const boxes = withAge
     .filter(({ item, age }) => (
-      age <= 20 &&
+      age <= 6 &&
+      typeof latestTs === 'number' &&
+      typeof item.ts === 'number' &&
+      latestTs - item.ts <= 1 &&
       item.bbox &&
       typeof item.bbox.x === 'number' &&
       typeof item.bbox.y === 'number'
@@ -527,8 +570,18 @@ function DetectionOverlay({ data }: { data: DetectionPayload }) {
     })
     .slice(0, 4)
 
+  const overlayStyle: CSSProperties = layout
+    ? {
+        left: `${layout.left}%`,
+        top: `${layout.top}%`,
+        width: `${layout.width}%`,
+        height: `${layout.height}%`,
+      }
+    : { inset: 0 }
+
   return (
     <>
+      <div className="pointer-events-none absolute" style={overlayStyle}>
       {boxes.map(({ item, age }, index) => {
         const b = item.bbox
         if (!b) return null
@@ -562,6 +615,7 @@ function DetectionOverlay({ data }: { data: DetectionPayload }) {
           </div>
         )
       })}
+      </div>
       <div
         className="pointer-events-none absolute bottom-3 left-3 flex items-center gap-2 rounded-full px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.16em]"
         style={{
@@ -583,6 +637,70 @@ function DetectionOverlay({ data }: { data: DetectionPayload }) {
       </div>
     </>
   )
+}
+
+function computeVideoOverlayLayout({
+  containerWidth,
+  containerHeight,
+  mediaWidth,
+  mediaHeight,
+  fit,
+  position,
+}: {
+  containerWidth: number
+  containerHeight: number
+  mediaWidth: number
+  mediaHeight: number
+  fit: VideoFit
+  position: string
+}): VideoOverlayLayout {
+  if (containerWidth <= 0 || containerHeight <= 0 || mediaWidth <= 0 || mediaHeight <= 0 || fit === 'fill') {
+    return { left: 0, top: 0, width: 100, height: 100 }
+  }
+
+  const scale = fit === 'cover'
+    ? Math.max(containerWidth / mediaWidth, containerHeight / mediaHeight)
+    : Math.min(containerWidth / mediaWidth, containerHeight / mediaHeight)
+  const renderedWidth = mediaWidth * scale
+  const renderedHeight = mediaHeight * scale
+  const [xAlign, yAlign] = parseObjectPosition(position)
+  const leftPx = (containerWidth - renderedWidth) * xAlign
+  const topPx = (containerHeight - renderedHeight) * yAlign
+
+  return {
+    left: (leftPx / containerWidth) * 100,
+    top: (topPx / containerHeight) * 100,
+    width: (renderedWidth / containerWidth) * 100,
+    height: (renderedHeight / containerHeight) * 100,
+  }
+}
+
+function parseObjectPosition(position: string): [number, number] {
+  const tokens = position.trim().toLowerCase().split(/\s+/).filter(Boolean)
+  const xToken = tokens[0] ?? 'center'
+  const yToken = tokens[1] ?? (isVerticalPositionToken(xToken) ? xToken : 'center')
+
+  return [positionTokenToRatio(xToken, 'x'), positionTokenToRatio(yToken, 'y')]
+}
+
+function isVerticalPositionToken(token: string): boolean {
+  return token === 'top' || token === 'bottom'
+}
+
+function positionTokenToRatio(token: string, axis: 'x' | 'y'): number {
+  if (token.endsWith('%')) {
+    const parsed = Number.parseFloat(token)
+    if (Number.isFinite(parsed)) return Math.max(0, Math.min(1, parsed / 100))
+  }
+  if (axis === 'x') {
+    if (token === 'left') return 0
+    if (token === 'right') return 1
+  }
+  if (axis === 'y') {
+    if (token === 'top') return 0
+    if (token === 'bottom') return 1
+  }
+  return 0.5
 }
 
 function clamp01(value: number): number {
