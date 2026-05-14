@@ -23,8 +23,8 @@ const CAMERA_HOST =
   'https://cayley-relay.tailc7d6b6.ts.net'
 const PRIMARY_FEED_STREAM = process.env.NEXT_PUBLIC_V3_FEED_STREAM || 'cayley-sub'
 const FEED_STREAMS = uniqueStreamNames([PRIMARY_FEED_STREAM, 'cayley-sub'])
-const PLAYER_MODE = process.env.NEXT_PUBLIC_V3_PLAYER_MODE || 'webrtc'
-const PLAYER_ASSET_VERSION = '20260513-low-latency-ai'
+const PLAYER_MODE = process.env.NEXT_PUBLIC_V3_PLAYER_MODE || 'mse,webrtc,mjpeg'
+const PLAYER_ASSET_VERSION = '20260514-transport-fallback'
 
 const SNAPSHOT_URL = `${CAMERA_HOST}/api/camera/snapshot.jpeg`
 const DETECTION_WINDOW_SEC = 60
@@ -227,12 +227,18 @@ export default function FieldCameraFeed({
           }
           const markOffline = () => markPlaybackFailure()
 
+          video.addEventListener('loadedmetadata', markLive)
           video.addEventListener('loadeddata', markLive)
+          video.addEventListener('canplay', markLive)
           video.addEventListener('playing', markLive)
+          video.addEventListener('timeupdate', markLive)
           video.addEventListener('error', markOffline)
           cleanups.push(() => {
+            video?.removeEventListener('loadedmetadata', markLive)
             video?.removeEventListener('loadeddata', markLive)
+            video?.removeEventListener('canplay', markLive)
             video?.removeEventListener('playing', markLive)
+            video?.removeEventListener('timeupdate', markLive)
             video?.removeEventListener('error', markOffline)
           })
 
