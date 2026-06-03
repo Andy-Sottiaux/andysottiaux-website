@@ -138,6 +138,29 @@ type TrainingStatus = {
     latest_pipeline_status?: string | null
     readiness_failures?: string[]
   }
+  production_readiness?: {
+    ok?: boolean
+    status?: string | null
+    short_action?: string | null
+    failures?: string[]
+    total_images?: number | null
+    labeled_images?: number | null
+    total_labels?: number | null
+    nonzero_classes?: Record<string, number>
+    image_diversity?: {
+      unique_images?: number | null
+      labeled_unique_images?: number | null
+    }
+    collection_plan?: {
+      min_new_images?: number | null
+      min_new_labeled_images?: number | null
+      min_new_labels?: number | null
+      min_new_classes?: number | null
+      min_new_unique_images?: number | null
+      min_new_labeled_unique_images?: number | null
+      focus?: string[]
+    } | null
+  } | null
   label_seed?: {
     name?: string | null
     total_images?: number | null
@@ -1011,6 +1034,28 @@ function trainingStateLabel(data: TrainingStatus): string {
 }
 
 function trainingDetail(data: TrainingStatus): string | null {
+  const plan = data.production_readiness?.collection_plan
+  if (plan) {
+    const parts = [
+      typeof plan.min_new_images === 'number' && plan.min_new_images > 0
+        ? `${plan.min_new_images} images`
+        : null,
+      typeof plan.min_new_labeled_images === 'number' && plan.min_new_labeled_images > 0
+        ? `${plan.min_new_labeled_images} labeled`
+        : null,
+      typeof plan.min_new_labels === 'number' && plan.min_new_labels > 0
+        ? `${plan.min_new_labels} labels`
+        : null,
+      typeof plan.min_new_unique_images === 'number' && plan.min_new_unique_images > 0
+        ? `${plan.min_new_unique_images} unique`
+        : null,
+      typeof plan.min_new_classes === 'number' && plan.min_new_classes > 0
+        ? `${plan.min_new_classes} classes`
+        : null,
+    ].filter(Boolean)
+    if (parts.length) return `need ${parts.slice(0, 3).join(' · ')}`
+  }
+
   const capture = data.collection_wait?.capture
   if (data.state === 'waiting_for_scene' && capture) {
     const parts = [
