@@ -19,35 +19,18 @@
 
 import { useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
+import FieldCameraPreview from './FieldCameraPreview'
 import FieldHealthCard from './FieldHealthCard'
 import FieldSolarCard from './FieldSolarCard'
 import { FieldThemeProvider, useFieldTheme } from './fieldTheme'
 import { useReducedMotion } from '@/lib/useReducedMotion'
 
-// Dynamic import — the camera feed embeds go2rtc's native player from the
-// browser; SSR'ing it is wasted work, so skip it server-side.
+// Dynamic import: the camera surface is browser-only and starts from the
+// relay-sanitized preview path, so SSR work here does not help first paint.
 const FieldCameraFeed = dynamic(() => import('./FieldCameraFeed'), {
   ssr: false,
-  loading: () => <CameraLoadingShimmer />,
+  loading: () => <FieldCameraPreview muted />,
 })
-
-function CameraLoadingShimmer() {
-  // Mode-aware skeleton so the placeholder doesn't fight the theme around it.
-  const { mode } = useFieldTheme()
-  return (
-    <div
-      className="absolute inset-0 rounded-2xl"
-      style={{
-        background:
-          mode === 'dark'
-            ? 'linear-gradient(105deg, #0a0a0c 25%, #16161a 50%, #0a0a0c 75%)'
-            : 'linear-gradient(105deg, #ececef 25%, #f6f6f8 50%, #ececef 75%)',
-        backgroundSize: '200% 100%',
-        animation: 'fldShimmer 2.4s linear infinite',
-      }}
-    />
-  )
-}
 
 // IntersectionObserver-based scroll reveal. Reduced-motion users get the
 // final state immediately.

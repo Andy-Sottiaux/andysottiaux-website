@@ -17,13 +17,14 @@
 import dynamic from 'next/dynamic'
 import Image from 'next/image'
 import { useEffect, useState } from 'react'
+import FieldCameraPreview from './FieldCameraPreview'
 import FieldHealthCard from './FieldHealthCard'
 import FieldSolarCard from './FieldSolarCard'
 import { useFieldTheme } from './fieldTheme'
 
 const FieldCameraFeed = dynamic(() => import('./FieldCameraFeed'), {
   ssr: false,
-  loading: () => <div className="absolute inset-0 bg-black/80" />,
+  loading: () => <FieldCameraPreview muted />,
 })
 
 const STLViewer = dynamic(() => import('./STLViewer'), {

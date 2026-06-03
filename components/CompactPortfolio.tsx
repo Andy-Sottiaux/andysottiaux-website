@@ -37,8 +37,10 @@ import Image from 'next/image'
 import dynamic from 'next/dynamic'
 import FieldSolarCard from './FieldSolarCard'
 import FieldHealthCard from './FieldHealthCard'
+import FieldCameraPreview from './FieldCameraPreview'
 import { FieldThemeProvider, useFieldTheme } from './fieldTheme'
 import Modal from './Modal'
+import { prewarmFieldCameraSurface } from './prewarmFieldCamera'
 import {
   AboutModalContent,
   AirpodsMountModalContent,
@@ -56,7 +58,7 @@ import { haptic } from '@/lib/haptics'
 // native player, so SSR'ing it is wasted work.
 const FieldCameraFeed = dynamic(() => import('./FieldCameraFeed'), {
   ssr: false,
-  loading: () => <div className="absolute inset-0 bg-black/80" />,
+  loading: () => <FieldCameraPreview fit="cover" muted />,
 })
 
 export default function CompactPortfolio({
@@ -82,6 +84,14 @@ function CompactInner({ initialBoardLive }: { initialBoardLive: boolean }) {
 
   const [openModal, setOpenModal] = useState<ModalKey | null>(null)
   const close = () => setOpenModal(null)
+  const open = (key: ModalKey) => {
+    if (key === 'live') prewarmFieldCameraSurface()
+    setOpenModal(key)
+  }
+
+  useEffect(() => {
+    prewarmFieldCameraSurface()
+  }, [])
 
   return (
     <main
@@ -104,7 +114,7 @@ function CompactInner({ initialBoardLive }: { initialBoardLive: boolean }) {
           Mobile: keeps `min-h-screen` and natural vertical scrolling. */}
       <div className="bento-shell flex-1 flex flex-col px-4 sm:px-6 md:px-8 py-3 sm:py-4 md:py-5 md:min-h-0">
         <div className="w-full max-w-[1380px] mx-auto md:flex-1 md:flex md:flex-col md:min-h-0">
-          <Bento boardLive={boardLive} cameraEnabled={openModal !== 'live'} onOpen={setOpenModal} />
+          <Bento boardLive={boardLive} cameraEnabled={openModal !== 'live'} onOpen={open} />
         </div>
       </div>
 
