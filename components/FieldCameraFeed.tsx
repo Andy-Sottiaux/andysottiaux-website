@@ -56,6 +56,11 @@ type CameraQuality = {
     latest_seen_age_s?: number | null
     last_green_ratio?: number | null
   }
+  rknn_frame?: {
+    source?: string | null
+    age_s?: number | null
+    stale?: boolean
+  }
   error?: string
 }
 
@@ -117,15 +122,16 @@ export default function FieldCameraFeed({
 }) {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
-  const debugMode = useDebugFlag()
-  const overlay = useCameraHealthOverlay()
-  const detections = useDetectionOverlay()
-  const quality = useCameraQuality()
   const containerRef = useRef<HTMLDivElement>(null)
   const [active, setActive] = useState<boolean>(() => enabled && initialActive())
   const [phase, setPhase] = useState<Phase>(() => (enabled && initialActive() ? 'connecting' : 'paused'))
   const [snapshotNonce, setSnapshotNonce] = useState(0)
   const [streamNonce, setStreamNonce] = useState(0)
+  const [snapshotReady, setSnapshotReady] = useState(false)
+  const debugMode = useDebugFlag()
+  const overlay = useCameraHealthOverlay(active)
+  const detections = useDetectionOverlay(active)
+  const quality = useCameraQuality(active)
   const mediaWidth = overlay.profile?.width || 1280
   const mediaHeight = overlay.profile?.height || 960
   const videoLayout = useOverlayLayout(containerRef, fit, position, mediaWidth, mediaHeight)
@@ -164,10 +170,12 @@ export default function FieldCameraFeed({
   useEffect(() => {
     if (!active) {
       setPhase('paused')
+      setSnapshotReady(false)
       return
     }
 
     setPhase('connecting')
+    setSnapshotReady(false)
     setStreamNonce((n) => n + 1)
     setSnapshotNonce(Date.now())
     const timeout = window.setTimeout(() => setPhase((p) => (p === 'connecting' ? 'offline' : p)), MJPEG_START_TIMEOUT_MS)
@@ -185,6 +193,7 @@ export default function FieldCameraFeed({
 
   const reload = () => {
     setPhase('connecting')
+    setSnapshotReady(false)
     setStreamNonce((n) => n + 1)
     setSnapshotNonce(Date.now())
   }
@@ -205,6 +214,8 @@ export default function FieldCameraFeed({
         decoding="async"
         fetchPriority="high"
         className="pointer-events-none absolute inset-0 h-full w-full"
+        onLoad={() => setSnapshotReady(true)}
+        onError={() => setSnapshotReady(false)}
         style={{
           objectFit: fit,
           objectPosition: position,
@@ -221,7 +232,10 @@ export default function FieldCameraFeed({
           alt=""
           aria-label="Cayley field camera clean live preview"
           className="absolute inset-0 h-full w-full"
-          onLoad={() => setPhase('live')}
+          onLoad={() => {
+            setSnapshotReady(true)
+            setPhase('live')
+          }}
           onError={() => setPhase('offline')}
           style={{
             objectFit: fit,
@@ -232,7 +246,7 @@ export default function FieldCameraFeed({
         />
       )}
 
-      {phase === 'connecting' && <FeedShimmer label="opening clean preview..." isLight={isLight} />}
+      {phase === 'connecting' && !snapshotReady && <FeedShimmer label="opening clean preview..." isLight={isLight} />}
       {phase === 'paused' && <FeedPaused />}
       {phase === 'offline' && <FeedOffline isLight={isLight} onRetry={reload} />}
 
@@ -282,10 +296,15 @@ export function prewarmFieldCameraFeed() {
   fetch(QUALITY_URL, { cache: 'no-store' }).catch(() => undefined)
 }
 
-function useCameraQuality(): CameraQuality {
+function useCameraQuality(enabled: boolean): CameraQuality {
   const [quality, setQuality] = useState<CameraQuality>({})
 
   useEffect(() => {
+    if (!enabled) {
+      setQuality({})
+      return
+    }
+
     let cancelled = false
     let timer: ReturnType<typeof setTimeout> | null = null
 
@@ -309,15 +328,20 @@ function useCameraQuality(): CameraQuality {
       cancelled = true
       if (timer) clearTimeout(timer)
     }
-  }, [])
+  }, [enabled])
 
   return quality
 }
 
-function useCameraHealthOverlay(): CameraHealthOverlay {
+function useCameraHealthOverlay(enabled: boolean): CameraHealthOverlay {
   const [overlay, setOverlay] = useState<CameraHealthOverlay>({})
 
   useEffect(() => {
+    if (!enabled) {
+      setOverlay({})
+      return
+    }
+
     let cancelled = false
     let timer: ReturnType<typeof setTimeout> | null = null
 
@@ -345,15 +369,20 @@ function useCameraHealthOverlay(): CameraHealthOverlay {
       cancelled = true
       if (timer) clearTimeout(timer)
     }
-  }, [])
+  }, [enabled])
 
   return overlay
 }
 
-function useDetectionOverlay(): DetectionPayload {
+function useDetectionOverlay(enabled: boolean): DetectionPayload {
   const [data, setData] = useState<DetectionPayload>({})
 
   useEffect(() => {
+    if (!enabled) {
+      setData({})
+      return
+    }
+
     let cancelled = false
     let timer: ReturnType<typeof setTimeout> | null = null
 
@@ -375,7 +404,7 @@ function useDetectionOverlay(): DetectionPayload {
       cancelled = true
       if (timer) clearTimeout(timer)
     }
-  }, [])
+  }, [enabled])
 
   return data
 }
@@ -713,6 +742,9 @@ function CameraGlyph({ dim = false, isLight }: { dim?: boolean; isLight: boolean
 }
 
 function DevHUD({ phase, quality }: { phase: Phase; quality: CameraQuality }) {
+  const rknnAge = typeof quality.rknn_frame?.age_s === 'number'
+    ? quality.rknn_frame.age_s.toFixed(1)
+    : 'n/a'
   return (
     <div
       className="absolute bottom-3 left-3 rounded-lg px-2.5 py-2 text-[10px] font-mono leading-relaxed"
@@ -728,6 +760,7 @@ function DevHUD({ phase, quality }: { phase: Phase; quality: CameraQuality }) {
       <div>ok:{String(quality.ok ?? 'pending')}</div>
       <div>drops:{quality.sanitizer?.frames_dropped_green ?? 0}</div>
       <div>decode:{quality.sanitizer?.decoder_errors ?? 0}</div>
+      <div>rknn:{quality.rknn_frame?.source ?? 'n/a'} {rknnAge}s</div>
     </div>
   )
 }
