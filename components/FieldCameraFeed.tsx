@@ -23,14 +23,17 @@ const CAMERA_HOST =
   'https://cayley-relay.tailc7d6b6.ts.net'
 const PRIMARY_FEED_STREAM = process.env.NEXT_PUBLIC_V3_FEED_STREAM || 'cayley-sub'
 const FEED_STREAMS = uniqueStreamNames([PRIMARY_FEED_STREAM, 'cayley-sub'])
-const PLAYER_MODE = process.env.NEXT_PUBLIC_V3_PLAYER_MODE || 'mse,webrtc,mjpeg'
-const PLAYER_ASSET_VERSION = '20260514-transport-fallback'
+const PLAYER_MODE = process.env.NEXT_PUBLIC_V3_PLAYER_MODE || 'webrtc,mse,mjpeg'
+const PLAYER_ASSET_VERSION = '20260603-green-band-recovery'
 
 const SNAPSHOT_URL = `${CAMERA_HOST}/api/camera/snapshot.jpeg`
 const DETECTION_WINDOW_SEC = 60
 const DETECTIONS_URL = `/api/v3/detections?window_sec=${DETECTION_WINDOW_SEC}`
 
 const LOAD_TIMEOUT_MS = 10_000
+const FRAME_INSPECTION_INTERVAL_MS = 1_500
+const GREEN_BAND_TRIGGER_COUNT = 2
+const GREEN_BAND_RECOVERY_COOLDOWN_MS = 12_000
 
 type Phase = 'paused' | 'connecting' | 'live' | 'offline'
 type VideoFit = 'contain' | 'cover' | 'fill'
@@ -40,6 +43,13 @@ type VideoOverlayLayout = {
   top: number
   width: number
   height: number
+}
+
+type BandStats = {
+  avgR: number
+  avgG: number
+  avgB: number
+  greenRatio: number
 }
 
 type CameraHealthOverlay = {
@@ -121,6 +131,7 @@ export default function FieldCameraFeed({
   const detections = useDetectionOverlay()
   const containerRef = useRef<HTMLDivElement>(null)
   const mountRef = useRef<HTMLDivElement>(null)
+  const lastVisualRecoveryAtRef = useRef(0)
 
   const [active, setActive] = useState<boolean>(() => enabled && initialActive())
   const [phase, setPhase] = useState<Phase>(() => (enabled && initialActive() ? 'connecting' : 'paused'))
@@ -128,6 +139,7 @@ export default function FieldCameraFeed({
   const [streamIndex, setStreamIndex] = useState(0)
   const [videoLayout, setVideoLayout] = useState<VideoOverlayLayout | null>(null)
   const activeStream = FEED_STREAMS[streamIndex] ?? FEED_STREAMS[0]
+  const snapshotUrl = `${SNAPSHOT_URL}?v=${reloadNonce}`
 
   useEffect(() => {
     const el = containerRef.current
@@ -172,6 +184,8 @@ export default function FieldCameraFeed({
     let video: HTMLVideoElement | null = null
     let bindTimer = 0
     let loadTimer = 0
+    let frameInspectionTimer = 0
+    let greenBandHits = 0
     let reachedLive = false
     let resizeObserver: ResizeObserver | null = null
     const cleanups: Array<() => void> = []
@@ -222,6 +236,7 @@ export default function FieldCameraFeed({
           }
 
           video.controls = false
+          video.crossOrigin = 'anonymous'
           video.muted = true
           video.autoplay = true
           video.playsInline = true
@@ -254,6 +269,30 @@ export default function FieldCameraFeed({
             }
           }
           const markOffline = () => markPlaybackFailure()
+          const inspectFrame = () => {
+            if (disposed || !video || video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return
+
+            const greenBand = detectGreenDecoderBand(video)
+            if (greenBand === 'unsupported') {
+              window.clearInterval(frameInspectionTimer)
+              frameInspectionTimer = 0
+              return
+            }
+
+            greenBandHits = greenBand ? greenBandHits + 1 : 0
+            const now = Date.now()
+            if (
+              greenBandHits >= GREEN_BAND_TRIGGER_COUNT &&
+              now - lastVisualRecoveryAtRef.current > GREEN_BAND_RECOVERY_COOLDOWN_MS
+            ) {
+              lastVisualRecoveryAtRef.current = now
+              greenBandHits = 0
+              reachedLive = false
+              setPhase('connecting')
+              setStreamIndex(0)
+              setReloadNonce((n) => n + 1)
+            }
+          }
 
           video.addEventListener('loadedmetadata', markLive)
           video.addEventListener('loadeddata', markLive)
@@ -267,6 +306,7 @@ export default function FieldCameraFeed({
             resizeObserver = new ResizeObserver(updateVideoLayout)
             resizeObserver.observe(containerRef.current ?? mount)
           }
+          frameInspectionTimer = window.setInterval(inspectFrame, FRAME_INSPECTION_INTERVAL_MS)
           cleanups.push(() => {
             video?.removeEventListener('loadedmetadata', markLive)
             video?.removeEventListener('loadeddata', markLive)
@@ -277,6 +317,7 @@ export default function FieldCameraFeed({
             video?.removeEventListener('loadedmetadata', updateVideoLayout)
             window.removeEventListener('resize', updateVideoLayout)
             resizeObserver?.disconnect()
+            if (frameInspectionTimer) window.clearInterval(frameInspectionTimer)
           })
 
           updateVideoLayout()
@@ -331,7 +372,7 @@ export default function FieldCameraFeed({
 
       {phase !== 'live' && (
         <img
-          src={SNAPSHOT_URL}
+          src={snapshotUrl}
           alt=""
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 h-full w-full"
@@ -705,6 +746,72 @@ function positionTokenToRatio(token: string, axis: 'x' | 'y'): number {
 
 function clamp01(value: number): number {
   return Math.max(0, Math.min(1, value))
+}
+
+function detectGreenDecoderBand(video: HTMLVideoElement): boolean | 'unsupported' {
+  if (typeof document === 'undefined' || video.videoWidth <= 0 || video.videoHeight <= 0) {
+    return false
+  }
+
+  const width = 96
+  const height = 72
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })
+  if (!ctx) return 'unsupported'
+
+  try {
+    ctx.drawImage(video, 0, 0, width, height)
+    const data = ctx.getImageData(0, 0, width, height).data
+    const top = bandStats(data, width, 0, 12)
+    const middle = bandStats(data, width, 31, 43)
+    const bottom = bandStats(data, width, 54, height)
+
+    return (
+      bottom.greenRatio > 0.32 &&
+      bottom.greenRatio > Math.max(top.greenRatio * 2.5, middle.greenRatio * 2.5, 0.32) &&
+      bottom.avgG > 72 &&
+      bottom.avgR < 58 &&
+      bottom.avgB < 58 &&
+      bottom.avgG > bottom.avgR * 1.9 &&
+      bottom.avgG > bottom.avgB * 1.45
+    )
+  } catch {
+    return 'unsupported'
+  }
+}
+
+function bandStats(data: Uint8ClampedArray, width: number, startY: number, endY: number): BandStats {
+  let rTotal = 0
+  let gTotal = 0
+  let bTotal = 0
+  let green = 0
+  let count = 0
+
+  for (let y = startY; y < endY; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const offset = (y * width + x) * 4
+      const r = data[offset] ?? 0
+      const g = data[offset + 1] ?? 0
+      const b = data[offset + 2] ?? 0
+      rTotal += r
+      gTotal += g
+      bTotal += b
+      count += 1
+
+      if (g >= 72 && r <= 54 && b <= 54 && g >= r * 2.1 && g >= b * 1.8) {
+        green += 1
+      }
+    }
+  }
+
+  return {
+    avgR: count ? rTotal / count : 0,
+    avgG: count ? gTotal / count : 0,
+    avgB: count ? bTotal / count : 0,
+    greenRatio: count ? green / count : 0,
+  }
 }
 
 function displayDetectionClass(value?: string): string {
