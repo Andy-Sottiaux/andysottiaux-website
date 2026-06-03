@@ -9,5 +9,7 @@ export const PLAYER_ASSET_VERSION = '20260603-instant-preview'
 export const SNAPSHOT_URL = `${CAMERA_HOST}/api/camera/snapshot.jpeg`
 export const SANITIZED_SNAPSHOT_URL = `${CAMERA_HOST}/api/camera/sanitized.jpeg`
 export const MJPEG_URL = `${CAMERA_HOST}/api/camera/mjpeg`
-export const QUALITY_URL = `${CAMERA_HOST}/api/camera/quality`
+export const QUALITY_URL =
+  process.env.NEXT_PUBLIC_V3_CAMERA_QUALITY_URL ||
+  '/api/v3/camera/quality'
 export const PLAYER_SCRIPT_URL = `${CAMERA_HOST}/video-stream.js?v=${PLAYER_ASSET_VERSION}`

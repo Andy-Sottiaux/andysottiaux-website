@@ -23,8 +23,9 @@ const DETECTION_WINDOW_SEC = 60
 const DETECTIONS_URL = `/api/v3/detections?window_sec=${DETECTION_WINDOW_SEC}`
 const SNAPSHOT_REFRESH_MS = 4_000
 const MJPEG_START_TIMEOUT_MS = 8_000
+const STALE_CLEAN_FRAME_SEC = 10
 
-type Phase = 'paused' | 'connecting' | 'live' | 'offline'
+type Phase = 'paused' | 'connecting' | 'preview' | 'live' | 'offline'
 type VideoFit = 'contain' | 'cover' | 'fill'
 
 type VideoOverlayLayout = {
@@ -128,6 +129,7 @@ export default function FieldCameraFeed({
   const [snapshotNonce, setSnapshotNonce] = useState(0)
   const [streamNonce, setStreamNonce] = useState(0)
   const [snapshotReady, setSnapshotReady] = useState(false)
+  const [streamReady, setStreamReady] = useState(false)
   const debugMode = useDebugFlag()
   const overlay = useCameraHealthOverlay(active)
   const detections = useDetectionOverlay(active)
@@ -137,7 +139,8 @@ export default function FieldCameraFeed({
   const videoLayout = useOverlayLayout(containerRef, fit, position, mediaWidth, mediaHeight)
   const snapshotUrl = `${SNAPSHOT_URL}?v=${snapshotNonce}`
   const mjpegUrl = `${MJPEG_URL}?v=${streamNonce}`
-  const qualityBad = quality.ok === false || quality.snapshot?.stale === true
+  const mediaHealthBad = isConfirmedCameraBad(quality)
+  const showStream = active && !mediaHealthBad
 
   useEffect(() => {
     const el = containerRef.current
@@ -171,14 +174,18 @@ export default function FieldCameraFeed({
     if (!active) {
       setPhase('paused')
       setSnapshotReady(false)
+      setStreamReady(false)
       return
     }
 
     setPhase('connecting')
     setSnapshotReady(false)
+    setStreamReady(false)
     setStreamNonce((n) => n + 1)
     setSnapshotNonce(Date.now())
-    const timeout = window.setTimeout(() => setPhase((p) => (p === 'connecting' ? 'offline' : p)), MJPEG_START_TIMEOUT_MS)
+    const timeout = window.setTimeout(() => {
+      setPhase((p) => (p === 'connecting' ? 'offline' : p))
+    }, MJPEG_START_TIMEOUT_MS)
     const refresh = window.setInterval(() => setSnapshotNonce(Date.now()), SNAPSHOT_REFRESH_MS)
     return () => {
       window.clearTimeout(timeout)
@@ -188,15 +195,24 @@ export default function FieldCameraFeed({
 
   useEffect(() => {
     if (!active) return
-    if (qualityBad) setPhase((p) => (p === 'live' || p === 'connecting' ? 'offline' : p))
-  }, [active, qualityBad])
+    if (mediaHealthBad) {
+      setPhase((p) => (p === 'live' || p === 'preview' || p === 'connecting' ? 'offline' : p))
+      return
+    }
+    if (snapshotReady) {
+      setPhase((p) => (p === 'connecting' || p === 'offline' ? 'preview' : p))
+    }
+  }, [active, mediaHealthBad, snapshotReady])
 
   const reload = () => {
     setPhase('connecting')
     setSnapshotReady(false)
+    setStreamReady(false)
     setStreamNonce((n) => n + 1)
     setSnapshotNonce(Date.now())
   }
+
+  const streamActive = streamReady && phase === 'live'
 
   return (
     <div
@@ -214,18 +230,24 @@ export default function FieldCameraFeed({
         decoding="async"
         fetchPriority="high"
         className="pointer-events-none absolute inset-0 h-full w-full"
-        onLoad={() => setSnapshotReady(true)}
-        onError={() => setSnapshotReady(false)}
+        onLoad={() => {
+          setSnapshotReady(true)
+          setPhase((p) => (active && !mediaHealthBad && (p === 'connecting' || p === 'offline') ? 'preview' : p))
+        }}
+        onError={() => {
+          setSnapshotReady(false)
+          setPhase((p) => (p === 'live' && streamReady ? p : 'offline'))
+        }}
         style={{
           objectFit: fit,
           objectPosition: position,
-          opacity: phase === 'live' ? 0 : 1,
+          opacity: streamActive ? 0 : 1,
           transition: 'opacity 240ms ease',
           filter: phase === 'offline' ? 'saturate(0.84) brightness(0.7)' : 'saturate(1.02) contrast(1.03)',
         }}
       />
 
-      {active && !qualityBad && (
+      {showStream && (
         <img
           key={streamNonce}
           src={mjpegUrl}
@@ -234,13 +256,17 @@ export default function FieldCameraFeed({
           className="absolute inset-0 h-full w-full"
           onLoad={() => {
             setSnapshotReady(true)
+            setStreamReady(true)
             setPhase('live')
           }}
-          onError={() => setPhase('offline')}
+          onError={() => {
+            setStreamReady(false)
+            setPhase((p) => (snapshotReady && !mediaHealthBad ? 'preview' : 'offline'))
+          }}
           style={{
             objectFit: fit,
             objectPosition: position,
-            opacity: phase === 'live' ? 1 : 0,
+            opacity: streamActive ? 1 : 0,
             transition: 'opacity 240ms ease',
           }}
         />
@@ -250,8 +276,8 @@ export default function FieldCameraFeed({
       {phase === 'paused' && <FeedPaused />}
       {phase === 'offline' && <FeedOffline isLight={isLight} onRetry={reload} />}
 
-      {phase === 'live' && <LiveBadge quality={quality} />}
-      {phase === 'live' && <CameraSpecsOverlay data={overlay} quality={quality} />}
+      {(phase === 'preview' || phase === 'live') && <LiveBadge phase={phase} quality={quality} />}
+      {(phase === 'preview' || phase === 'live') && <CameraSpecsOverlay data={overlay} quality={quality} />}
       {phase === 'live' && <DetectionOverlay data={detections} layout={videoLayout} />}
       {debugMode && <DevHUD phase={phase} quality={quality} />}
 
@@ -294,6 +320,14 @@ export function prewarmFieldCameraFeed() {
   image.decoding = 'async'
   image.src = `${SNAPSHOT_URL}?v=${Date.now()}`
   fetch(QUALITY_URL, { cache: 'no-store' }).catch(() => undefined)
+}
+
+function isConfirmedCameraBad(quality: CameraQuality): boolean {
+  if (quality.snapshot?.stale === true) return true
+  if (typeof quality.sanitizer?.latest_clean_age_s === 'number' && quality.sanitizer.latest_clean_age_s > STALE_CLEAN_FRAME_SEC) {
+    return true
+  }
+  return quality.ok === false && !quality.error
 }
 
 function useCameraQuality(enabled: boolean): CameraQuality {
@@ -447,8 +481,9 @@ function useOverlayLayout(
   return layout
 }
 
-function LiveBadge({ quality }: { quality: CameraQuality }) {
+function LiveBadge({ phase, quality }: { phase: Extract<Phase, 'preview' | 'live'>; quality: CameraQuality }) {
   const dropped = quality.sanitizer?.frames_dropped_green ?? 0
+  const label = phase === 'live' ? 'Clean live' : 'Clean preview'
   return (
     <div
       className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-widest"
@@ -467,7 +502,7 @@ function LiveBadge({ quality }: { quality: CameraQuality }) {
           animation: 'fldLivePulse 1.6s cubic-bezier(0.4,0,0.6,1) infinite',
         }}
       />
-      Clean live{dropped > 0 ? ` · ${dropped} drops` : ''}
+      {label}{dropped > 0 ? ` · ${dropped} drops` : ''}
     </div>
   )
 }
