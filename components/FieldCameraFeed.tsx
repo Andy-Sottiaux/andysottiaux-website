@@ -131,6 +131,18 @@ type TrainingStatus = {
       invalid?: number | null
       diverse_attempt_ratio?: number | null
     }
+    guided_progress?: {
+      available?: boolean
+      status?: string | null
+      attempts?: number | null
+      kept?: number | null
+      duplicates?: number | null
+      invalid?: number | null
+      fetch_failed?: number | null
+      duplicate_ratio?: number | null
+      latest_event_age_s?: number | null
+      finish_reason?: string | null
+    } | null
   }
   model_wait?: {
     status?: string | null
@@ -804,7 +816,9 @@ function TrainingStatusPill({ data }: { data: TrainingStatus }) {
   const ready = data.training_ready || data.dataset_ready || data.state === 'ready_to_train'
   const unavailable = data.ok === false || Boolean(data.error)
   const label = trainingStateLabel(data)
-  const detail = trainingDetail(data)
+  const progress = trainingProgressChips(data)
+  const detail = progress.length > 0 ? null : trainingDetail(data)
+  const waitLine = trainingWaitLine(data)
   const dot = ready ? '#34d399' : unavailable ? '#f87171' : '#f59e0b'
   const background = ready
     ? 'rgba(6,78,59,0.76)'
@@ -815,7 +829,7 @@ function TrainingStatusPill({ data }: { data: TrainingStatus }) {
 
   return (
     <div
-      className="pointer-events-none absolute bottom-11 right-3 hidden max-w-[22rem] items-center gap-2 rounded-full px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.14em] sm:flex"
+      className="pointer-events-none absolute bottom-11 left-3 right-3 flex max-w-[calc(100%-1.5rem)] flex-col gap-1 rounded-[8px] px-2.5 py-2 text-[9px] font-semibold uppercase tracking-[0.12em] sm:left-auto sm:max-w-[32rem]"
       style={{
         background,
         color,
@@ -823,16 +837,28 @@ function TrainingStatusPill({ data }: { data: TrainingStatus }) {
         WebkitBackdropFilter: 'blur(8px)',
       }}
     >
-      <span
-        aria-hidden="true"
-        className="h-1.5 w-1.5 shrink-0 rounded-full"
-        style={{
-          background: dot,
-          boxShadow: `0 0 8px ${dot}`,
-        }}
-      />
-      <span className="whitespace-nowrap">Training · {label}</span>
-      {detail && <span className="hidden truncate opacity-80 md:inline">{detail}</span>}
+      <div className="flex min-w-0 items-center gap-2">
+        <span
+          aria-hidden="true"
+          className="h-1.5 w-1.5 shrink-0 rounded-full"
+          style={{
+            background: dot,
+            boxShadow: `0 0 8px ${dot}`,
+          }}
+        />
+        <span className="shrink-0 whitespace-nowrap">Training · {label}</span>
+        {detail && <span className="min-w-0 truncate opacity-80">{detail}</span>}
+      </div>
+      {(progress.length > 0 || waitLine) && (
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 opacity-80">
+          {progress.map((item) => (
+            <span key={item.label} className="whitespace-nowrap">
+              {item.label} {item.value}
+            </span>
+          ))}
+          {waitLine && <span className="min-w-0 truncate opacity-75">{waitLine}</span>}
+        </div>
+      )}
     </div>
   )
 }
@@ -1022,6 +1048,7 @@ function displayDetectionClass(value?: string): string {
 function trainingStateLabel(data: TrainingStatus): string {
   if (data.error) return 'unavailable'
   if (data.training_ready || data.dataset_ready || data.state === 'ready_to_train') return 'ready'
+  if (data.collection_wait?.guided_progress?.status === 'collecting') return 'collecting'
 
   switch (data.state) {
     case 'waiting_for_scene':
@@ -1031,6 +1058,73 @@ function trainingStateLabel(data: TrainingStatus): string {
     default:
       return (data.state || 'checking').replace(/_/g, ' ')
   }
+}
+
+function trainingProgressChips(data: TrainingStatus): { label: string; value: string }[] {
+  const readiness = data.production_readiness
+  const plan = readiness?.collection_plan
+  if (!readiness || !plan) return []
+
+  const totalImages = numericValue(readiness.total_images)
+  const labeledImages = numericValue(readiness.labeled_images)
+  const totalLabels = numericValue(readiness.total_labels)
+  const uniqueImages = numericValue(readiness.image_diversity?.unique_images)
+  const classCount = Object.keys(readiness.nonzero_classes ?? {}).length
+
+  return [
+    progressChip('img', totalImages, numericValue(plan.min_new_images)),
+    progressChip('labeled', labeledImages, numericValue(plan.min_new_labeled_images)),
+    progressChip('labels', totalLabels, numericValue(plan.min_new_labels)),
+    progressChip('unique', uniqueImages, numericValue(plan.min_new_unique_images)),
+    progressChip('classes', classCount, numericValue(plan.min_new_classes)),
+  ].filter((item): item is { label: string; value: string } => Boolean(item))
+}
+
+function progressChip(label: string, current: number | null, needed: number | null): { label: string; value: string } | null {
+  if (current == null || needed == null || needed <= 0) return null
+  return { label, value: `${formatProgressNumber(current)}/${formatProgressNumber(current + needed)}` }
+}
+
+function trainingWaitLine(data: TrainingStatus): string | null {
+  const guided = data.collection_wait?.guided_progress
+  if (guided?.available) {
+    const status = guided.status ? guided.status.replace(/_/g, ' ') : 'collecting'
+    const kept = numericValue(guided.kept)
+    const attempts = numericValue(guided.attempts)
+    const duplicateRatio = numericValue(guided.duplicate_ratio)
+    const duplicates = numericValue(guided.duplicates)
+    const pieces = [
+      kept != null && attempts != null ? `${status} ${kept}/${attempts} kept` : status,
+      duplicateRatio != null
+        ? `${Math.round(duplicateRatio * 100)}% dupes`
+        : duplicates != null && duplicates > 0
+          ? `${duplicates} dupes`
+          : null,
+    ].filter(Boolean)
+    return pieces.join(' · ')
+  }
+
+  const capture = data.collection_wait?.capture
+  const collection = data.collection_wait?.status
+    ? data.collection_wait.status.replace(/_/g, ' ')
+    : null
+  const duplicateCount = numericValue(capture?.duplicates)
+  const kept = numericValue(capture?.kept)
+  const attempts = numericValue(capture?.attempts)
+  const pieces = [
+    collection ? `collection ${collection}` : null,
+    kept != null && attempts != null ? `${kept}/${attempts} kept` : null,
+    duplicateCount != null && duplicateCount > 0 ? `${duplicateCount} dupes` : null,
+  ].filter(Boolean)
+  return pieces.length ? pieces.join(' · ') : null
+}
+
+function numericValue(value: number | null | undefined): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null
+}
+
+function formatProgressNumber(value: number): string {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1)
 }
 
 function trainingDetail(data: TrainingStatus): string | null {
