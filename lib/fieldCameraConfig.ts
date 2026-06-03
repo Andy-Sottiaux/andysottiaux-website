@@ -12,4 +12,7 @@ export const MJPEG_URL = `${CAMERA_HOST}/api/camera/mjpeg`
 export const QUALITY_URL =
   process.env.NEXT_PUBLIC_V3_CAMERA_QUALITY_URL ||
   '/api/v3/camera/quality'
+export const TRAINING_STATUS_URL =
+  process.env.NEXT_PUBLIC_V3_TRAINING_STATUS_URL ||
+  '/api/v3/training/status'
 export const PLAYER_SCRIPT_URL = `${CAMERA_HOST}/video-stream.js?v=${PLAYER_ASSET_VERSION}`

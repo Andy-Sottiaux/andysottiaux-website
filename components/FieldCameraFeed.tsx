@@ -16,6 +16,7 @@ import {
   PRIMARY_FEED_STREAM,
   QUALITY_URL,
   SNAPSHOT_URL,
+  TRAINING_STATUS_URL,
 } from '@/lib/fieldCameraConfig'
 import { useFieldTheme } from './fieldTheme'
 
@@ -112,6 +113,42 @@ type DetectionPayload = {
   error?: string
 }
 
+type TrainingStatus = {
+  ok?: boolean
+  state?: string
+  dataset_ready?: boolean
+  scene_ready?: boolean
+  training_ready?: boolean
+  selected_dataset?: string | null
+  short_action?: string | null
+  collection_wait?: {
+    status?: string | null
+    preflight_count?: number | null
+    capture?: {
+      attempts?: number | null
+      kept?: number | null
+      duplicates?: number | null
+      invalid?: number | null
+      diverse_attempt_ratio?: number | null
+    }
+  }
+  model_wait?: {
+    status?: string | null
+    status_count?: number | null
+    latest_pipeline_status?: string | null
+    readiness_failures?: string[]
+  }
+  label_seed?: {
+    name?: string | null
+    total_images?: number | null
+    labeled_images?: number | null
+    total_labels?: number | null
+    classes?: Record<string, number>
+    excluded?: boolean | null
+  } | null
+  error?: string
+}
+
 export default function FieldCameraFeed({
   enabled = true,
   fit = 'contain',
@@ -134,6 +171,7 @@ export default function FieldCameraFeed({
   const overlay = useCameraHealthOverlay(active)
   const detections = useDetectionOverlay(active)
   const quality = useCameraQuality(active)
+  const training = useTrainingStatus(active)
   const mediaWidth = overlay.profile?.width || 1280
   const mediaHeight = overlay.profile?.height || 960
   const videoLayout = useOverlayLayout(containerRef, fit, position, mediaWidth, mediaHeight)
@@ -279,6 +317,7 @@ export default function FieldCameraFeed({
       {(phase === 'preview' || phase === 'live') && <LiveBadge phase={phase} quality={quality} />}
       {(phase === 'preview' || phase === 'live') && <CameraSpecsOverlay data={overlay} quality={quality} />}
       {phase === 'live' && <DetectionOverlay data={detections} layout={videoLayout} />}
+      {(phase === 'preview' || phase === 'live') && <TrainingStatusPill data={training} />}
       {debugMode && <DevHUD phase={phase} quality={quality} />}
 
       <a
@@ -320,6 +359,7 @@ export function prewarmFieldCameraFeed() {
   image.decoding = 'async'
   image.src = `${SNAPSHOT_URL}?v=${Date.now()}`
   fetch(QUALITY_URL, { cache: 'no-store' }).catch(() => undefined)
+  fetch(TRAINING_STATUS_URL, { cache: 'no-store' }).catch(() => undefined)
 }
 
 function isConfirmedCameraBad(quality: CameraQuality): boolean {
@@ -431,6 +471,43 @@ function useDetectionOverlay(enabled: boolean): DetectionPayload {
         if (!cancelled) setData((prev) => ({ ...prev, error: 'unreachable' }))
       }
       if (!cancelled) timer = setTimeout(tick, 2_000)
+    }
+
+    tick()
+    return () => {
+      cancelled = true
+      if (timer) clearTimeout(timer)
+    }
+  }, [enabled])
+
+  return data
+}
+
+function useTrainingStatus(enabled: boolean): TrainingStatus {
+  const [data, setData] = useState<TrainingStatus>({})
+
+  useEffect(() => {
+    if (!enabled) {
+      setData({})
+      return
+    }
+
+    let cancelled = false
+    let timer: ReturnType<typeof setTimeout> | null = null
+
+    const tick = async () => {
+      try {
+        const res = await fetch(TRAINING_STATUS_URL, { cache: 'no-store' })
+        if (res.ok) {
+          const next = (await res.json()) as TrainingStatus
+          if (!cancelled) setData(next)
+        } else if (!cancelled) {
+          setData({ ok: false, error: `training_${res.status}` })
+        }
+      } catch {
+        if (!cancelled) setData((prev) => ({ ...prev, ok: false, error: 'training_unreachable' }))
+      }
+      if (!cancelled) timer = setTimeout(tick, 15_000)
     }
 
     tick()
@@ -698,6 +775,45 @@ function DetectionOverlay({ data, layout }: { data: DetectionPayload; layout: Vi
   )
 }
 
+function TrainingStatusPill({ data }: { data: TrainingStatus }) {
+  if (!data.state && !data.error) return null
+
+  const ready = data.training_ready || data.dataset_ready || data.state === 'ready_to_train'
+  const unavailable = data.ok === false || Boolean(data.error)
+  const label = trainingStateLabel(data)
+  const detail = trainingDetail(data)
+  const dot = ready ? '#34d399' : unavailable ? '#f87171' : '#f59e0b'
+  const background = ready
+    ? 'rgba(6,78,59,0.76)'
+    : unavailable
+      ? 'rgba(127,29,29,0.72)'
+      : 'rgba(92,52,13,0.76)'
+  const color = ready ? '#bbf7d0' : unavailable ? '#fecaca' : '#fed7aa'
+
+  return (
+    <div
+      className="pointer-events-none absolute bottom-11 right-3 hidden max-w-[22rem] items-center gap-2 rounded-full px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.14em] sm:flex"
+      style={{
+        background,
+        color,
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+      }}
+    >
+      <span
+        aria-hidden="true"
+        className="h-1.5 w-1.5 shrink-0 rounded-full"
+        style={{
+          background: dot,
+          boxShadow: `0 0 8px ${dot}`,
+        }}
+      />
+      <span className="whitespace-nowrap">Training · {label}</span>
+      {detail && <span className="hidden truncate opacity-80 md:inline">{detail}</span>}
+    </div>
+  )
+}
+
 function FeedShimmer({ label, isLight }: { label: string; isLight: boolean }) {
   return (
     <div
@@ -878,6 +994,83 @@ function displayDetectionClass(value?: string): string {
     default:
       return value || 'object'
   }
+}
+
+function trainingStateLabel(data: TrainingStatus): string {
+  if (data.error) return 'unavailable'
+  if (data.training_ready || data.dataset_ready || data.state === 'ready_to_train') return 'ready'
+
+  switch (data.state) {
+    case 'waiting_for_scene':
+      return 'move targets'
+    case 'waiting_for_labels':
+      return 'review labels'
+    default:
+      return (data.state || 'checking').replace(/_/g, ' ')
+  }
+}
+
+function trainingDetail(data: TrainingStatus): string | null {
+  const capture = data.collection_wait?.capture
+  if (data.state === 'waiting_for_scene' && capture) {
+    const parts = [
+      typeof capture.diverse_attempt_ratio === 'number'
+        ? `${Math.round(capture.diverse_attempt_ratio * 100)}% diverse`
+        : null,
+      typeof capture.kept === 'number' && typeof capture.attempts === 'number'
+        ? `${capture.kept}/${capture.attempts} kept`
+        : null,
+      typeof data.collection_wait?.preflight_count === 'number'
+        ? `${data.collection_wait.preflight_count} checks`
+        : null,
+    ].filter(Boolean)
+    return parts.length ? parts.join(' · ') : null
+  }
+
+  const failures = data.model_wait?.readiness_failures
+    ?.map(humanizeReadinessFailure)
+    .filter(Boolean)
+    .slice(0, 2)
+  if (failures?.length) return failures.join(' · ')
+
+  const seed = data.label_seed
+  if (seed && typeof seed.labeled_images === 'number' && typeof seed.total_images === 'number') {
+    return `${seed.labeled_images}/${seed.total_images} seed images labeled`
+  }
+  return data.selected_dataset || null
+}
+
+function humanizeReadinessFailure(value?: string): string | null {
+  if (!value) return null
+  const minMatch = value.match(/^([a-z_]+):([0-9.]+)<([0-9.]+)$/)
+  if (minMatch) {
+    const [, rawKey, rawValue, rawMin] = minMatch
+    const labels: Record<string, string> = {
+      images: 'images',
+      labeled_images: 'labeled',
+      labels: 'labels',
+      classes: 'classes',
+      unique_images: 'unique',
+      labeled_unique_images: 'labeled unique',
+    }
+    const label = labels[rawKey] || rawKey.replace(/_/g, ' ')
+    return `${label} ${formatCompactNumber(rawValue)}/${formatCompactNumber(rawMin)}`
+  }
+
+  const maxMatch = value.match(/^([a-z_]+):([0-9.]+)>([0-9.]+)$/)
+  if (maxMatch) {
+    const [, rawKey, rawValue, rawMax] = maxMatch
+    const label = rawKey.replace(/_/g, ' ')
+    return `${label} ${formatCompactNumber(rawValue)}>${formatCompactNumber(rawMax)}`
+  }
+
+  return value.replace(/_/g, ' ')
+}
+
+function formatCompactNumber(value: string): string {
+  const n = Number.parseFloat(value)
+  if (!Number.isFinite(n)) return value
+  return Number.isInteger(n) ? String(n) : n.toFixed(2)
 }
 
 function formatFps(value: number): string {
