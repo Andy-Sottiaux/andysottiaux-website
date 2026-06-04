@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "test:camera": "node scripts/verify-camera-feed.mjs",
-    "audit:camera-transport": "node scripts/audit-camera-transport.mjs"
+    "audit:camera-transport": "node scripts/audit-camera-transport.mjs",
+    "monitor:camera-playback": "node scripts/monitor-camera-playback.mjs"
   },
   "keywords": [],
   "author": "",

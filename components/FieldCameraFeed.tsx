@@ -140,6 +140,14 @@ type CameraPlaybackMetrics = {
   updatedAtMs: number
   rtcConnectionState?: RTCPeerConnectionState
   rtcIceConnectionState?: RTCIceConnectionState
+  rtcAvailableIncomingBitrate?: number | null
+  rtcBytesReceived?: number | null
+  rtcCurrentRoundTripTimeSec?: number | null
+  rtcFramesDecoded?: number | null
+  rtcFramesDropped?: number | null
+  rtcFramesPerSecond?: number | null
+  rtcJitterSec?: number | null
+  rtcPacketsLost?: number | null
 }
 
 type DetectionItem = {
@@ -387,11 +395,50 @@ export default function FieldCameraFeed({
     let cancelled = false
     let painted = false
     const metricsWindow = window as Window & { __cayleyCameraMetrics?: CameraPlaybackMetrics }
+    let rtcStats: Partial<CameraPlaybackMetrics> = {}
     const pc = new RTCPeerConnection({
       bundlePolicy: 'max-bundle',
       iceServers: [{ urls: ['stun:stun.cloudflare.com:3478', 'stun:stun.l.google.com:19302'] }],
     })
 
+    const finiteNumber = (value: unknown): number | null =>
+      typeof value === 'number' && Number.isFinite(value) ? value : null
+    const rounded = (value: unknown, places = 3): number | null => {
+      const n = finiteNumber(value)
+      return n == null ? null : Number(n.toFixed(places))
+    }
+    const sampleRtcStats = async () => {
+      try {
+        const report = await pc.getStats()
+        if (cancelled) return
+        const nextStats: Partial<CameraPlaybackMetrics> = {}
+        report.forEach((raw) => {
+          const stat = raw as RTCStats & Record<string, unknown>
+          if (
+            stat.type === 'inbound-rtp' &&
+            (stat.kind === 'video' || stat.mediaType === 'video')
+          ) {
+            nextStats.rtcBytesReceived = rounded(stat.bytesReceived, 0)
+            nextStats.rtcPacketsLost = rounded(stat.packetsLost, 0)
+            nextStats.rtcJitterSec = rounded(stat.jitter, 4)
+            nextStats.rtcFramesDecoded = rounded(stat.framesDecoded, 0)
+            nextStats.rtcFramesDropped = rounded(stat.framesDropped, 0)
+            nextStats.rtcFramesPerSecond = rounded(stat.framesPerSecond, 2)
+          }
+          if (
+            stat.type === 'candidate-pair' &&
+            (stat.selected === true || (stat.nominated === true && stat.state === 'succeeded'))
+          ) {
+            nextStats.rtcCurrentRoundTripTimeSec = rounded(stat.currentRoundTripTime, 4)
+            nextStats.rtcAvailableIncomingBitrate = rounded(stat.availableIncomingBitrate, 0)
+          }
+        })
+        rtcStats = nextStats
+        publishMetrics()
+      } catch {
+        // Stats are advisory; playback health is driven by the video element.
+      }
+    }
     const publishMetrics = () => {
       metricsWindow.__cayleyCameraMetrics = {
         mode: 'rtc',
@@ -407,6 +454,7 @@ export default function FieldCameraFeed({
         updatedAtMs: Date.now(),
         rtcConnectionState: pc.connectionState,
         rtcIceConnectionState: pc.iceConnectionState,
+        ...rtcStats,
       }
     }
     const markLive = () => {
@@ -460,7 +508,10 @@ export default function FieldCameraFeed({
     const startTimeout = window.setTimeout(() => {
       if (!painted) fail()
     }, HTTP_RTC_START_TIMEOUT_MS)
-    const metricsTimer = window.setInterval(publishMetrics, 1_000)
+    const metricsTimer = window.setInterval(() => {
+      publishMetrics()
+      void sampleRtcStats()
+    }, 1_000)
 
     const start = async () => {
       try {
@@ -482,6 +533,7 @@ export default function FieldCameraFeed({
         if (cancelled) return
         await pc.setRemoteDescription({ type: 'answer', sdp: answer })
         publishMetrics()
+        void sampleRtcStats()
       } catch {
         fail()
       }
