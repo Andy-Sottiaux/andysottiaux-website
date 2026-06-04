@@ -9,6 +9,7 @@ const expectedMode = process.env.CAMERA_VERIFY_MODE || 'hls'
 const screenshotPath = process.env.CAMERA_VERIFY_SCREENSHOT ||
   path.join(process.cwd(), 'tmp', 'camera-feed-smoke.png')
 const timeoutMs = Number.parseInt(process.env.CAMERA_VERIFY_TIMEOUT_MS || '45000', 10)
+const settleMs = Number.parseInt(process.env.CAMERA_VERIFY_SETTLE_MS || '12000', 10)
 const maxHlsLatencySec = Number.parseFloat(process.env.CAMERA_VERIFY_MAX_HLS_LATENCY_SEC || '4.5')
 
 function fail(message, details = {}) {
@@ -23,50 +24,40 @@ function compactEvent(event) {
   }
 }
 
-await mkdir(path.dirname(screenshotPath), { recursive: true })
-
-const browser = await chromium.launch({
-  headless: true,
-  args: ['--autoplay-policy=no-user-gesture-required'],
-})
-
-try {
-  const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } })
-  const events = []
-
-  page.on('console', (msg) => {
-    const text = msg.text()
-    if (/error|warn|local address space|blocked|hls|video|webrtc|rtc|camera/i.test(text)) {
-      events.push(compactEvent({ type: msg.type(), text }))
-    }
-  })
-  page.on('requestfailed', (req) => {
-    const url = req.url()
-    if (/cayley|camera|m3u8|\.ts|video|api\/ws/.test(url)) {
-      events.push(compactEvent({
-        type: 'requestfailed',
-        text: `${req.failure()?.errorText || 'failed'} ${url}`,
-      }))
-    }
-  })
-
-  await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: timeoutMs })
-  await page.waitForLoadState('networkidle', { timeout: 20000 }).catch(() => undefined)
-
-  if (expectedMode === 'rtc') {
-    await page.waitForSelector(
-      'iframe.cayley-go2rtc-player, video[aria-label="Cayley field camera WebRTC live preview"]',
-      { timeout: timeoutMs }
+function evaluateCameraState(state, frameState) {
+  const hlsOk = state.hlsVideo &&
+    state.hlsVideo.readyState >= 2 &&
+    state.hlsVideo.videoWidth >= 1280 &&
+    state.hlsVideo.videoHeight >= 720 &&
+    state.hlsVideo.opacity !== '0' &&
+    (
+      /\/api\/v3\/camera\/hls\/clean\.m3u8/.test(state.hlsVideo.src) ||
+      (state.hlsVideo.src.startsWith('blob:') && state.cameraMetrics?.mode === 'hls')
     )
-  } else {
-    await page.waitForSelector(
-      'video[aria-label="Cayley field camera WebRTC live preview"], video[aria-label="Cayley field camera clean live preview"], img[aria-label="Cayley field camera clean live preview"]',
-      { timeout: timeoutMs }
-    )
+  const rtcOk = frameState?.mode === 'RTC' &&
+    frameState.video?.readyState >= 2 &&
+    frameState.video?.videoWidth >= 1280 &&
+    frameState.video?.videoHeight >= 720 &&
+    frameState.video?.hasSrcObject
+  const embeddedRtcOk = state.rtcVideo &&
+    state.rtcVideo.readyState >= 2 &&
+    state.rtcVideo.videoWidth >= 1280 &&
+    state.rtcVideo.videoHeight >= 720 &&
+    state.rtcVideo.opacity !== '0' &&
+    state.rtcVideo.hasSrcObject &&
+    state.cameraMetrics?.mode === 'rtc'
+
+  return {
+    hlsOk: Boolean(hlsOk),
+    rtcOk: Boolean(rtcOk),
+    embeddedRtcOk: Boolean(embeddedRtcOk),
+    expectedOk: expectedMode === 'rtc'
+      ? Boolean(rtcOk || embeddedRtcOk)
+      : Boolean(hlsOk || embeddedRtcOk),
   }
+}
 
-  await page.waitForTimeout(12000)
-
+async function readCameraState(page) {
   const state = await page.evaluate(() => {
     const iframe = document.querySelector('iframe.cayley-go2rtc-player')
     const rtcVideo = document.querySelector('video[aria-label="Cayley field camera WebRTC live preview"]')
@@ -133,60 +124,106 @@ try {
         y: Math.round(rect.y),
         width: Math.round(rect.width),
         height: Math.round(rect.height),
-      } : null,
+      } : null
     }
   })
 
-  let frameState = null
   const rtcFrame = page.frames().find((frame) => frame.url().includes('cayley-relay.tailc7d6b6.ts.net/stream.html'))
-  if (rtcFrame) {
-    frameState = await rtcFrame.evaluate(() => {
-      const player = document.querySelector('video-stream')
-      const video = player?.querySelector('video') || document.querySelector('video')
-      return {
-        mode: document.querySelector('.mode')?.textContent || null,
-        status: document.querySelector('.status')?.textContent || null,
-        video: video ? {
-          readyState: video.readyState,
-          networkState: video.networkState,
-          paused: video.paused,
-          currentTime: Number(video.currentTime.toFixed(3)),
-          videoWidth: video.videoWidth,
-          videoHeight: video.videoHeight,
-          hasSrcObject: !!video.srcObject,
-          src: video.currentSrc || video.src || '',
-        } : null,
-      }
-    }).catch((error) => ({ error: error.message }))
+  const frameState = rtcFrame
+    ? await rtcFrame.evaluate(() => {
+        const player = document.querySelector('video-stream')
+        const video = player?.querySelector('video') || document.querySelector('video')
+        return {
+          mode: document.querySelector('.mode')?.textContent || null,
+          status: document.querySelector('.status')?.textContent || null,
+          video: video ? {
+            readyState: video.readyState,
+            networkState: video.networkState,
+            paused: video.paused,
+            currentTime: Number(video.currentTime.toFixed(3)),
+            videoWidth: video.videoWidth,
+            videoHeight: video.videoHeight,
+            hasSrcObject: !!video.srcObject,
+            src: video.currentSrc || video.src || '',
+          } : null,
+        }
+      }).catch((error) => ({ error: error.message }))
+    : null
+
+  return { state, frameState }
+}
+
+await mkdir(path.dirname(screenshotPath), { recursive: true })
+
+const browser = await chromium.launch({
+  headless: true,
+  args: ['--autoplay-policy=no-user-gesture-required'],
+})
+
+try {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } })
+  const events = []
+
+  page.on('console', (msg) => {
+    const text = msg.text()
+    if (/error|warn|local address space|blocked|hls|video|webrtc|rtc|camera/i.test(text)) {
+      events.push(compactEvent({ type: msg.type(), text }))
+    }
+  })
+  page.on('requestfailed', (req) => {
+    const url = req.url()
+    if (/cayley|camera|m3u8|\.ts|video|api\/ws/.test(url)) {
+      events.push(compactEvent({
+        type: 'requestfailed',
+        text: `${req.failure()?.errorText || 'failed'} ${url}`,
+      }))
+    }
+  })
+
+  const startedAt = Date.now()
+  await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: timeoutMs })
+  const timings = {
+    domContentLoadedMs: Date.now() - startedAt,
+    snapshotLoadedMs: null,
+    hlsPaintedMs: null,
+    rtcPaintedMs: null,
+    expectedPaintedMs: null,
+  }
+  let state = null
+  let frameState = null
+  let checks = { hlsOk: false, rtcOk: false, embeddedRtcOk: false, expectedOk: false }
+  const deadline = Date.now() + timeoutMs
+
+  while (Date.now() < deadline) {
+    ;({ state, frameState } = await readCameraState(page))
+    checks = evaluateCameraState(state, frameState)
+    const elapsedMs = Date.now() - startedAt
+
+    if (state.snapshotLoaded && timings.snapshotLoadedMs === null) timings.snapshotLoadedMs = elapsedMs
+    if (checks.hlsOk && timings.hlsPaintedMs === null) timings.hlsPaintedMs = elapsedMs
+    if ((checks.rtcOk || checks.embeddedRtcOk) && timings.rtcPaintedMs === null) timings.rtcPaintedMs = elapsedMs
+    if (checks.expectedOk) {
+      timings.expectedPaintedMs = timings.expectedPaintedMs ?? elapsedMs
+      break
+    }
+
+    await page.waitForTimeout(750)
+  }
+
+  if (settleMs > 0 && checks.expectedOk) {
+    await page.waitForTimeout(settleMs)
+    ;({ state, frameState } = await readCameraState(page))
+    checks = evaluateCameraState(state, frameState)
   }
 
   await page.screenshot({ path: screenshotPath, fullPage: false })
 
   const blockedEvents = events.filter((event) => /ERR_BLOCKED_BY_LOCAL_NETWORK_ACCESS_CHECKS|local address space|blocked by CORS/i.test(event.text))
-  const hlsOk = state.hlsVideo &&
-    state.hlsVideo.readyState >= 2 &&
-    state.hlsVideo.videoWidth >= 1280 &&
-    state.hlsVideo.videoHeight >= 720 &&
-    state.hlsVideo.opacity !== '0' &&
-    (
-      /\/api\/v3\/camera\/hls\/clean\.m3u8/.test(state.hlsVideo.src) ||
-      (state.hlsVideo.src.startsWith('blob:') && state.cameraMetrics?.mode === 'hls')
-    )
-  const rtcOk = frameState?.mode === 'RTC' &&
-    frameState.video?.readyState >= 2 &&
-    frameState.video?.videoWidth >= 1280 &&
-    frameState.video?.videoHeight >= 720 &&
-    frameState.video?.hasSrcObject
-  const embeddedRtcOk = state.rtcVideo &&
-    state.rtcVideo.readyState >= 2 &&
-    state.rtcVideo.videoWidth >= 1280 &&
-    state.rtcVideo.videoHeight >= 720 &&
-    state.rtcVideo.opacity !== '0' &&
-    state.rtcVideo.hasSrcObject &&
-    state.cameraMetrics?.mode === 'rtc'
 
-  if (expectedMode === 'rtc' ? !(rtcOk || embeddedRtcOk) : !(hlsOk || embeddedRtcOk)) {
+  if (!checks.expectedOk) {
     fail(`camera_${expectedMode}_not_painting`, {
+      timings,
+      checks,
       state,
       frameState,
       blockedEvents,
@@ -222,6 +259,8 @@ try {
   console.log(JSON.stringify({
     ok: true,
     mode: expectedMode,
+    timings,
+    checks,
     state,
     frameState,
     events: events.slice(-10),
