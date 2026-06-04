@@ -12,6 +12,21 @@ function contentType(asset: string) {
   return 'application/octet-stream'
 }
 
+function cacheHeaders(asset: string) {
+  if (asset.endsWith('.m3u8')) {
+    return {
+      'Cache-Control': 'public, max-age=1, stale-while-revalidate=1',
+      'CDN-Cache-Control': 'public, max-age=1',
+      'Vercel-CDN-Cache-Control': 'public, max-age=1',
+    }
+  }
+  return {
+    'Cache-Control': 'public, max-age=30, immutable',
+    'CDN-Cache-Control': 'public, max-age=30',
+    'Vercel-CDN-Cache-Control': 'public, max-age=30',
+  }
+}
+
 export async function GET(_request: Request, { params }: { params: { asset: string } }) {
   const asset = params.asset
   if (!asset || asset !== asset.split('/').at(-1) || (!asset.endsWith('.m3u8') && !asset.endsWith('.ts'))) {
@@ -34,7 +49,7 @@ export async function GET(_request: Request, { params }: { params: { asset: stri
     return new Response(upstream.body, {
       status: 200,
       headers: {
-        'Cache-Control': asset.endsWith('.m3u8') ? 'no-store' : 'public, max-age=4',
+        ...cacheHeaders(asset),
         'Content-Type': upstream.headers.get('content-type') || contentType(asset),
       },
     })
