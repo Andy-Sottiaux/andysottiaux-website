@@ -34,6 +34,7 @@ const STALE_CLEAN_FRAME_SEC = 10
 const LIVE_EDGE_TARGET_SEC = 0.75
 const LIVE_EDGE_SOFT_DRIFT_SEC = 1.6
 const LIVE_EDGE_HARD_DRIFT_SEC = 3.2
+const LIVE_EDGE_CATCHUP_RATE = 1.12
 
 type Phase = 'paused' | 'connecting' | 'preview' | 'live' | 'offline'
 type VideoFit = 'contain' | 'cover' | 'fill'
@@ -118,6 +119,20 @@ type HealthPayload = {
 type QualityRateSample = {
   ts: number
   hlsFramesWritten: number
+}
+
+type CameraPlaybackMetrics = {
+  mode: 'hls'
+  readyState: number
+  videoTimeSec: number
+  bufferedAheadSec: number | null
+  hlsLatencySec: number | null
+  hlsEdgeSec: number | null
+  hlsTargetLatencySec: number | null
+  hlsMaxLatencySec: number | null
+  liveSyncPositionSec: number | null
+  playbackRate: number
+  updatedAtMs: number
 }
 
 type DetectionItem = {
@@ -359,10 +374,49 @@ export default function FieldCameraFeed({
     } | null = null
     let recoverAttempts = 0
     let liveEdgeTimer: number | null = null
+    const metricsWindow = window as Window & { __cayleyCameraMetrics?: CameraPlaybackMetrics }
+    const finiteNumber = (value: unknown): number | null =>
+      typeof value === 'number' && Number.isFinite(value) ? value : null
+    const bufferedAhead = () => {
+      const ranges = video.buffered
+      if (!ranges.length) return null
+      const end = ranges.end(ranges.length - 1)
+      return Number.isFinite(end) ? Math.max(0, end - video.currentTime) : null
+    }
+    const publishMetrics = () => {
+      const hlsState = hls as ({
+        latency?: number
+        targetLatency?: number | null
+        maxLatency?: number
+        liveSyncPosition?: number | null
+        latestLevelDetails?: {
+          age?: number
+          edge?: number
+        } | null
+      } | null)
+      const levelEdge = finiteNumber(hlsState?.latestLevelDetails?.edge)
+      const levelAge = finiteNumber(hlsState?.latestLevelDetails?.age) ?? 0
+      const estimatedLatency = levelEdge == null ? null : levelEdge + levelAge - video.currentTime
+      const hlsLatency = finiteNumber(hlsState?.latency)
+      metricsWindow.__cayleyCameraMetrics = {
+        mode: 'hls',
+        readyState: video.readyState,
+        videoTimeSec: Number(video.currentTime.toFixed(3)),
+        bufferedAheadSec: finiteNumber(bufferedAhead()),
+        hlsLatencySec: hlsLatency && hlsLatency > 0 ? hlsLatency : finiteNumber(estimatedLatency),
+        hlsEdgeSec: levelEdge == null ? null : levelEdge + levelAge,
+        hlsTargetLatencySec: finiteNumber(hlsState?.targetLatency),
+        hlsMaxLatencySec: finiteNumber(hlsState?.maxLatency),
+        liveSyncPositionSec: finiteNumber(hlsState?.liveSyncPosition),
+        playbackRate: Number(video.playbackRate.toFixed(3)),
+        updatedAtMs: Date.now(),
+      }
+    }
 
     const markLive = () => {
       if (cancelled) return
       painted = true
+      publishMetrics()
       setSnapshotReady(true)
       setStreamReady(true)
       setHlsRetryCount(0)
@@ -384,73 +438,94 @@ export default function FieldCameraFeed({
 
     const play = () => video.play().catch(() => undefined)
     const followLiveEdge = () => {
-      if (cancelled || video.paused || video.readyState < 2) return
-      const liveSyncPosition = typeof hls?.liveSyncPosition === 'number' ? hls.liveSyncPosition : null
+      if (cancelled || video.paused || video.readyState < 2) {
+        publishMetrics()
+        return
+      }
+      const hlsState = hls as ({ latency?: number; liveSyncPosition?: number | null } | null)
+      const hlsLatency = finiteNumber(hlsState?.latency)
+      const liveSyncPosition = finiteNumber(hlsState?.liveSyncPosition)
       const seekable = video.seekable
       const liveEnd = liveSyncPosition ??
         (seekable.length > 0 ? seekable.end(seekable.length - 1) : null)
-      if (liveEnd == null || !Number.isFinite(liveEnd) || liveEnd <= 0) return
-      const drift = liveEnd - video.currentTime
+      if (liveEnd == null || !Number.isFinite(liveEnd) || liveEnd <= 0) {
+        publishMetrics()
+        return
+      }
+      const drift = hlsLatency && hlsLatency > 0 ? hlsLatency : liveEnd - video.currentTime
       if (drift > LIVE_EDGE_HARD_DRIFT_SEC) {
         video.currentTime = Math.max(0, liveEnd - LIVE_EDGE_TARGET_SEC)
         video.playbackRate = 1
       } else if (drift > LIVE_EDGE_SOFT_DRIFT_SEC) {
-        video.playbackRate = 1.08
+        video.playbackRate = LIVE_EDGE_CATCHUP_RATE
       } else if (video.playbackRate !== 1) {
         video.playbackRate = 1
       }
+      publishMetrics()
     }
     const startTimeout = window.setTimeout(() => {
       if (!painted) fail()
     }, STREAM_START_TIMEOUT_MS)
     liveEdgeTimer = window.setInterval(followLiveEdge, 1_000)
 
-    if (video.canPlayType('application/vnd.apple.mpegurl')) {
+    const startNativeHls = () => {
       video.src = hlsUrl
       video.load()
       play()
-    } else {
-      import('hls.js')
-        .then(({ default: Hls }) => {
-          if (cancelled) return
-          if (!Hls.isSupported()) {
+    }
+
+    import('hls.js')
+      .then(({ default: Hls }) => {
+        if (cancelled) return
+        if (!Hls.isSupported()) {
+          if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            startNativeHls()
+          } else {
             fail()
+          }
+          return
+        }
+        const instance = new Hls({
+          lowLatencyMode: true,
+          liveSyncDurationCount: 1,
+          liveMaxLatencyDurationCount: 3,
+          maxLiveSyncPlaybackRate: LIVE_EDGE_CATCHUP_RATE,
+          maxBufferLength: 3,
+          maxMaxBufferLength: 5,
+          backBufferLength: 0,
+          manifestLoadingTimeOut: 5_000,
+          levelLoadingTimeOut: 5_000,
+          fragLoadingTimeOut: 6_000,
+          nudgeOffset: 0.05,
+          nudgeMaxRetry: 5,
+        })
+        hls = instance
+        instance.loadSource(hlsUrl)
+        instance.attachMedia(video)
+        instance.on(Hls.Events.MANIFEST_PARSED, play)
+        instance.on(Hls.Events.ERROR, (_event, data) => {
+          if (!data?.fatal) return
+          if (recoverAttempts < 3) {
+            recoverAttempts += 1
+            setPhase('connecting')
+            if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+              instance.recoverMediaError()
+            } else {
+              instance.startLoad(-1)
+            }
             return
           }
-          const instance = new Hls({
-            lowLatencyMode: true,
-            liveSyncDurationCount: 1,
-            liveMaxLatencyDurationCount: 3,
-            maxBufferLength: 3,
-            maxMaxBufferLength: 5,
-            backBufferLength: 0,
-            manifestLoadingTimeOut: 5_000,
-            levelLoadingTimeOut: 5_000,
-            fragLoadingTimeOut: 6_000,
-            nudgeOffset: 0.05,
-            nudgeMaxRetry: 5,
-          })
-          hls = instance
-          instance.loadSource(hlsUrl)
-          instance.attachMedia(video)
-          instance.on(Hls.Events.MANIFEST_PARSED, play)
-          instance.on(Hls.Events.ERROR, (_event, data) => {
-            if (!data?.fatal) return
-            if (recoverAttempts < 3) {
-              recoverAttempts += 1
-              setPhase('connecting')
-              if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
-                instance.recoverMediaError()
-              } else {
-                instance.startLoad(-1)
-              }
-              return
-            }
-            fail()
-          })
+          fail()
         })
-        .catch(fail)
-    }
+      })
+      .catch(() => {
+        if (cancelled) return
+        if (video.canPlayType('application/vnd.apple.mpegurl')) {
+          startNativeHls()
+        } else {
+          fail()
+        }
+      })
 
     return () => {
       cancelled = true
@@ -460,6 +535,7 @@ export default function FieldCameraFeed({
       video.removeEventListener('playing', markLive)
       video.removeEventListener('error', fail)
       video.playbackRate = 1
+      delete metricsWindow.__cayleyCameraMetrics
       hls?.destroy()
       video.removeAttribute('src')
       video.load()
