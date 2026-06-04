@@ -24,7 +24,7 @@ import { useFieldTheme } from './fieldTheme'
 const DETECTION_WINDOW_SEC = 60
 const DETECTIONS_URL = `/api/v3/detections?window_sec=${DETECTION_WINDOW_SEC}`
 const SNAPSHOT_REFRESH_MS = 4_000
-const MJPEG_START_TIMEOUT_MS = 8_000
+const STREAM_START_TIMEOUT_MS = 6_000
 const STALE_CLEAN_FRAME_SEC = 10
 
 type Phase = 'paused' | 'connecting' | 'preview' | 'live' | 'offline'
@@ -281,7 +281,7 @@ export default function FieldCameraFeed({
     setSnapshotNonce(Date.now())
     const timeout = window.setTimeout(() => {
       setPhase((p) => (p === 'connecting' ? 'offline' : p))
-    }, MJPEG_START_TIMEOUT_MS)
+    }, STREAM_START_TIMEOUT_MS)
     const refresh = window.setInterval(() => setSnapshotNonce(Date.now()), SNAPSHOT_REFRESH_MS)
     return () => {
       window.clearTimeout(timeout)
@@ -296,10 +296,12 @@ export default function FieldCameraFeed({
     if (!video) return
 
     let cancelled = false
+    let painted = false
     let hls: { destroy: () => void } | null = null
 
     const markLive = () => {
       if (cancelled) return
+      painted = true
       setSnapshotReady(true)
       setStreamReady(true)
       setPhase('live')
@@ -318,6 +320,9 @@ export default function FieldCameraFeed({
     video.addEventListener('error', fail)
 
     const play = () => video.play().catch(() => undefined)
+    const startTimeout = window.setTimeout(() => {
+      if (!painted) fail()
+    }, STREAM_START_TIMEOUT_MS)
 
     if (video.canPlayType('application/vnd.apple.mpegurl')) {
       video.src = hlsUrl
@@ -333,9 +338,13 @@ export default function FieldCameraFeed({
           }
           const instance = new Hls({
             lowLatencyMode: false,
-            liveSyncDurationCount: 3,
-            maxBufferLength: 8,
+            liveSyncDurationCount: 2,
+            liveMaxLatencyDurationCount: 4,
+            maxBufferLength: 6,
             backBufferLength: 0,
+            manifestLoadingTimeOut: 4_000,
+            levelLoadingTimeOut: 4_000,
+            fragLoadingTimeOut: 6_000,
           })
           hls = instance
           instance.loadSource(hlsUrl)
@@ -350,6 +359,7 @@ export default function FieldCameraFeed({
 
     return () => {
       cancelled = true
+      window.clearTimeout(startTimeout)
       video.removeEventListener('loadeddata', markLive)
       video.removeEventListener('playing', markLive)
       video.removeEventListener('error', fail)
