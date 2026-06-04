@@ -15,12 +15,14 @@ import {
   CAMERA_HOST,
   FAST_PLAYER_ENABLED,
   HLS_URL,
+  HTTP_RTC_ENABLED,
   MJPEG_URL,
   PLAYER_MODE,
   PRIMARY_FEED_STREAM,
   QUALITY_URL,
   SNAPSHOT_URL,
   TRAINING_STATUS_URL,
+  WEBRTC_OFFER_URL,
 } from '@/lib/fieldCameraConfig'
 import { useFieldTheme } from './fieldTheme'
 
@@ -29,6 +31,8 @@ const DETECTIONS_URL = `/api/v3/detections?window_sec=${DETECTION_WINDOW_SEC}`
 const SNAPSHOT_REFRESH_MS = 4_000
 const STREAM_START_TIMEOUT_MS = 20_000
 const FAST_PLAYER_START_TIMEOUT_MS = 8_000
+const HTTP_RTC_START_TIMEOUT_MS = 7_000
+const HTTP_RTC_ICE_GATHER_TIMEOUT_MS = 1_500
 const HLS_RETRY_MS = 3_000
 const STALE_CLEAN_FRAME_SEC = 10
 const LIVE_EDGE_TARGET_SEC = 0.75
@@ -123,7 +127,7 @@ type QualityRateSample = {
 }
 
 type CameraPlaybackMetrics = {
-  mode: 'hls'
+  mode: 'hls' | 'rtc'
   readyState: number
   videoTimeSec: number
   bufferedAheadSec: number | null
@@ -134,6 +138,8 @@ type CameraPlaybackMetrics = {
   liveSyncPositionSec: number | null
   playbackRate: number
   updatedAtMs: number
+  rtcConnectionState?: RTCPeerConnectionState
+  rtcIceConnectionState?: RTCIceConnectionState
 }
 
 type DetectionItem = {
@@ -256,6 +262,7 @@ export default function FieldCameraFeed({
   const isLight = palette.mode === 'light'
   const containerRef = useRef<HTMLDivElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
+  const rtcVideoRef = useRef<HTMLVideoElement>(null)
   const [active, setActive] = useState<boolean>(() => enabled && initialActive())
   const [phase, setPhase] = useState<Phase>(() => (enabled && initialActive() ? 'connecting' : 'paused'))
   const [snapshotNonce, setSnapshotNonce] = useState(0)
@@ -264,6 +271,8 @@ export default function FieldCameraFeed({
   const [streamReady, setStreamReady] = useState(false)
   const [fastPlayerReady, setFastPlayerReady] = useState(false)
   const [fastPlayerFailed, setFastPlayerFailed] = useState(!FAST_PLAYER_ENABLED)
+  const [httpRtcReady, setHttpRtcReady] = useState(false)
+  const [httpRtcFailed, setHttpRtcFailed] = useState(!HTTP_RTC_ENABLED)
   const [hlsFailed, setHlsFailed] = useState(false)
   const [hlsRetryCount, setHlsRetryCount] = useState(0)
   const debugMode = useDebugFlag()
@@ -277,10 +286,13 @@ export default function FieldCameraFeed({
   const snapshotUrl = `${SNAPSHOT_URL}?v=${snapshotNonce}`
   const mjpegUrl = `${MJPEG_URL}?v=${streamNonce}`
   const hlsUrl = `${HLS_URL}?v=${streamNonce}`
+  const webrtcOfferUrl = `${WEBRTC_OFFER_URL}?stream=${encodeURIComponent(PRIMARY_FEED_STREAM)}&v=${streamNonce}`
   const fastPlayerUrl = nativePlayerUrl(PRIMARY_FEED_STREAM)
   const mediaHealthBad = isConfirmedCameraBad(quality)
   const showStream = active && !mediaHealthBad
   const showFastPlayer = FAST_PLAYER_ENABLED && showStream && !fastPlayerFailed
+  const showHttpRtc = HTTP_RTC_ENABLED && showStream && fastPlayerFailed && !httpRtcFailed
+  const showHls = showStream && fastPlayerFailed && !hlsFailed && !httpRtcReady
 
   useEffect(() => {
     const el = containerRef.current
@@ -317,6 +329,8 @@ export default function FieldCameraFeed({
       setStreamReady(false)
       setFastPlayerReady(false)
       setFastPlayerFailed(!FAST_PLAYER_ENABLED)
+      setHttpRtcReady(false)
+      setHttpRtcFailed(!HTTP_RTC_ENABLED)
       setHlsFailed(false)
       setHlsRetryCount(0)
       return
@@ -327,6 +341,8 @@ export default function FieldCameraFeed({
     setStreamReady(false)
     setFastPlayerReady(false)
     setFastPlayerFailed(!FAST_PLAYER_ENABLED)
+    setHttpRtcReady(false)
+    setHttpRtcFailed(!HTTP_RTC_ENABLED)
     setHlsFailed(false)
     setHlsRetryCount(0)
     setStreamNonce((n) => n + 1)
@@ -360,7 +376,136 @@ export default function FieldCameraFeed({
   }, [fastPlayerReady, showFastPlayer, streamNonce])
 
   useEffect(() => {
-    if (!showStream || !fastPlayerFailed || hlsFailed) return
+    if (!showHttpRtc) return
+
+    const video = rtcVideoRef.current
+    if (!video || typeof RTCPeerConnection === 'undefined') {
+      setHttpRtcFailed(true)
+      return
+    }
+
+    let cancelled = false
+    let painted = false
+    const metricsWindow = window as Window & { __cayleyCameraMetrics?: CameraPlaybackMetrics }
+    const pc = new RTCPeerConnection({
+      bundlePolicy: 'max-bundle',
+      iceServers: [{ urls: ['stun:stun.cloudflare.com:3478', 'stun:stun.l.google.com:19302'] }],
+    })
+
+    const publishMetrics = () => {
+      metricsWindow.__cayleyCameraMetrics = {
+        mode: 'rtc',
+        readyState: video.readyState,
+        videoTimeSec: Number(video.currentTime.toFixed(3)),
+        bufferedAheadSec: null,
+        hlsLatencySec: null,
+        hlsEdgeSec: null,
+        hlsTargetLatencySec: null,
+        hlsMaxLatencySec: null,
+        liveSyncPositionSec: null,
+        playbackRate: Number(video.playbackRate.toFixed(3)),
+        updatedAtMs: Date.now(),
+        rtcConnectionState: pc.connectionState,
+        rtcIceConnectionState: pc.iceConnectionState,
+      }
+    }
+    const markLive = () => {
+      if (cancelled) return
+      painted = true
+      publishMetrics()
+      setHttpRtcReady(true)
+      setSnapshotReady(true)
+      setStreamReady(true)
+      setPhase('live')
+    }
+    const fail = () => {
+      if (cancelled) return
+      setHttpRtcReady(false)
+      setHttpRtcFailed(true)
+      setPhase((p) => (p === 'connecting' ? 'preview' : p))
+    }
+    const closePeer = () => {
+      try {
+        pc.getSenders().forEach((sender) => sender.track?.stop())
+        pc.getReceivers().forEach((receiver) => receiver.track?.stop())
+        pc.close()
+      } catch {
+        // Best effort cleanup only.
+      }
+    }
+
+    video.muted = true
+    video.playsInline = true
+    video.addEventListener('loadeddata', markLive)
+    video.addEventListener('playing', markLive)
+    video.addEventListener('error', fail)
+
+    pc.addTransceiver('video', { direction: 'recvonly' })
+    pc.addEventListener('track', (event) => {
+      const stream = event.streams[0] || new MediaStream([event.track])
+      video.srcObject = stream
+      video.play().catch(() => undefined)
+    })
+    pc.addEventListener('connectionstatechange', () => {
+      publishMetrics()
+      if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
+        fail()
+      }
+    })
+    pc.addEventListener('iceconnectionstatechange', () => {
+      publishMetrics()
+      if (pc.iceConnectionState === 'failed') fail()
+    })
+
+    const startTimeout = window.setTimeout(() => {
+      if (!painted) fail()
+    }, HTTP_RTC_START_TIMEOUT_MS)
+    const metricsTimer = window.setInterval(publishMetrics, 1_000)
+
+    const start = async () => {
+      try {
+        const offer = await pc.createOffer()
+        await pc.setLocalDescription(offer)
+        await waitForIceGatheringComplete(pc, HTTP_RTC_ICE_GATHER_TIMEOUT_MS)
+        if (cancelled) return
+
+        const sdp = pc.localDescription?.sdp
+        if (!sdp) throw new Error('missing local SDP')
+        const res = await fetch(webrtcOfferUrl, {
+          method: 'POST',
+          cache: 'no-store',
+          headers: { 'Content-Type': 'application/sdp' },
+          body: sdp,
+        })
+        if (!res.ok) throw new Error(`webrtc offer failed: ${res.status}`)
+        const answer = await res.text()
+        if (cancelled) return
+        await pc.setRemoteDescription({ type: 'answer', sdp: answer })
+        publishMetrics()
+      } catch {
+        fail()
+      }
+    }
+
+    start()
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(startTimeout)
+      window.clearInterval(metricsTimer)
+      video.removeEventListener('loadeddata', markLive)
+      video.removeEventListener('playing', markLive)
+      video.removeEventListener('error', fail)
+      video.srcObject = null
+      closePeer()
+      if (metricsWindow.__cayleyCameraMetrics?.mode === 'rtc') {
+        delete metricsWindow.__cayleyCameraMetrics
+      }
+    }
+  }, [showHttpRtc, webrtcOfferUrl])
+
+  useEffect(() => {
+    if (!showHls) return
 
     const video = videoRef.current
     if (!video) return
@@ -550,10 +695,10 @@ export default function FieldCameraFeed({
       video.removeAttribute('src')
       video.load()
     }
-  }, [fastPlayerFailed, hlsFailed, hlsUrl, showStream])
+  }, [hlsUrl, showHls])
 
   useEffect(() => {
-    if (!showStream || !fastPlayerFailed || !hlsFailed) return
+    if (!showStream || !fastPlayerFailed || !hlsFailed || httpRtcReady) return
     const retry = window.setTimeout(() => {
       setPhase('connecting')
       setStreamReady(false)
@@ -561,7 +706,7 @@ export default function FieldCameraFeed({
       setStreamNonce((n) => n + 1)
     }, Math.min(30_000, HLS_RETRY_MS * Math.max(1, hlsRetryCount)))
     return () => window.clearTimeout(retry)
-  }, [fastPlayerFailed, hlsFailed, hlsRetryCount, showStream])
+  }, [fastPlayerFailed, hlsFailed, hlsRetryCount, httpRtcReady, showStream])
 
   useEffect(() => {
     if (!active) return
@@ -580,6 +725,8 @@ export default function FieldCameraFeed({
     setStreamReady(false)
     setFastPlayerReady(false)
     setFastPlayerFailed(!FAST_PLAYER_ENABLED)
+    setHttpRtcReady(false)
+    setHttpRtcFailed(!HTTP_RTC_ENABLED)
     setHlsFailed(false)
     setHlsRetryCount(0)
     setStreamNonce((n) => n + 1)
@@ -650,7 +797,24 @@ export default function FieldCameraFeed({
         />
       )}
 
-      {showStream && fastPlayerFailed && !hlsFailed && (
+      {showHttpRtc && (
+        <video
+          ref={rtcVideoRef}
+          muted
+          playsInline
+          autoPlay
+          aria-label="Cayley field camera WebRTC live preview"
+          className="absolute inset-0 h-full w-full"
+          style={{
+            objectFit: fit,
+            objectPosition: position,
+            opacity: streamActive && httpRtcReady ? 1 : 0,
+            transition: 'opacity 120ms ease',
+          }}
+        />
+      )}
+
+      {showHls && (
         <video
           ref={videoRef}
           muted
@@ -1658,6 +1822,26 @@ function nativePlayerUrl(stream: string): string {
     `&mode=${encodeURIComponent(PLAYER_MODE)}` +
     '&background=false' +
     '&width=100%'
+}
+
+function waitForIceGatheringComplete(pc: RTCPeerConnection, timeoutMs: number): Promise<void> {
+  if (pc.iceGatheringState === 'complete') return Promise.resolve()
+  return new Promise((resolve) => {
+    let done = false
+    let timeoutId: number | null = null
+    const finish = () => {
+      if (done) return
+      done = true
+      pc.removeEventListener('icegatheringstatechange', onChange)
+      if (timeoutId) window.clearTimeout(timeoutId)
+      resolve()
+    }
+    const onChange = () => {
+      if (pc.iceGatheringState === 'complete') finish()
+    }
+    pc.addEventListener('icegatheringstatechange', onChange)
+    timeoutId = window.setTimeout(finish, timeoutMs)
+  })
 }
 
 function initialActive(): boolean {

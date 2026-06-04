@@ -54,10 +54,13 @@ try {
   await page.waitForLoadState('networkidle', { timeout: 20000 }).catch(() => undefined)
 
   if (expectedMode === 'rtc') {
-    await page.waitForSelector('iframe.cayley-go2rtc-player', { timeout: timeoutMs })
+    await page.waitForSelector(
+      'iframe.cayley-go2rtc-player, video[aria-label="Cayley field camera WebRTC live preview"]',
+      { timeout: timeoutMs }
+    )
   } else {
     await page.waitForSelector(
-      'video[aria-label="Cayley field camera clean live preview"], img[aria-label="Cayley field camera clean live preview"]',
+      'video[aria-label="Cayley field camera WebRTC live preview"], video[aria-label="Cayley field camera clean live preview"], img[aria-label="Cayley field camera clean live preview"]',
       { timeout: timeoutMs }
     )
   }
@@ -66,11 +69,13 @@ try {
 
   const state = await page.evaluate(() => {
     const iframe = document.querySelector('iframe.cayley-go2rtc-player')
+    const rtcVideo = document.querySelector('video[aria-label="Cayley field camera WebRTC live preview"]')
     const hlsVideo = document.querySelector('video[aria-label="Cayley field camera clean live preview"]')
     const mjpeg = document.querySelector('img[aria-label="Cayley field camera clean live preview"]')
     const snapshot = document.querySelector('img[aria-hidden="true"]')
+    const rtcStyle = rtcVideo ? getComputedStyle(rtcVideo) : null
     const videoStyle = hlsVideo ? getComputedStyle(hlsVideo) : null
-    const rect = iframe?.getBoundingClientRect() || hlsVideo?.getBoundingClientRect() || mjpeg?.getBoundingClientRect() || null
+    const rect = iframe?.getBoundingClientRect() || rtcVideo?.getBoundingClientRect() || hlsVideo?.getBoundingClientRect() || mjpeg?.getBoundingClientRect() || null
     const timeRanges = (ranges) => Array.from(
       { length: ranges?.length || 0 },
       (_, i) => [Number(ranges.start(i).toFixed(3)), Number(ranges.end(i).toFixed(3))]
@@ -88,6 +93,18 @@ try {
       iframe: iframe ? {
         src: iframe.getAttribute('src'),
         opacity: getComputedStyle(iframe).opacity,
+      } : null,
+      rtcVideo: rtcVideo ? {
+        readyState: rtcVideo.readyState,
+        networkState: rtcVideo.networkState,
+        paused: rtcVideo.paused,
+        currentTime: Number(rtcVideo.currentTime.toFixed(3)),
+        videoWidth: rtcVideo.videoWidth,
+        videoHeight: rtcVideo.videoHeight,
+        playbackRate: Number(rtcVideo.playbackRate.toFixed(3)),
+        hasSrcObject: !!rtcVideo.srcObject,
+        src: rtcVideo.currentSrc || rtcVideo.src || '',
+        opacity: rtcStyle?.opacity || null,
       } : null,
       hlsVideo: hlsVideo ? {
         readyState: hlsVideo.readyState,
@@ -160,8 +177,15 @@ try {
     frameState.video?.videoWidth >= 1280 &&
     frameState.video?.videoHeight >= 720 &&
     frameState.video?.hasSrcObject
+  const embeddedRtcOk = state.rtcVideo &&
+    state.rtcVideo.readyState >= 2 &&
+    state.rtcVideo.videoWidth >= 1280 &&
+    state.rtcVideo.videoHeight >= 720 &&
+    state.rtcVideo.opacity !== '0' &&
+    state.rtcVideo.hasSrcObject &&
+    state.cameraMetrics?.mode === 'rtc'
 
-  if (expectedMode === 'rtc' ? !rtcOk : !hlsOk) {
+  if (expectedMode === 'rtc' ? !(rtcOk || embeddedRtcOk) : !(hlsOk || embeddedRtcOk)) {
     fail(`camera_${expectedMode}_not_painting`, {
       state,
       frameState,
@@ -181,6 +205,7 @@ try {
   const hlsLatencySec = state.cameraMetrics?.hlsLatencySec
   if (
     expectedMode === 'hls' &&
+    state.cameraMetrics?.mode === 'hls' &&
     Number.isFinite(maxHlsLatencySec) &&
     maxHlsLatencySec > 0 &&
     typeof hlsLatencySec === 'number' &&
