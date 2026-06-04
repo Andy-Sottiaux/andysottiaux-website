@@ -332,8 +332,8 @@ export default function FieldCameraFeed({
             return
           }
           const instance = new Hls({
-            lowLatencyMode: true,
-            liveSyncDurationCount: 2,
+            lowLatencyMode: false,
+            liveSyncDurationCount: 3,
             maxBufferLength: 8,
             backBufferLength: 0,
           })
