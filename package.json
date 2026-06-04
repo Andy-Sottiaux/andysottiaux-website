@@ -9,6 +9,7 @@
     "lint": "next lint",
     "test:camera": "node scripts/verify-camera-feed.mjs",
     "audit:camera-transport": "node scripts/audit-camera-transport.mjs",
+    "audit:camera-transport:offtailnet": "bash scripts/audit-camera-transport-offtailnet.sh",
     "monitor:camera-playback": "node scripts/monitor-camera-playback.mjs"
   },
   "keywords": [],

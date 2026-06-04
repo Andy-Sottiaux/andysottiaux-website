@@ -7,6 +7,8 @@ const stream = process.env.CAMERA_TRANSPORT_STREAM || 'cayley-sub'
 const timeoutMs = Number.parseInt(process.env.CAMERA_TRANSPORT_TIMEOUT_MS || '45000', 10)
 const iceGatherTimeoutMs = Number.parseInt(process.env.CAMERA_TRANSPORT_ICE_GATHER_TIMEOUT_MS || '2500', 10)
 const connectTimeoutMs = Number.parseInt(process.env.CAMERA_TRANSPORT_CONNECT_TIMEOUT_MS || '9000', 10)
+const browserChannel = process.env.CAMERA_TRANSPORT_BROWSER_CHANNEL || ''
+const requireMediaConnected = process.env.CAMERA_TRANSPORT_REQUIRE_CONNECTED === '1'
 
 function classifyIp(address) {
   if (!address) return 'unknown'
@@ -59,6 +61,7 @@ function parseCandidates(sdp) {
 
 const browser = await chromium.launch({
   headless: true,
+  ...(browserChannel ? { channel: browserChannel } : {}),
   args: ['--autoplay-policy=no-user-gesture-required'],
 })
 
@@ -96,6 +99,14 @@ try {
         })
       })
       const offerSdp = pc.localDescription?.sdp || ''
+      const offeredVideoCodecs = Array.from(
+        new Set(
+          offerSdp
+            .split(/\r?\n/)
+            .map((line) => line.match(/^a=rtpmap:\d+\s+([^/]+)/i)?.[1]?.toUpperCase())
+            .filter(Boolean)
+        )
+      )
       const ctrl = new AbortController()
       const timer = setTimeout(() => ctrl.abort(), timeoutMs)
       try {
@@ -188,6 +199,7 @@ try {
           iceConnectionState: pc.iceConnectionState,
           localIceGatheringState: pc.iceGatheringState,
           localCandidateLines: localCandidates,
+          offeredVideoCodecs,
           selectedPair,
           answerSdp,
           answerPreview: answerSdp.slice(0, 1200),
@@ -219,11 +231,14 @@ try {
     ['private-rfc1918', 'tailnet-cgnat', 'private-ula', 'link-local'].includes(candidate.reachability)
   )
   const summary = {
-    ok: result.ok,
+    offerOk: result.ok,
     url: baseUrl,
     stream,
+    browserChannel: browserChannel || 'chromium',
     status: result.status,
     elapsedMs: result.elapsedMs,
+    responsePreview: result.answerPreview || null,
+    offeredVideoCodecs: result.offeredVideoCodecs || [],
     connectionState: result.connectionState,
     iceConnectionState: result.iceConnectionState,
     candidateCount: candidates.length,
@@ -236,9 +251,29 @@ try {
     potentialPublicRtcReachable: publicServerReflexiveCandidates.length > 0,
     likelyTailnetOrLanOnly: publicMediaCandidates.length === 0 && tailnetOrLanCandidates.length > 0,
   }
+  const selectedRemoteReachability = result.selectedPair?.remoteCandidate
+    ? classifyIp(result.selectedPair.remoteCandidate.address)
+    : null
+  const mediaConnected =
+    result.connectionState === 'connected' ||
+    result.iceConnectionState === 'connected' ||
+    result.iceConnectionState === 'completed'
+  const selectedPublicMedia =
+    result.selectedPair?.remoteCandidate?.candidateType === 'relay' ||
+    selectedRemoteReachability === 'public-ipv4' ||
+    selectedRemoteReachability === 'public-ipv6'
+  const selectedTailnetOrLan =
+    selectedRemoteReachability &&
+    ['private-rfc1918', 'tailnet-cgnat', 'private-ula', 'link-local'].includes(selectedRemoteReachability)
 
   console.log(JSON.stringify({
     ...summary,
+    ok: result.ok && (!requireMediaConnected || mediaConnected),
+    mediaConnected,
+    selectedRemoteReachability,
+    selectedPublicMedia,
+    selectedTailnetOrLan,
+    requireMediaConnected,
     selectedPair: result.selectedPair ? {
       ...result.selectedPair,
       localCandidate: result.selectedPair.localCandidate ? {
@@ -253,12 +288,18 @@ try {
     candidates,
     recommendation: summary.robustPublicRtcReachable
       ? 'RTC has a TURN relay or public host candidate.'
+      : mediaConnected && selectedPublicMedia
+        ? 'RTC connected over a public media candidate.'
+      : mediaConnected && selectedTailnetOrLan
+        ? 'RTC connected, but the selected path is private or tailnet; arbitrary public viewers still need off-tailnet verification or TURN.'
+      : requireMediaConnected
+        ? 'RTC offer succeeded, but no media path connected under the required test; add TURN/public media relay before enabling public RTC by default.'
       : summary.potentialPublicRtcReachable
         ? 'RTC has public STUN server-reflexive candidates; public viewers may connect directly, but off-tailnet browser verification is still required.'
       : 'RTC is currently LAN/tailnet candidate only; arbitrary public viewers should expect HLS fallback unless a TURN/public media relay is added.',
   }, null, 2))
 
-  if (!result.ok) process.exit(1)
+  if (!result.ok || (requireMediaConnected && !mediaConnected)) process.exit(1)
 } finally {
   await browser.close()
 }
