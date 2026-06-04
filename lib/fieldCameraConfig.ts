@@ -3,7 +3,14 @@ export const CAMERA_HOST =
   'https://cayley-relay.tailc7d6b6.ts.net'
 
 export const PRIMARY_FEED_STREAM = process.env.NEXT_PUBLIC_V3_FEED_STREAM || 'cayley-sub'
-export const PLAYER_MODE = process.env.NEXT_PUBLIC_V3_PLAYER_MODE || 'webrtc,mse,mjpeg'
+export const PLAYER_MODE = process.env.NEXT_PUBLIC_V3_PLAYER_MODE || 'webrtc,mse,hls,mjpeg'
+export const GO2RTC_SCRIPT_URL =
+  process.env.NEXT_PUBLIC_V3_GO2RTC_SCRIPT_URL ||
+  `${CAMERA_HOST}/video-stream.js`
+export const GO2RTC_WS_URL =
+  process.env.NEXT_PUBLIC_V3_GO2RTC_WS_URL ||
+  `${CAMERA_HOST}/api/ws?src=${encodeURIComponent(PRIMARY_FEED_STREAM)}`
+export const FAST_PLAYER_ENABLED = process.env.NEXT_PUBLIC_V3_FAST_PLAYER_ENABLED !== '0'
 
 export const SNAPSHOT_URL =
   process.env.NEXT_PUBLIC_V3_CAMERA_SNAPSHOT_URL ||
