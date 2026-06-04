@@ -11,6 +11,7 @@
 import { type CSSProperties, type RefObject, useEffect, useRef, useState } from 'react'
 import {
   CAMERA_HOST,
+  HLS_URL,
   MJPEG_URL,
   PLAYER_MODE,
   PRIMARY_FEED_STREAM,
@@ -213,12 +214,14 @@ export default function FieldCameraFeed({
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
   const containerRef = useRef<HTMLDivElement>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
   const [active, setActive] = useState<boolean>(() => enabled && initialActive())
   const [phase, setPhase] = useState<Phase>(() => (enabled && initialActive() ? 'connecting' : 'paused'))
   const [snapshotNonce, setSnapshotNonce] = useState(0)
   const [streamNonce, setStreamNonce] = useState(0)
   const [snapshotReady, setSnapshotReady] = useState(false)
   const [streamReady, setStreamReady] = useState(false)
+  const [hlsFailed, setHlsFailed] = useState(false)
   const debugMode = useDebugFlag()
   const overlay = useCameraHealthOverlay(active)
   const detections = useDetectionOverlay(active)
@@ -229,6 +232,7 @@ export default function FieldCameraFeed({
   const videoLayout = useOverlayLayout(containerRef, fit, position, mediaWidth, mediaHeight)
   const snapshotUrl = `${SNAPSHOT_URL}?v=${snapshotNonce}`
   const mjpegUrl = `${MJPEG_URL}?v=${streamNonce}`
+  const hlsUrl = `${HLS_URL}?v=${streamNonce}`
   const mediaHealthBad = isConfirmedCameraBad(quality)
   const showStream = active && !mediaHealthBad
 
@@ -265,12 +269,14 @@ export default function FieldCameraFeed({
       setPhase('paused')
       setSnapshotReady(false)
       setStreamReady(false)
+      setHlsFailed(false)
       return
     }
 
     setPhase('connecting')
     setSnapshotReady(false)
     setStreamReady(false)
+    setHlsFailed(false)
     setStreamNonce((n) => n + 1)
     setSnapshotNonce(Date.now())
     const timeout = window.setTimeout(() => {
@@ -282,6 +288,76 @@ export default function FieldCameraFeed({
       window.clearInterval(refresh)
     }
   }, [active])
+
+  useEffect(() => {
+    if (!showStream || hlsFailed) return
+
+    const video = videoRef.current
+    if (!video) return
+
+    let cancelled = false
+    let hls: { destroy: () => void } | null = null
+
+    const markLive = () => {
+      if (cancelled) return
+      setSnapshotReady(true)
+      setStreamReady(true)
+      setPhase('live')
+    }
+    const fail = () => {
+      if (cancelled) return
+      setStreamReady(false)
+      setHlsFailed(true)
+      setPhase((p) => (snapshotReady && !mediaHealthBad ? 'preview' : p))
+    }
+
+    video.muted = true
+    video.playsInline = true
+    video.addEventListener('loadeddata', markLive)
+    video.addEventListener('playing', markLive)
+    video.addEventListener('error', fail)
+
+    const play = () => video.play().catch(() => undefined)
+
+    if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = hlsUrl
+      video.load()
+      play()
+    } else {
+      import('hls.js')
+        .then(({ default: Hls }) => {
+          if (cancelled) return
+          if (!Hls.isSupported()) {
+            fail()
+            return
+          }
+          const instance = new Hls({
+            lowLatencyMode: true,
+            liveSyncDurationCount: 2,
+            maxBufferLength: 8,
+            backBufferLength: 0,
+          })
+          hls = instance
+          instance.loadSource(hlsUrl)
+          instance.attachMedia(video)
+          instance.on(Hls.Events.MANIFEST_PARSED, play)
+          instance.on(Hls.Events.ERROR, (_event, data) => {
+            if (data?.fatal) fail()
+          })
+        })
+        .catch(fail)
+    }
+
+    return () => {
+      cancelled = true
+      video.removeEventListener('loadeddata', markLive)
+      video.removeEventListener('playing', markLive)
+      video.removeEventListener('error', fail)
+      hls?.destroy()
+      video.removeAttribute('src')
+      video.load()
+    }
+  }, [hlsFailed, hlsUrl, mediaHealthBad, showStream, snapshotReady])
 
   useEffect(() => {
     if (!active) return
@@ -298,6 +374,7 @@ export default function FieldCameraFeed({
     setPhase('connecting')
     setSnapshotReady(false)
     setStreamReady(false)
+    setHlsFailed(false)
     setStreamNonce((n) => n + 1)
     setSnapshotNonce(Date.now())
   }
@@ -337,7 +414,24 @@ export default function FieldCameraFeed({
         }}
       />
 
-      {showStream && (
+      {showStream && !hlsFailed && (
+        <video
+          ref={videoRef}
+          muted
+          playsInline
+          autoPlay
+          aria-label="Cayley field camera clean live preview"
+          className="absolute inset-0 h-full w-full"
+          style={{
+            objectFit: fit,
+            objectPosition: position,
+            opacity: streamActive ? 1 : 0,
+            transition: 'opacity 240ms ease',
+          }}
+        />
+      )}
+
+      {showStream && hlsFailed && (
         <img
           key={streamNonce}
           src={mjpegUrl}
