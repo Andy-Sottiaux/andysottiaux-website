@@ -6,6 +6,7 @@ const baseUrl = process.env.CAMERA_TRANSPORT_AUDIT_URL || 'https://andysottiaux.
 const stream = process.env.CAMERA_TRANSPORT_STREAM || 'cayley-sub'
 const timeoutMs = Number.parseInt(process.env.CAMERA_TRANSPORT_TIMEOUT_MS || '45000', 10)
 const iceGatherTimeoutMs = Number.parseInt(process.env.CAMERA_TRANSPORT_ICE_GATHER_TIMEOUT_MS || '2500', 10)
+const connectTimeoutMs = Number.parseInt(process.env.CAMERA_TRANSPORT_CONNECT_TIMEOUT_MS || '9000', 10)
 
 function classifyIp(address) {
   if (!address) return 'unknown'
@@ -65,7 +66,7 @@ try {
   const page = await browser.newPage()
   await page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: timeoutMs })
   const result = await page.evaluate(
-    async ({ stream, timeoutMs, iceGatherTimeoutMs }) => {
+    async ({ stream, timeoutMs, iceGatherTimeoutMs, connectTimeoutMs }) => {
       const startedAt = performance.now()
       const pc = new RTCPeerConnection({
         bundlePolicy: 'max-bundle',
@@ -106,12 +107,88 @@ try {
           body: offerSdp,
         })
         const answerSdp = await res.text()
+        if (res.ok) {
+          await pc.setRemoteDescription({ type: 'answer', sdp: answerSdp })
+          await new Promise((resolve) => {
+            if (
+              pc.connectionState === 'connected' ||
+              pc.iceConnectionState === 'connected' ||
+              pc.iceConnectionState === 'completed'
+            ) {
+              return resolve()
+            }
+            let done = false
+            const finish = () => {
+              if (done) return
+              done = true
+              resolve()
+            }
+            const connectionTimer = setTimeout(finish, connectTimeoutMs)
+            const onState = () => {
+              if (
+                pc.connectionState === 'connected' ||
+                pc.iceConnectionState === 'connected' ||
+                pc.iceConnectionState === 'completed' ||
+                pc.connectionState === 'failed' ||
+                pc.iceConnectionState === 'failed'
+              ) {
+                clearTimeout(connectionTimer)
+                finish()
+              }
+            }
+            pc.addEventListener('connectionstatechange', onState)
+            pc.addEventListener('iceconnectionstatechange', onState)
+          })
+        }
+
+        const report = await pc.getStats()
+        let selectedPair = null
+        let selectedPairId = null
+        report.forEach((raw) => {
+          const stat = raw
+          if (stat.type === 'transport' && stat.selectedCandidatePairId) {
+            selectedPairId = stat.selectedCandidatePairId
+          }
+        })
+        report.forEach((raw) => {
+          const stat = raw
+          if (
+            stat.type === 'candidate-pair' &&
+            (stat.id === selectedPairId || stat.selected === true || (stat.nominated === true && stat.state === 'succeeded'))
+          ) {
+            const local = report.get(stat.localCandidateId)
+            const remote = report.get(stat.remoteCandidateId)
+            const slimCandidate = (candidate) => candidate ? {
+              address: candidate.address || candidate.ip || null,
+              port: candidate.port || null,
+              protocol: candidate.protocol || null,
+              candidateType: candidate.candidateType || null,
+              relayProtocol: candidate.relayProtocol || null,
+            } : null
+            selectedPair = {
+              id: stat.id,
+              state: stat.state || null,
+              nominated: stat.nominated ?? null,
+              currentRoundTripTime: stat.currentRoundTripTime ?? null,
+              availableIncomingBitrate: stat.availableIncomingBitrate ?? null,
+              bytesReceived: stat.bytesReceived ?? null,
+              packetsReceived: stat.packetsReceived ?? null,
+              packetsDiscardedOnSend: stat.packetsDiscardedOnSend ?? null,
+              localCandidate: slimCandidate(local),
+              remoteCandidate: slimCandidate(remote),
+            }
+          }
+        })
+
         return {
           ok: res.ok,
           status: res.status,
           elapsedMs: Math.round(performance.now() - startedAt),
+          connectionState: pc.connectionState,
+          iceConnectionState: pc.iceConnectionState,
           localIceGatheringState: pc.iceGatheringState,
           localCandidateLines: localCandidates,
+          selectedPair,
           answerSdp,
           answerPreview: answerSdp.slice(0, 1200),
         }
@@ -120,7 +197,7 @@ try {
         pc.close()
       }
     },
-    { stream, timeoutMs, iceGatherTimeoutMs }
+    { stream, timeoutMs, iceGatherTimeoutMs, connectTimeoutMs }
   )
 
   const candidates = parseCandidates(result.answerSdp || '')
@@ -147,6 +224,8 @@ try {
     stream,
     status: result.status,
     elapsedMs: result.elapsedMs,
+    connectionState: result.connectionState,
+    iceConnectionState: result.iceConnectionState,
     candidateCount: candidates.length,
     publicMediaCandidateCount: publicMediaCandidates.length,
     turnRelayCandidateCount: turnRelayCandidates.length,
@@ -160,6 +239,17 @@ try {
 
   console.log(JSON.stringify({
     ...summary,
+    selectedPair: result.selectedPair ? {
+      ...result.selectedPair,
+      localCandidate: result.selectedPair.localCandidate ? {
+        ...result.selectedPair.localCandidate,
+        reachability: classifyIp(result.selectedPair.localCandidate.address),
+      } : null,
+      remoteCandidate: result.selectedPair.remoteCandidate ? {
+        ...result.selectedPair.remoteCandidate,
+        reachability: classifyIp(result.selectedPair.remoteCandidate.address),
+      } : null,
+    } : null,
     candidates,
     recommendation: summary.robustPublicRtcReachable
       ? 'RTC has a TURN relay or public host candidate.'

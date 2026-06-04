@@ -8,6 +8,7 @@ const targetUrl = process.env.CAMERA_MONITOR_URL || process.argv[2] || 'https://
 const durationMs = Number.parseInt(process.env.CAMERA_MONITOR_DURATION_MS || '60000', 10)
 const intervalMs = Number.parseInt(process.env.CAMERA_MONITOR_INTERVAL_MS || '1000', 10)
 const startupTimeoutMs = Number.parseInt(process.env.CAMERA_MONITOR_STARTUP_TIMEOUT_MS || '45000', 10)
+const blockRtc = process.env.CAMERA_MONITOR_BLOCK_RTC === '1'
 const screenshotPath = process.env.CAMERA_MONITOR_SCREENSHOT ||
   path.join(process.cwd(), 'tmp', 'camera-playback-monitor.png')
 
@@ -42,12 +43,23 @@ function summarizeCounterDelta(samples, key) {
   return Number((values[values.length - 1] - values[0]).toFixed(3))
 }
 
+function summarizeVideoCounterDelta(samples, key) {
+  const values = samples
+    .map((sample) => number(sample.video?.[key]))
+    .filter((value) => value != null)
+  if (values.length < 2) return null
+  return Number((values[values.length - 1] - values[0]).toFixed(3))
+}
+
 async function readSample(page, startedAt) {
   return page.evaluate((startedAt) => {
     const rtcVideo = document.querySelector('video[aria-label="Cayley field camera WebRTC live preview"]')
     const hlsVideo = document.querySelector('video[aria-label="Cayley field camera clean live preview"]')
     const cameraMetrics = window.__cayleyCameraMetrics || null
     const active = rtcVideo || hlsVideo
+    const playbackQuality = active && typeof active.getVideoPlaybackQuality === 'function'
+      ? active.getVideoPlaybackQuality()
+      : null
     return {
       elapsedMs: Date.now() - startedAt,
       cameraMetrics,
@@ -60,6 +72,9 @@ async function readSample(page, startedAt) {
         videoWidth: active.videoWidth,
         videoHeight: active.videoHeight,
         opacity: getComputedStyle(active).opacity,
+        totalVideoFrames: playbackQuality?.totalVideoFrames ?? null,
+        droppedVideoFrames: playbackQuality?.droppedVideoFrames ?? null,
+        corruptedVideoFrames: playbackQuality?.corruptedVideoFrames ?? null,
       } : null,
     }
   }, startedAt)
@@ -76,6 +91,15 @@ try {
   await mkdir(path.dirname(screenshotPath), { recursive: true })
   const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } })
   const events = []
+  if (blockRtc) {
+    await page.route('**/api/v3/camera/webrtc/offer**', (route) => {
+      route.fulfill({
+        status: 503,
+        contentType: 'text/plain',
+        body: 'rtc blocked by camera monitor',
+      })
+    })
+  }
   page.on('console', (msg) => {
     const text = msg.text()
     if (/error|warn|local address space|blocked|hls|video|webrtc|rtc|camera/i.test(text)) {
@@ -123,10 +147,14 @@ try {
     : null
   const droppedFramesDelta = summarizeCounterDelta(samples, 'rtcFramesDropped')
   const decodedFramesDelta = summarizeCounterDelta(samples, 'rtcFramesDecoded')
+  const videoTotalFramesDelta = summarizeVideoCounterDelta(samples, 'totalVideoFrames')
+  const videoDroppedFramesDelta = summarizeVideoCounterDelta(samples, 'droppedVideoFrames')
+  const videoCorruptedFramesDelta = summarizeVideoCounterDelta(samples, 'corruptedVideoFrames')
 
   const summary = {
     ok: samples.length > 0 && samples.every((sample) => cameraPainted(sample)),
     url: targetUrl,
+    blockRtc,
     durationMs,
     intervalMs,
     sampleCount: samples.length,
@@ -144,6 +172,14 @@ try {
     rtcFramesDroppedDelta: droppedFramesDelta,
     rtcDropRatio: decodedFramesDelta != null && decodedFramesDelta > 0 && droppedFramesDelta != null
       ? Number((droppedFramesDelta / decodedFramesDelta).toFixed(6))
+      : null,
+    rtcPacketsReceivedDelta: summarizeCounterDelta(samples, 'rtcPacketsReceived'),
+    rtcDegradedReason: last?.cameraMetrics?.rtcDegradedReason || null,
+    videoTotalFramesDelta,
+    videoDroppedFramesDelta,
+    videoCorruptedFramesDelta,
+    videoDropRatio: videoTotalFramesDelta != null && videoTotalFramesDelta > 0 && videoDroppedFramesDelta != null
+      ? Number((videoDroppedFramesDelta / videoTotalFramesDelta).toFixed(6))
       : null,
     rtcCurrentRoundTripTimeSec: summarizeMetric(samples, 'rtcCurrentRoundTripTimeSec'),
     rtcJitterSec: summarizeMetric(samples, 'rtcJitterSec'),

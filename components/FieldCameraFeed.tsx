@@ -33,6 +33,12 @@ const STREAM_START_TIMEOUT_MS = 20_000
 const FAST_PLAYER_START_TIMEOUT_MS = 8_000
 const HTTP_RTC_START_TIMEOUT_MS = 7_000
 const HTTP_RTC_ICE_GATHER_TIMEOUT_MS = 1_500
+const HTTP_RTC_HEALTH_GRACE_MS = 10_000
+const HTTP_RTC_HEALTH_SAMPLE_MS = 4_000
+const HTTP_RTC_BAD_SAMPLE_LIMIT = 2
+const HTTP_RTC_MIN_PROGRESS_RATIO = 0.82
+const HTTP_RTC_MAX_VIDEO_DROP_RATIO = 0.38
+const HTTP_RTC_MAX_PACKET_LOSS_RATIO = 0.06
 const HLS_RETRY_MS = 3_000
 const STALE_CLEAN_FRAME_SEC = 10
 const LIVE_EDGE_TARGET_SEC = 0.75
@@ -138,16 +144,21 @@ type CameraPlaybackMetrics = {
   liveSyncPositionSec: number | null
   playbackRate: number
   updatedAtMs: number
+  videoCorruptedFrames?: number | null
+  videoDroppedFrames?: number | null
+  videoTotalFrames?: number | null
   rtcConnectionState?: RTCPeerConnectionState
   rtcIceConnectionState?: RTCIceConnectionState
   rtcAvailableIncomingBitrate?: number | null
   rtcBytesReceived?: number | null
   rtcCurrentRoundTripTimeSec?: number | null
+  rtcDegradedReason?: string | null
   rtcFramesDecoded?: number | null
   rtcFramesDropped?: number | null
   rtcFramesPerSecond?: number | null
   rtcJitterSec?: number | null
   rtcPacketsLost?: number | null
+  rtcPacketsReceived?: number | null
 }
 
 type DetectionItem = {
@@ -396,6 +407,18 @@ export default function FieldCameraFeed({
     let painted = false
     const metricsWindow = window as Window & { __cayleyCameraMetrics?: CameraPlaybackMetrics }
     let rtcStats: Partial<CameraPlaybackMetrics> = {}
+    let startedAtMs = Date.now()
+    let lastHealthSample: {
+      atMs: number
+      videoTimeSec: number
+      videoDroppedFrames: number | null
+      videoTotalFrames: number | null
+      rtcPacketsLost: number | null
+      rtcPacketsReceived: number | null
+    } | null = null
+    let badHealthSamples = 0
+    let degradedReason: string | null = null
+    let failing = false
     const pc = new RTCPeerConnection({
       bundlePolicy: 'max-bundle',
       iceServers: [{ urls: ['stun:stun.cloudflare.com:3478', 'stun:stun.l.google.com:19302'] }],
@@ -420,6 +443,7 @@ export default function FieldCameraFeed({
           ) {
             nextStats.rtcBytesReceived = rounded(stat.bytesReceived, 0)
             nextStats.rtcPacketsLost = rounded(stat.packetsLost, 0)
+            nextStats.rtcPacketsReceived = rounded(stat.packetsReceived, 0)
             nextStats.rtcJitterSec = rounded(stat.jitter, 4)
             nextStats.rtcFramesDecoded = rounded(stat.framesDecoded, 0)
             nextStats.rtcFramesDropped = rounded(stat.framesDropped, 0)
@@ -439,8 +463,83 @@ export default function FieldCameraFeed({
         // Stats are advisory; playback health is driven by the video element.
       }
     }
+    const playbackQuality = () => {
+      const getQuality = video.getVideoPlaybackQuality
+      if (typeof getQuality !== 'function') return {}
+      const quality = getQuality.call(video)
+      return {
+        videoCorruptedFrames: rounded(quality.corruptedVideoFrames, 0),
+        videoDroppedFrames: rounded(quality.droppedVideoFrames, 0),
+        videoTotalFrames: rounded(quality.totalVideoFrames, 0),
+      }
+    }
+    const evaluateRtcHealth = (metrics: CameraPlaybackMetrics) => {
+      if (failing) return
+      if (!painted || Date.now() - startedAtMs < HTTP_RTC_HEALTH_GRACE_MS) return
+
+      const next = {
+        atMs: Date.now(),
+        videoTimeSec: metrics.videoTimeSec,
+        videoDroppedFrames: metrics.videoDroppedFrames ?? null,
+        videoTotalFrames: metrics.videoTotalFrames ?? null,
+        rtcPacketsLost: metrics.rtcPacketsLost ?? null,
+        rtcPacketsReceived: metrics.rtcPacketsReceived ?? null,
+      }
+      if (!lastHealthSample) {
+        lastHealthSample = next
+        return
+      }
+
+      const elapsedSec = Math.max(0.001, (next.atMs - lastHealthSample.atMs) / 1000)
+      if (elapsedSec < HTTP_RTC_HEALTH_SAMPLE_MS / 1000) return
+
+      const progressRatio = (next.videoTimeSec - lastHealthSample.videoTimeSec) / elapsedSec
+      const videoDroppedDelta =
+        next.videoDroppedFrames != null && lastHealthSample.videoDroppedFrames != null
+          ? next.videoDroppedFrames - lastHealthSample.videoDroppedFrames
+          : null
+      const videoTotalDelta =
+        next.videoTotalFrames != null && lastHealthSample.videoTotalFrames != null
+          ? next.videoTotalFrames - lastHealthSample.videoTotalFrames
+          : null
+      const packetLostDelta =
+        next.rtcPacketsLost != null && lastHealthSample.rtcPacketsLost != null
+          ? next.rtcPacketsLost - lastHealthSample.rtcPacketsLost
+          : null
+      const packetReceivedDelta =
+        next.rtcPacketsReceived != null && lastHealthSample.rtcPacketsReceived != null
+          ? next.rtcPacketsReceived - lastHealthSample.rtcPacketsReceived
+          : null
+
+      const videoDropRatio =
+        videoDroppedDelta != null && videoTotalDelta != null && videoTotalDelta > 0
+          ? videoDroppedDelta / videoTotalDelta
+          : 0
+      const packetLossRatio =
+        packetLostDelta != null && packetReceivedDelta != null && packetReceivedDelta + packetLostDelta > 0
+          ? packetLostDelta / (packetReceivedDelta + packetLostDelta)
+          : 0
+
+      let reason: string | null = null
+      if (progressRatio < HTTP_RTC_MIN_PROGRESS_RATIO) reason = 'slow_playback'
+      else if (videoDropRatio > HTTP_RTC_MAX_VIDEO_DROP_RATIO) reason = 'video_drops'
+      else if (packetLossRatio > HTTP_RTC_MAX_PACKET_LOSS_RATIO) reason = 'packet_loss'
+
+      if (reason) {
+        badHealthSamples += 1
+        degradedReason = reason
+      } else {
+        badHealthSamples = 0
+        degradedReason = null
+      }
+
+      lastHealthSample = next
+      if (badHealthSamples >= HTTP_RTC_BAD_SAMPLE_LIMIT) {
+        fail(degradedReason || 'unstable_rtc')
+      }
+    }
     const publishMetrics = () => {
-      metricsWindow.__cayleyCameraMetrics = {
+      const nextMetrics: CameraPlaybackMetrics = {
         mode: 'rtc',
         readyState: video.readyState,
         videoTimeSec: Number(video.currentTime.toFixed(3)),
@@ -452,26 +551,39 @@ export default function FieldCameraFeed({
         liveSyncPositionSec: null,
         playbackRate: Number(video.playbackRate.toFixed(3)),
         updatedAtMs: Date.now(),
+        ...playbackQuality(),
         rtcConnectionState: pc.connectionState,
         rtcIceConnectionState: pc.iceConnectionState,
+        rtcDegradedReason: degradedReason,
         ...rtcStats,
       }
+      metricsWindow.__cayleyCameraMetrics = nextMetrics
+      evaluateRtcHealth(nextMetrics)
     }
     const markLive = () => {
       if (cancelled) return
       painted = true
+      startedAtMs = Date.now()
+      lastHealthSample = null
+      badHealthSamples = 0
+      degradedReason = null
       publishMetrics()
       setHttpRtcReady(true)
       setSnapshotReady(true)
       setStreamReady(true)
       setPhase('live')
     }
-    const fail = () => {
-      if (cancelled) return
+    const fail = (reason?: string) => {
+      if (cancelled || failing) return
+      failing = true
+      degradedReason = reason || degradedReason
+      publishMetrics()
       setHttpRtcReady(false)
       setHttpRtcFailed(true)
-      setPhase((p) => (p === 'connecting' ? 'preview' : p))
+      setStreamReady(false)
+      setPhase((p) => (p === 'connecting' || p === 'live' ? 'preview' : p))
     }
+    const onVideoError = () => fail('video_error')
     const closePeer = () => {
       try {
         pc.getSenders().forEach((sender) => sender.track?.stop())
@@ -486,7 +598,7 @@ export default function FieldCameraFeed({
     video.playsInline = true
     video.addEventListener('loadeddata', markLive)
     video.addEventListener('playing', markLive)
-    video.addEventListener('error', fail)
+    video.addEventListener('error', onVideoError)
 
     pc.addTransceiver('video', { direction: 'recvonly' })
     pc.addEventListener('track', (event) => {
@@ -547,7 +659,7 @@ export default function FieldCameraFeed({
       window.clearInterval(metricsTimer)
       video.removeEventListener('loadeddata', markLive)
       video.removeEventListener('playing', markLive)
-      video.removeEventListener('error', fail)
+      video.removeEventListener('error', onVideoError)
       video.srcObject = null
       closePeer()
       if (metricsWindow.__cayleyCameraMetrics?.mode === 'rtc') {
@@ -575,6 +687,10 @@ export default function FieldCameraFeed({
     const metricsWindow = window as Window & { __cayleyCameraMetrics?: CameraPlaybackMetrics }
     const finiteNumber = (value: unknown): number | null =>
       typeof value === 'number' && Number.isFinite(value) ? value : null
+    const rounded = (value: unknown, places = 3): number | null => {
+      const n = finiteNumber(value)
+      return n == null ? null : Number(n.toFixed(places))
+    }
     const bufferedAhead = () => {
       const ranges = video.buffered
       if (!ranges.length) return null
@@ -608,6 +724,13 @@ export default function FieldCameraFeed({
         liveSyncPositionSec: finiteNumber(hlsState?.liveSyncPosition),
         playbackRate: Number(video.playbackRate.toFixed(3)),
         updatedAtMs: Date.now(),
+      }
+      const getQuality = video.getVideoPlaybackQuality
+      if (typeof getQuality === 'function') {
+        const quality = getQuality.call(video)
+        metricsWindow.__cayleyCameraMetrics.videoCorruptedFrames = rounded(quality.corruptedVideoFrames, 0)
+        metricsWindow.__cayleyCameraMetrics.videoDroppedFrames = rounded(quality.droppedVideoFrames, 0)
+        metricsWindow.__cayleyCameraMetrics.videoTotalFrames = rounded(quality.totalVideoFrames, 0)
       }
     }
 
