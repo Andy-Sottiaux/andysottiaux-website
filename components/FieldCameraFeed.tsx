@@ -131,20 +131,9 @@ type TrainingStatus = {
       invalid?: number | null
       diverse_attempt_ratio?: number | null
     }
-    guided_progress?: {
-      available?: boolean
-      status?: string | null
-      attempts?: number | null
-      kept?: number | null
-      duplicates?: number | null
-      invalid?: number | null
-      fetch_failed?: number | null
-	      duplicate_ratio?: number | null
-	      latest_event_age_s?: number | null
-	      finish_reason?: string | null
-	      session_status?: string | null
-	    } | null
-	  }
+    preflight_progress?: CollectionProgress | null
+    guided_progress?: CollectionProgress | null
+  }
   model_wait?: {
     status?: string | null
     status_count?: number | null
@@ -184,7 +173,33 @@ type TrainingStatus = {
   } | null
   error?: string
 }
-type GuidedProgress = NonNullable<NonNullable<TrainingStatus['collection_wait']>['guided_progress']>
+
+type CollectionProgress = {
+  available?: boolean
+  status?: string | null
+  ok?: boolean | null
+  attempts?: number | null
+  kept?: number | null
+  duplicates?: number | null
+  invalid?: number | null
+  fetch_failed?: number | null
+  duplicate_ratio?: number | null
+  diverse_attempt_ratio?: number | null
+  valid_attempt_ratio?: number | null
+  latest_event_age_s?: number | null
+  finish_reason?: string | null
+  session_status?: string | null
+  min_kept?: number | null
+  min_diverse_attempt_ratio?: number | null
+  sample_target_frames?: number | null
+  failures?: {
+    kind?: string | null
+    detail?: string | null
+    actual?: number | string | null
+    required?: number | string | null
+  }[]
+  recommendations?: string[]
+}
 
 export default function FieldCameraFeed({
   enabled = true,
@@ -1051,7 +1066,11 @@ function trainingStateLabel(data: TrainingStatus): string {
   if (data.error) return 'unavailable'
   if (data.training_ready || data.dataset_ready || data.state === 'ready_to_train') return 'ready'
   if (data.collection_wait?.guided_progress?.status === 'collecting') return 'collecting'
-  if (isDuplicateStalled(data.collection_wait?.guided_progress) || data.collection_wait?.status === 'guided_failed') return 'move targets'
+  if (
+    isDuplicateStalled(data.collection_wait?.guided_progress) ||
+    isDuplicateStalled(data.collection_wait?.preflight_progress) ||
+    data.collection_wait?.status === 'guided_failed'
+  ) return 'move targets'
 
   switch (data.state) {
     case 'waiting_for_scene':
@@ -1091,24 +1110,12 @@ function progressChip(label: string, current: number | null, needed: number | nu
 function trainingWaitLine(data: TrainingStatus): string | null {
   const guided = data.collection_wait?.guided_progress
   if (guided?.available) {
-    const status = isDuplicateStalled(guided)
-      ? 'stalled'
-      : guided.status
-        ? guided.status.replace(/_/g, ' ')
-        : 'collecting'
-    const kept = numericValue(guided.kept)
-    const attempts = numericValue(guided.attempts)
-    const duplicateRatio = numericValue(guided.duplicate_ratio)
-    const duplicates = numericValue(guided.duplicates)
-    const pieces = [
-      kept != null && attempts != null ? `${status} ${kept}/${attempts} kept` : status,
-      duplicateRatio != null
-        ? `${Math.round(duplicateRatio * 100)}% dupes`
-        : duplicates != null && duplicates > 0
-          ? `${duplicates} dupes`
-          : null,
-    ].filter(Boolean)
-    return pieces.join(' · ')
+    return collectionProgressLine(guided, 'collecting')
+  }
+
+  const preflight = data.collection_wait?.preflight_progress
+  if (preflight?.available) {
+    return collectionProgressLine(preflight, 'preflight')
   }
 
   const capture = data.collection_wait?.capture
@@ -1126,18 +1133,46 @@ function trainingWaitLine(data: TrainingStatus): string | null {
   return pieces.length ? pieces.join(' · ') : null
 }
 
+function collectionProgressLine(progress: CollectionProgress, defaultStatus: string): string {
+  const rawStatus = isDuplicateStalled(progress) ? 'stalled' : progress.status || defaultStatus
+  const status = rawStatus.replace(/_/g, ' ')
+  const kept = numericValue(progress.kept)
+  const attempts = numericValue(progress.attempts)
+  const duplicateRatio = numericValue(progress.duplicate_ratio)
+  const duplicates = numericValue(progress.duplicates)
+  const diverseRatio = numericValue(progress.diverse_attempt_ratio)
+  const minDiverseRatio = numericValue(progress.min_diverse_attempt_ratio)
+  const pieces = [
+    kept != null && attempts != null ? `${status} ${kept}/${attempts} kept` : status,
+    duplicateRatio != null
+      ? `${Math.round(duplicateRatio * 100)}% dupes`
+      : duplicates != null && duplicates > 0
+        ? `${duplicates} dupes`
+        : null,
+    diverseRatio != null
+      ? `${Math.round(diverseRatio * 100)}% diverse${minDiverseRatio != null ? `/${Math.round(minDiverseRatio * 100)}%` : ''}`
+      : null,
+  ].filter(Boolean)
+  return pieces.join(' · ')
+}
+
 function numericValue(value: number | null | undefined): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null
 }
 
-function isDuplicateStalled(guided?: GuidedProgress | null): boolean {
-  if (!guided || typeof guided !== 'object') return false
-  const duplicateRatio = numericValue(guided.duplicate_ratio)
+function isDuplicateStalled(progress?: CollectionProgress | null): boolean {
+  if (!progress || typeof progress !== 'object') return false
+  const duplicateRatio = numericValue(progress.duplicate_ratio)
+  const diverseRatio = numericValue(progress.diverse_attempt_ratio)
   return (
-    guided.status === 'complete' &&
-    (guided.session_status === 'failed' || guided.finish_reason === 'attempt_limit' || guided.finish_reason === 'duplicate_streak') &&
     duplicateRatio != null &&
-    duplicateRatio >= 0.8
+    duplicateRatio >= 0.8 &&
+    (
+      (progress.status === 'complete' &&
+        (progress.session_status === 'failed' || progress.finish_reason === 'attempt_limit' || progress.finish_reason === 'duplicate_streak')) ||
+      progress.status === 'not_ready_to_collect' ||
+      (diverseRatio != null && diverseRatio <= 0.2)
+    )
   )
 }
 
