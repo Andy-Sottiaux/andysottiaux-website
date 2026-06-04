@@ -15,15 +15,15 @@ function contentType(asset: string) {
 function cacheHeaders(asset: string) {
   if (asset.endsWith('.m3u8')) {
     return {
-      'Cache-Control': 'max-age=0, must-revalidate',
-      'CDN-Cache-Control': 'public, max-age=1, stale-while-revalidate=1',
-      'Vercel-CDN-Cache-Control': 'public, max-age=1',
+      'Cache-Control': 'no-store',
+      'CDN-Cache-Control': 'max-age=0',
+      'Vercel-CDN-Cache-Control': 'max-age=0',
     }
   }
   return {
-    'Cache-Control': 'public, max-age=30, immutable',
-    'CDN-Cache-Control': 'public, max-age=30',
-    'Vercel-CDN-Cache-Control': 'public, max-age=30',
+    'Cache-Control': 'no-store',
+    'CDN-Cache-Control': 'max-age=0',
+    'Vercel-CDN-Cache-Control': 'max-age=0',
   }
 }
 

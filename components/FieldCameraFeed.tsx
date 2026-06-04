@@ -24,8 +24,8 @@ import { useFieldTheme } from './fieldTheme'
 const DETECTION_WINDOW_SEC = 60
 const DETECTIONS_URL = `/api/v3/detections?window_sec=${DETECTION_WINDOW_SEC}`
 const SNAPSHOT_REFRESH_MS = 4_000
-const STREAM_START_TIMEOUT_MS = 12_000
-const HLS_RETRY_MS = 8_000
+const STREAM_START_TIMEOUT_MS = 20_000
+const HLS_RETRY_MS = 3_000
 const STALE_CLEAN_FRAME_SEC = 10
 
 type Phase = 'paused' | 'connecting' | 'preview' | 'live' | 'offline'
@@ -56,6 +56,18 @@ type CameraQuality = {
     fps_target?: number
     width?: number
     height?: number
+    hls_bitrate?: string
+    hls_ok?: boolean | null
+    hls_latest_write_age_s?: number | null
+    hls_frames_written?: number
+    hls_frames_dropped?: number
+    framed_frames_read?: number
+    framed_frames_segmented?: number
+    framed_udp_listen?: string | null
+    framed_udp_fec_packets?: number
+    framed_udp_fec_recovered?: number
+    framed_udp_incomplete_frames?: number
+    observed_hls_fps?: number | null
     latest_clean_age_s?: number | null
     latest_seen_age_s?: number | null
     last_green_ratio?: number | null
@@ -94,6 +106,11 @@ type HealthPayload = {
       stream_profile?: CameraStreamProfile
     }
   }
+}
+
+type QualityRateSample = {
+  ts: number
+  hlsFramesWritten: number
 }
 
 type DetectionItem = {
@@ -301,7 +318,12 @@ export default function FieldCameraFeed({
 
     let cancelled = false
     let painted = false
-    let hls: { destroy: () => void } | null = null
+    let hls: {
+      destroy: () => void
+      startLoad?: (startPosition?: number) => void
+      recoverMediaError?: () => void
+    } | null = null
+    let recoverAttempts = 0
 
     const markLive = () => {
       if (cancelled) return
@@ -357,7 +379,18 @@ export default function FieldCameraFeed({
           instance.attachMedia(video)
           instance.on(Hls.Events.MANIFEST_PARSED, play)
           instance.on(Hls.Events.ERROR, (_event, data) => {
-            if (data?.fatal) fail()
+            if (!data?.fatal) return
+            if (recoverAttempts < 3) {
+              recoverAttempts += 1
+              setPhase('connecting')
+              if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+                instance.recoverMediaError()
+              } else {
+                instance.startLoad(-1)
+              }
+              return
+            }
+            fail()
           })
         })
         .catch(fail)
@@ -532,6 +565,7 @@ export function prewarmFieldCameraFeed() {
   const image = new Image()
   image.decoding = 'async'
   image.src = `${SNAPSHOT_URL}?v=${Date.now()}`
+  fetch(`${HLS_URL}?v=${Date.now()}`, { cache: 'no-store' }).catch(() => undefined)
   fetch(QUALITY_URL, { cache: 'no-store' }).catch(() => undefined)
   fetch(TRAINING_STATUS_URL, { cache: 'no-store' }).catch(() => undefined)
 }
@@ -541,15 +575,25 @@ function isConfirmedCameraBad(quality: CameraQuality): boolean {
   if (typeof quality.sanitizer?.latest_clean_age_s === 'number' && quality.sanitizer.latest_clean_age_s > STALE_CLEAN_FRAME_SEC) {
     return true
   }
-  return quality.ok === false && !quality.error
+  if (quality.ok === false && !quality.error) {
+    const cleanFresh =
+      quality.snapshot?.stale === false ||
+      (typeof quality.sanitizer?.latest_clean_age_s === 'number' &&
+        quality.sanitizer.latest_clean_age_s <= STALE_CLEAN_FRAME_SEC)
+    if (quality.sanitizer?.hls_ok === false && cleanFresh) return false
+    return true
+  }
+  return false
 }
 
 function useCameraQuality(enabled: boolean): CameraQuality {
   const [quality, setQuality] = useState<CameraQuality>({})
+  const lastSampleRef = useRef<QualityRateSample | null>(null)
 
   useEffect(() => {
     if (!enabled) {
       setQuality({})
+      lastSampleRef.current = null
       return
     }
 
@@ -561,6 +605,22 @@ function useCameraQuality(enabled: boolean): CameraQuality {
         const res = await fetch(QUALITY_URL, { cache: 'no-store' })
         if (res.ok) {
           const next = (await res.json()) as CameraQuality
+          const hlsFramesWritten = next.sanitizer?.hls_frames_written
+          if (typeof hlsFramesWritten === 'number' && Number.isFinite(hlsFramesWritten)) {
+            const ts = Date.now()
+            const last = lastSampleRef.current
+            if (last && hlsFramesWritten >= last.hlsFramesWritten) {
+              const elapsedS = Math.max(0.001, (ts - last.ts) / 1000)
+              const fps = (hlsFramesWritten - last.hlsFramesWritten) / elapsedS
+              next.sanitizer = {
+                ...next.sanitizer,
+                observed_hls_fps: Number.isFinite(fps) ? fps : null,
+              }
+            }
+            lastSampleRef.current = { ts, hlsFramesWritten }
+          } else {
+            lastSampleRef.current = null
+          }
           if (!cancelled) setQuality(next)
         } else if (!cancelled) {
           setQuality({ ok: false, error: `quality_${res.status}` })
@@ -772,23 +832,39 @@ function CameraSpecsOverlay({ data, quality }: { data: CameraHealthOverlay; qual
   const cleanAge = typeof quality.sanitizer?.latest_clean_age_s === 'number'
     ? `${quality.sanitizer.latest_clean_age_s.toFixed(1)}s clean`
     : null
+  const hlsAge = typeof quality.sanitizer?.hls_latest_write_age_s === 'number'
+    ? `${quality.sanitizer.hls_latest_write_age_s.toFixed(1)}s hls`
+    : null
   const cleanOutput = quality.sanitizer?.width && quality.sanitizer?.height
     ? `${quality.sanitizer.width}x${quality.sanitizer.height}`
     : null
-  const cleanFps = typeof quality.sanitizer?.fps_target === 'number' && quality.sanitizer.fps_target > 0
-    ? `${formatFps(quality.sanitizer.fps_target)}fps`
+  const deliveredFps = typeof quality.sanitizer?.observed_hls_fps === 'number' && quality.sanitizer.observed_hls_fps > 0
+    ? `${formatFps(quality.sanitizer.observed_hls_fps)}fps delivered`
+    : null
+  const targetFps = typeof quality.sanitizer?.fps_target === 'number' && quality.sanitizer.fps_target > 0
+    ? `${formatFps(quality.sanitizer.fps_target)}fps target`
+    : null
+  const transport = quality.sanitizer?.framed_udp_listen
+    ? `udp${(quality.sanitizer?.framed_udp_fec_packets ?? 0) > 0 ? '+fec' : ''}`
+    : null
+  const fecRecovered = quality.sanitizer?.framed_udp_fec_recovered && quality.sanitizer.framed_udp_fec_recovered > 0
+    ? `${quality.sanitizer.framed_udp_fec_recovered} recovered`
     : null
   const cleanDrops = (quality.sanitizer?.frames_dropped_green ?? 0) + (quality.sanitizer?.frames_dropped_encode ?? 0)
+  const hlsDrops = quality.sanitizer?.hls_frames_dropped ?? 0
   const cleanRestart = quality.sanitizer?.ffmpeg_restarts && quality.sanitizer.ffmpeg_restarts > 1
     ? `${quality.sanitizer.ffmpeg_restarts} restarts`
     : null
   const cleanParts = [
     cleanOutput,
-    cleanFps,
+    deliveredFps || targetFps,
+    transport,
+    fecRecovered,
     quality.mode === 'sanitized-preview' || quality.snapshot?.source === 'sanitized' ? 'sanitized' : null,
     cleanDrops > 0 ? `${cleanDrops} drops` : null,
+    hlsDrops > 0 ? `${hlsDrops} hls drops` : null,
     cleanRestart,
-    cleanAge,
+    hlsAge || cleanAge,
   ].filter(Boolean)
   if (cleanParts.length > 0) {
     return (
