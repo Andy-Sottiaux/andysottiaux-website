@@ -15,8 +15,8 @@ function contentType(asset: string) {
 function cacheHeaders(asset: string) {
   if (asset.endsWith('.m3u8')) {
     return {
-      'Cache-Control': 'public, max-age=1, stale-while-revalidate=1',
-      'CDN-Cache-Control': 'public, max-age=1',
+      'Cache-Control': 'max-age=0, must-revalidate',
+      'CDN-Cache-Control': 'public, max-age=1, stale-while-revalidate=1',
       'Vercel-CDN-Cache-Control': 'public, max-age=1',
     }
   }
