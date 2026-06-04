@@ -33,12 +33,12 @@ const STREAM_START_TIMEOUT_MS = 20_000
 const FAST_PLAYER_START_TIMEOUT_MS = 8_000
 const HTTP_RTC_START_TIMEOUT_MS = 7_000
 const HTTP_RTC_ICE_GATHER_TIMEOUT_MS = 1_500
-const HTTP_RTC_HEALTH_GRACE_MS = 10_000
-const HTTP_RTC_HEALTH_SAMPLE_MS = 4_000
+const HTTP_RTC_HEALTH_GRACE_MS = 5_000
+const HTTP_RTC_HEALTH_SAMPLE_MS = 3_000
 const HTTP_RTC_BAD_SAMPLE_LIMIT = 2
-const HTTP_RTC_MIN_PROGRESS_RATIO = 0.82
-const HTTP_RTC_MAX_VIDEO_DROP_RATIO = 0.38
-const HTTP_RTC_MAX_PACKET_LOSS_RATIO = 0.06
+const HTTP_RTC_MIN_PROGRESS_RATIO = 0.9
+const HTTP_RTC_MAX_VIDEO_DROP_RATIO = 0.32
+const HTTP_RTC_MAX_PACKET_LOSS_RATIO = 0.04
 const HLS_RETRY_MS = 3_000
 const STALE_CLEAN_FRAME_SEC = 10
 const LIVE_EDGE_TARGET_SEC = 0.75
@@ -405,7 +405,10 @@ export default function FieldCameraFeed({
 
     let cancelled = false
     let painted = false
-    const metricsWindow = window as Window & { __cayleyCameraMetrics?: CameraPlaybackMetrics }
+    const metricsWindow = window as Window & {
+      __cayleyCameraLastRtcDegradedReason?: string | null
+      __cayleyCameraMetrics?: CameraPlaybackMetrics
+    }
     let rtcStats: Partial<CameraPlaybackMetrics> = {}
     let startedAtMs = Date.now()
     let lastHealthSample: {
@@ -567,6 +570,7 @@ export default function FieldCameraFeed({
       lastHealthSample = null
       badHealthSamples = 0
       degradedReason = null
+      metricsWindow.__cayleyCameraLastRtcDegradedReason = null
       publishMetrics()
       setHttpRtcReady(true)
       setSnapshotReady(true)
@@ -577,6 +581,7 @@ export default function FieldCameraFeed({
       if (cancelled || failing) return
       failing = true
       degradedReason = reason || degradedReason
+      metricsWindow.__cayleyCameraLastRtcDegradedReason = degradedReason
       publishMetrics()
       setHttpRtcReady(false)
       setHttpRtcFailed(true)
@@ -684,7 +689,10 @@ export default function FieldCameraFeed({
     } | null = null
     let recoverAttempts = 0
     let liveEdgeTimer: number | null = null
-    const metricsWindow = window as Window & { __cayleyCameraMetrics?: CameraPlaybackMetrics }
+    const metricsWindow = window as Window & {
+      __cayleyCameraLastRtcDegradedReason?: string | null
+      __cayleyCameraMetrics?: CameraPlaybackMetrics
+    }
     const finiteNumber = (value: unknown): number | null =>
       typeof value === 'number' && Number.isFinite(value) ? value : null
     const rounded = (value: unknown, places = 3): number | null => {
@@ -724,6 +732,7 @@ export default function FieldCameraFeed({
         liveSyncPositionSec: finiteNumber(hlsState?.liveSyncPosition),
         playbackRate: Number(video.playbackRate.toFixed(3)),
         updatedAtMs: Date.now(),
+        rtcDegradedReason: metricsWindow.__cayleyCameraLastRtcDegradedReason || null,
       }
       const getQuality = video.getVideoPlaybackQuality
       if (typeof getQuality === 'function') {
