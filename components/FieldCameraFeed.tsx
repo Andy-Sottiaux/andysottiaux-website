@@ -1,11 +1,13 @@
 'use client'
 
 /**
- * FieldCameraFeed renders the lowest-latency relay camera surface that paints.
+ * FieldCameraFeed renders the lowest-latency relay camera surface that is safe
+ * for a public website embed.
  *
- * go2rtc WebRTC/MSE is the primary path for low latency. Sanitized HLS, MJPEG,
- * and JPEG remain fallbacks so damaged or unreachable fast-path media does not
- * take the public camera offline.
+ * Same-origin sanitized HLS is the default embedded path because browsers block
+ * public pages from directly embedding the Tailscale Funnel media origin as a
+ * local/private-network subresource. go2rtc WebRTC/MSE stays available as an
+ * opt-in/native player path.
  */
 
 import { type CSSProperties, type RefObject, useEffect, useRef, useState } from 'react'
