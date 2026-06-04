@@ -35,6 +35,7 @@ const LIVE_EDGE_TARGET_SEC = 0.75
 const LIVE_EDGE_SOFT_DRIFT_SEC = 1.6
 const LIVE_EDGE_HARD_DRIFT_SEC = 3.2
 const LIVE_EDGE_CATCHUP_RATE = 1.12
+const LIVE_EDGE_MIN_CATCHUP_BUFFER_SEC = 1.0
 
 type Phase = 'paused' | 'connecting' | 'preview' | 'live' | 'offline'
 type VideoFit = 'contain' | 'cover' | 'fill'
@@ -453,10 +454,19 @@ export default function FieldCameraFeed({
         return
       }
       const drift = hlsLatency && hlsLatency > 0 ? hlsLatency : liveEnd - video.currentTime
-      if (drift > LIVE_EDGE_HARD_DRIFT_SEC) {
+      const forwardBuffer = bufferedAhead()
+      if (
+        drift > LIVE_EDGE_HARD_DRIFT_SEC &&
+        forwardBuffer != null &&
+        forwardBuffer > LIVE_EDGE_MIN_CATCHUP_BUFFER_SEC
+      ) {
         video.currentTime = Math.max(0, liveEnd - LIVE_EDGE_TARGET_SEC)
         video.playbackRate = 1
-      } else if (drift > LIVE_EDGE_SOFT_DRIFT_SEC) {
+      } else if (
+        drift > LIVE_EDGE_SOFT_DRIFT_SEC &&
+        forwardBuffer != null &&
+        forwardBuffer > LIVE_EDGE_MIN_CATCHUP_BUFFER_SEC
+      ) {
         video.playbackRate = LIVE_EDGE_CATCHUP_RATE
       } else if (video.playbackRate !== 1) {
         video.playbackRate = 1
