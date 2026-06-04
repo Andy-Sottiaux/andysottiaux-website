@@ -27,6 +27,9 @@ const SNAPSHOT_REFRESH_MS = 4_000
 const STREAM_START_TIMEOUT_MS = 20_000
 const HLS_RETRY_MS = 3_000
 const STALE_CLEAN_FRAME_SEC = 10
+const LIVE_EDGE_TARGET_SEC = 0.75
+const LIVE_EDGE_SOFT_DRIFT_SEC = 1.6
+const LIVE_EDGE_HARD_DRIFT_SEC = 3.2
 
 type Phase = 'paused' | 'connecting' | 'preview' | 'live' | 'offline'
 type VideoFit = 'contain' | 'cover' | 'fill'
@@ -322,8 +325,10 @@ export default function FieldCameraFeed({
       destroy: () => void
       startLoad?: (startPosition?: number) => void
       recoverMediaError?: () => void
+      liveSyncPosition?: number | null
     } | null = null
     let recoverAttempts = 0
+    let liveEdgeTimer: number | null = null
 
     const markLive = () => {
       if (cancelled) return
@@ -348,9 +353,27 @@ export default function FieldCameraFeed({
     video.addEventListener('error', fail)
 
     const play = () => video.play().catch(() => undefined)
+    const followLiveEdge = () => {
+      if (cancelled || video.paused || video.readyState < 2) return
+      const liveSyncPosition = typeof hls?.liveSyncPosition === 'number' ? hls.liveSyncPosition : null
+      const seekable = video.seekable
+      const liveEnd = liveSyncPosition ??
+        (seekable.length > 0 ? seekable.end(seekable.length - 1) : null)
+      if (liveEnd == null || !Number.isFinite(liveEnd) || liveEnd <= 0) return
+      const drift = liveEnd - video.currentTime
+      if (drift > LIVE_EDGE_HARD_DRIFT_SEC) {
+        video.currentTime = Math.max(0, liveEnd - LIVE_EDGE_TARGET_SEC)
+        video.playbackRate = 1
+      } else if (drift > LIVE_EDGE_SOFT_DRIFT_SEC) {
+        video.playbackRate = 1.08
+      } else if (video.playbackRate !== 1) {
+        video.playbackRate = 1
+      }
+    }
     const startTimeout = window.setTimeout(() => {
       if (!painted) fail()
     }, STREAM_START_TIMEOUT_MS)
+    liveEdgeTimer = window.setInterval(followLiveEdge, 1_000)
 
     if (video.canPlayType('application/vnd.apple.mpegurl')) {
       video.src = hlsUrl
@@ -365,14 +388,17 @@ export default function FieldCameraFeed({
             return
           }
           const instance = new Hls({
-            lowLatencyMode: false,
-            liveSyncDurationCount: 3,
-            liveMaxLatencyDurationCount: 6,
-            maxBufferLength: 10,
+            lowLatencyMode: true,
+            liveSyncDurationCount: 1,
+            liveMaxLatencyDurationCount: 3,
+            maxBufferLength: 3,
+            maxMaxBufferLength: 5,
             backBufferLength: 0,
-            manifestLoadingTimeOut: 10_000,
-            levelLoadingTimeOut: 10_000,
-            fragLoadingTimeOut: 12_000,
+            manifestLoadingTimeOut: 5_000,
+            levelLoadingTimeOut: 5_000,
+            fragLoadingTimeOut: 6_000,
+            nudgeOffset: 0.05,
+            nudgeMaxRetry: 5,
           })
           hls = instance
           instance.loadSource(hlsUrl)
@@ -399,9 +425,11 @@ export default function FieldCameraFeed({
     return () => {
       cancelled = true
       window.clearTimeout(startTimeout)
+      if (liveEdgeTimer != null) window.clearInterval(liveEdgeTimer)
       video.removeEventListener('loadeddata', markLive)
       video.removeEventListener('playing', markLive)
       video.removeEventListener('error', fail)
+      video.playbackRate = 1
       hls?.destroy()
       video.removeAttribute('src')
       video.load()
