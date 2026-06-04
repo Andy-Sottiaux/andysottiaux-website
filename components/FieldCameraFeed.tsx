@@ -8,12 +8,10 @@
  * take the public camera offline.
  */
 
-import { createElement, type CSSProperties, type RefObject, useEffect, useRef, useState } from 'react'
+import { type CSSProperties, type RefObject, useEffect, useRef, useState } from 'react'
 import {
   CAMERA_HOST,
   FAST_PLAYER_ENABLED,
-  GO2RTC_SCRIPT_URL,
-  GO2RTC_WS_URL,
   HLS_URL,
   MJPEG_URL,
   PLAYER_MODE,
@@ -34,19 +32,9 @@ const STALE_CLEAN_FRAME_SEC = 10
 const LIVE_EDGE_TARGET_SEC = 0.75
 const LIVE_EDGE_SOFT_DRIFT_SEC = 1.6
 const LIVE_EDGE_HARD_DRIFT_SEC = 3.2
-const GO2RTC_SCRIPT_ID = 'cayley-go2rtc-video-stream'
 
 type Phase = 'paused' | 'connecting' | 'preview' | 'live' | 'offline'
 type VideoFit = 'contain' | 'cover' | 'fill'
-
-type Go2RtcElement = HTMLElement & {
-  mode?: string
-  media?: string
-  background?: boolean
-  visibilityThreshold?: number
-  src?: string | URL
-  ondisconnect?: () => void
-}
 
 type VideoOverlayLayout = {
   left: number
@@ -128,48 +116,6 @@ type HealthPayload = {
 type QualityRateSample = {
   ts: number
   hlsFramesWritten: number
-}
-
-let go2rtcScriptPromise: Promise<void> | null = null
-
-function ensureGo2RtcPlayerScript(src: string): Promise<void> {
-  if (typeof window === 'undefined') return Promise.reject(new Error('browser_required'))
-  if (window.customElements?.get('video-stream')) return Promise.resolve()
-  if (go2rtcScriptPromise) return go2rtcScriptPromise
-
-  go2rtcScriptPromise = new Promise<void>((resolve, reject) => {
-    const existing = document.getElementById(GO2RTC_SCRIPT_ID) as HTMLScriptElement | null
-    const script = existing || document.createElement('script')
-    let settled = false
-
-    const finish = () => {
-      if (settled) return
-      settled = true
-      window.customElements.whenDefined('video-stream').then(() => resolve()).catch(reject)
-    }
-    const fail = () => {
-      if (settled) return
-      settled = true
-      go2rtcScriptPromise = null
-      reject(new Error('go2rtc_script_failed'))
-    }
-
-    script.addEventListener('load', finish, { once: true })
-    script.addEventListener('error', fail, { once: true })
-
-    if (!existing) {
-      script.id = GO2RTC_SCRIPT_ID
-      script.type = 'module'
-      script.async = true
-      script.crossOrigin = 'anonymous'
-      script.src = src
-      document.head.appendChild(script)
-    } else if (window.customElements?.get('video-stream')) {
-      finish()
-    }
-  })
-
-  return go2rtcScriptPromise
 }
 
 type DetectionItem = {
@@ -291,7 +237,6 @@ export default function FieldCameraFeed({
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
   const containerRef = useRef<HTMLDivElement>(null)
-  const rtcRef = useRef<Go2RtcElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const [active, setActive] = useState<boolean>(() => enabled && initialActive())
   const [phase, setPhase] = useState<Phase>(() => (enabled && initialActive() ? 'connecting' : 'paused'))
@@ -314,6 +259,7 @@ export default function FieldCameraFeed({
   const snapshotUrl = `${SNAPSHOT_URL}?v=${snapshotNonce}`
   const mjpegUrl = `${MJPEG_URL}?v=${streamNonce}`
   const hlsUrl = `${HLS_URL}?v=${streamNonce}`
+  const fastPlayerUrl = nativePlayerUrl(PRIMARY_FEED_STREAM)
   const mediaHealthBad = isConfirmedCameraBad(quality)
   const showStream = active && !mediaHealthBad
   const showFastPlayer = FAST_PLAYER_ENABLED && showStream && !fastPlayerFailed
@@ -378,80 +324,22 @@ export default function FieldCameraFeed({
   }, [active])
 
   useEffect(() => {
-    if (!showFastPlayer) return
-
-    const player = rtcRef.current
-    if (!player) return
+    if (!showFastPlayer || fastPlayerReady) return
 
     let cancelled = false
-    let painted = false
-    let video: HTMLVideoElement | null = null
-    let observer: MutationObserver | null = null
-
-    const markLive = () => {
+    const startTimeout = window.setTimeout(() => {
       if (cancelled) return
-      painted = true
-      setFastPlayerReady(true)
-      setSnapshotReady(true)
-      setStreamReady(true)
-      setHlsRetryCount(0)
-      setPhase('live')
-    }
-    const fail = () => {
-      if (cancelled || painted) return
       setFastPlayerReady(false)
       setFastPlayerFailed(true)
       setStreamReady(false)
       setPhase((p) => (p === 'connecting' || p === 'live' ? 'preview' : p))
-    }
-    const attachVideoListeners = () => {
-      const next = player.querySelector('video')
-      if (!next || next === video) return
-      if (video) {
-        video.removeEventListener('loadeddata', markLive)
-        video.removeEventListener('playing', markLive)
-        video.removeEventListener('error', fail)
-      }
-      video = next
-      video.muted = true
-      video.playsInline = true
-      video.controls = false
-      video.addEventListener('loadeddata', markLive)
-      video.addEventListener('playing', markLive)
-      video.addEventListener('error', fail)
-      if (video.readyState >= 2) markLive()
-    }
-
-    const startTimeout = window.setTimeout(() => {
-      if (!painted) fail()
     }, FAST_PLAYER_START_TIMEOUT_MS)
-
-    ensureGo2RtcPlayerScript(GO2RTC_SCRIPT_URL)
-      .then(() => {
-        if (cancelled) return
-        player.mode = PLAYER_MODE
-        player.media = 'video'
-        player.background = false
-        player.visibilityThreshold = 0
-        player.src = GO2RTC_WS_URL
-        attachVideoListeners()
-        observer = new MutationObserver(attachVideoListeners)
-        observer.observe(player, { childList: true, subtree: true })
-      })
-      .catch(fail)
 
     return () => {
       cancelled = true
       window.clearTimeout(startTimeout)
-      observer?.disconnect()
-      if (video) {
-        video.removeEventListener('loadeddata', markLive)
-        video.removeEventListener('playing', markLive)
-        video.removeEventListener('error', fail)
-      }
-      player.ondisconnect?.()
     }
-  }, [showFastPlayer, streamNonce])
+  }, [fastPlayerReady, showFastPlayer, streamNonce])
 
   useEffect(() => {
     if (!showStream || !fastPlayerFailed || hlsFailed) return
@@ -645,16 +533,34 @@ export default function FieldCameraFeed({
         }}
       />
 
-      {showFastPlayer &&
-        createElement('video-stream', {
-          ref: rtcRef,
-          'aria-label': 'Cayley field camera low-latency live preview',
-          className: 'cayley-go2rtc-player absolute inset-0 h-full w-full',
-          style: {
+      {showFastPlayer && (
+        <iframe
+          key={streamNonce}
+          src={fastPlayerUrl}
+          title="Cayley field camera low-latency live preview"
+          aria-label="Cayley field camera low-latency live preview"
+          allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+          allowFullScreen
+          className="cayley-go2rtc-player absolute inset-0 h-full w-full"
+          onLoad={() => {
+            setFastPlayerReady(true)
+            setSnapshotReady(true)
+            setStreamReady(true)
+            setHlsRetryCount(0)
+            setPhase('live')
+          }}
+          onError={() => {
+            setFastPlayerReady(false)
+            setFastPlayerFailed(true)
+            setStreamReady(false)
+            setPhase((p) => (p === 'connecting' || p === 'live' ? 'preview' : p))
+          }}
+          style={{
             opacity: streamActive && fastPlayerReady ? 1 : 0,
             transition: 'opacity 180ms ease',
-          },
-        })}
+          }}
+        />
+      )}
 
       {showStream && fastPlayerFailed && !hlsFailed && (
         <video
@@ -738,17 +644,8 @@ export default function FieldCameraFeed({
         }
         .cayley-go2rtc-player {
           display: block;
+          border: 0;
           background: #000;
-        }
-        .cayley-go2rtc-player video {
-          width: 100% !important;
-          height: 100% !important;
-          object-fit: var(--field-camera-fit) !important;
-          object-position: var(--field-camera-position) !important;
-          background: #000;
-        }
-        .cayley-go2rtc-player .info {
-          display: none !important;
         }
       `}</style>
     </div>
@@ -760,9 +657,6 @@ export function prewarmFieldCameraFeed() {
   const image = new Image()
   image.decoding = 'async'
   image.src = `${SNAPSHOT_URL}?v=${Date.now()}`
-  if (FAST_PLAYER_ENABLED) {
-    ensureGo2RtcPlayerScript(GO2RTC_SCRIPT_URL).catch(() => undefined)
-  }
   fetch(`${HLS_URL}?v=${Date.now()}`, { cache: 'no-store' }).catch(() => undefined)
   fetch(QUALITY_URL, { cache: 'no-store' }).catch(() => undefined)
   fetch(TRAINING_STATUS_URL, { cache: 'no-store' }).catch(() => undefined)
