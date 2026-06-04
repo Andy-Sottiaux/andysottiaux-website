@@ -139,11 +139,12 @@ type TrainingStatus = {
       duplicates?: number | null
       invalid?: number | null
       fetch_failed?: number | null
-      duplicate_ratio?: number | null
-      latest_event_age_s?: number | null
-      finish_reason?: string | null
-    } | null
-  }
+	      duplicate_ratio?: number | null
+	      latest_event_age_s?: number | null
+	      finish_reason?: string | null
+	      session_status?: string | null
+	    } | null
+	  }
   model_wait?: {
     status?: string | null
     status_count?: number | null
@@ -183,6 +184,7 @@ type TrainingStatus = {
   } | null
   error?: string
 }
+type GuidedProgress = NonNullable<NonNullable<TrainingStatus['collection_wait']>['guided_progress']>
 
 export default function FieldCameraFeed({
   enabled = true,
@@ -1049,6 +1051,7 @@ function trainingStateLabel(data: TrainingStatus): string {
   if (data.error) return 'unavailable'
   if (data.training_ready || data.dataset_ready || data.state === 'ready_to_train') return 'ready'
   if (data.collection_wait?.guided_progress?.status === 'collecting') return 'collecting'
+  if (isDuplicateStalled(data.collection_wait?.guided_progress) || data.collection_wait?.status === 'guided_failed') return 'move targets'
 
   switch (data.state) {
     case 'waiting_for_scene':
@@ -1088,7 +1091,11 @@ function progressChip(label: string, current: number | null, needed: number | nu
 function trainingWaitLine(data: TrainingStatus): string | null {
   const guided = data.collection_wait?.guided_progress
   if (guided?.available) {
-    const status = guided.status ? guided.status.replace(/_/g, ' ') : 'collecting'
+    const status = isDuplicateStalled(guided)
+      ? 'stalled'
+      : guided.status
+        ? guided.status.replace(/_/g, ' ')
+        : 'collecting'
     const kept = numericValue(guided.kept)
     const attempts = numericValue(guided.attempts)
     const duplicateRatio = numericValue(guided.duplicate_ratio)
@@ -1121,6 +1128,17 @@ function trainingWaitLine(data: TrainingStatus): string | null {
 
 function numericValue(value: number | null | undefined): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null
+}
+
+function isDuplicateStalled(guided?: GuidedProgress | null): boolean {
+  if (!guided || typeof guided !== 'object') return false
+  const duplicateRatio = numericValue(guided.duplicate_ratio)
+  return (
+    guided.status === 'complete' &&
+    (guided.session_status === 'failed' || guided.finish_reason === 'attempt_limit' || guided.finish_reason === 'duplicate_streak') &&
+    duplicateRatio != null &&
+    duplicateRatio >= 0.8
+  )
 }
 
 function formatProgressNumber(value: number): string {
