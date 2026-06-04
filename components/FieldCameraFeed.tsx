@@ -24,7 +24,8 @@ import { useFieldTheme } from './fieldTheme'
 const DETECTION_WINDOW_SEC = 60
 const DETECTIONS_URL = `/api/v3/detections?window_sec=${DETECTION_WINDOW_SEC}`
 const SNAPSHOT_REFRESH_MS = 4_000
-const STREAM_START_TIMEOUT_MS = 6_000
+const STREAM_START_TIMEOUT_MS = 12_000
+const HLS_RETRY_MS = 8_000
 const STALE_CLEAN_FRAME_SEC = 10
 
 type Phase = 'paused' | 'connecting' | 'preview' | 'live' | 'offline'
@@ -222,6 +223,7 @@ export default function FieldCameraFeed({
   const [snapshotReady, setSnapshotReady] = useState(false)
   const [streamReady, setStreamReady] = useState(false)
   const [hlsFailed, setHlsFailed] = useState(false)
+  const [hlsRetryCount, setHlsRetryCount] = useState(0)
   const debugMode = useDebugFlag()
   const overlay = useCameraHealthOverlay(active)
   const detections = useDetectionOverlay(active)
@@ -270,6 +272,7 @@ export default function FieldCameraFeed({
       setSnapshotReady(false)
       setStreamReady(false)
       setHlsFailed(false)
+      setHlsRetryCount(0)
       return
     }
 
@@ -277,6 +280,7 @@ export default function FieldCameraFeed({
     setSnapshotReady(false)
     setStreamReady(false)
     setHlsFailed(false)
+    setHlsRetryCount(0)
     setStreamNonce((n) => n + 1)
     setSnapshotNonce(Date.now())
     const timeout = window.setTimeout(() => {
@@ -304,12 +308,14 @@ export default function FieldCameraFeed({
       painted = true
       setSnapshotReady(true)
       setStreamReady(true)
+      setHlsRetryCount(0)
       setPhase('live')
     }
     const fail = () => {
       if (cancelled) return
       setStreamReady(false)
       setHlsFailed(true)
+      setHlsRetryCount((n) => n + 1)
       setPhase((p) => (p === 'connecting' || p === 'live' ? 'preview' : p))
     }
 
@@ -338,13 +344,13 @@ export default function FieldCameraFeed({
           }
           const instance = new Hls({
             lowLatencyMode: false,
-            liveSyncDurationCount: 2,
-            liveMaxLatencyDurationCount: 4,
-            maxBufferLength: 6,
+            liveSyncDurationCount: 3,
+            liveMaxLatencyDurationCount: 6,
+            maxBufferLength: 10,
             backBufferLength: 0,
-            manifestLoadingTimeOut: 4_000,
-            levelLoadingTimeOut: 4_000,
-            fragLoadingTimeOut: 6_000,
+            manifestLoadingTimeOut: 10_000,
+            levelLoadingTimeOut: 10_000,
+            fragLoadingTimeOut: 12_000,
           })
           hls = instance
           instance.loadSource(hlsUrl)
@@ -370,6 +376,17 @@ export default function FieldCameraFeed({
   }, [hlsFailed, hlsUrl, showStream])
 
   useEffect(() => {
+    if (!showStream || !hlsFailed) return
+    const retry = window.setTimeout(() => {
+      setPhase('connecting')
+      setStreamReady(false)
+      setHlsFailed(false)
+      setStreamNonce((n) => n + 1)
+    }, Math.min(30_000, HLS_RETRY_MS * Math.max(1, hlsRetryCount)))
+    return () => window.clearTimeout(retry)
+  }, [hlsFailed, hlsRetryCount, showStream])
+
+  useEffect(() => {
     if (!active) return
     if (mediaHealthBad) {
       setPhase((p) => (p === 'live' || p === 'preview' || p === 'connecting' ? 'offline' : p))
@@ -385,6 +402,7 @@ export default function FieldCameraFeed({
     setSnapshotReady(false)
     setStreamReady(false)
     setHlsFailed(false)
+    setHlsRetryCount(0)
     setStreamNonce((n) => n + 1)
     setSnapshotNonce(Date.now())
   }

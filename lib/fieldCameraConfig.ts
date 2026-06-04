@@ -16,7 +16,7 @@ export const MJPEG_URL =
   '/api/v3/camera/mjpeg'
 export const HLS_URL =
   process.env.NEXT_PUBLIC_V3_CAMERA_HLS_URL ||
-  '/api/v3/camera/hls/clean.m3u8'
+  `${CAMERA_HOST}/api/camera/hls/clean.m3u8`
 export const QUALITY_URL =
   process.env.NEXT_PUBLIC_V3_CAMERA_QUALITY_URL ||
   '/api/v3/camera/quality'
