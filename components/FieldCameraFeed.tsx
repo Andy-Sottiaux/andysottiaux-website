@@ -308,7 +308,7 @@ export default function FieldCameraFeed({
       if (cancelled) return
       setStreamReady(false)
       setHlsFailed(true)
-      setPhase((p) => (snapshotReady && !mediaHealthBad ? 'preview' : p))
+      setPhase((p) => (p === 'connecting' || p === 'live' ? 'preview' : p))
     }
 
     video.muted = true
@@ -357,7 +357,7 @@ export default function FieldCameraFeed({
       video.removeAttribute('src')
       video.load()
     }
-  }, [hlsFailed, hlsUrl, mediaHealthBad, showStream, snapshotReady])
+  }, [hlsFailed, hlsUrl, showStream])
 
   useEffect(() => {
     if (!active) return
