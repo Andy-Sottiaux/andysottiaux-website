@@ -3,7 +3,7 @@ const UPSTREAM =
   process.env.V3_UPSTREAM_HOST ||
   'https://cayley-relay.tailc7d6b6.ts.net'
 
-export const runtime = 'edge'
+export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 function contentType(asset: string) {
@@ -33,30 +33,55 @@ export async function GET(_request: Request, { params }: { params: { asset: stri
     return new Response('bad hls asset', { status: 400, headers: { 'Cache-Control': 'no-store' } })
   }
 
-  try {
-    const upstream = await fetch(`${UPSTREAM}/api/camera/hls/${encodeURIComponent(asset)}`, {
-      cache: 'no-store',
-      headers: { 'User-Agent': 'andysottiaux.com/camera-hls-proxy' },
-    })
+  const upstreamUrl = `${UPSTREAM}/api/camera/hls/${encodeURIComponent(asset)}`
+  const attempts = asset.endsWith('.ts') ? 3 : 2
 
-    if (!upstream.ok || !upstream.body) {
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    let timeoutId: ReturnType<typeof setTimeout> | null = null
+    try {
+      const ctrl = new AbortController()
+      timeoutId = setTimeout(() => ctrl.abort(), asset.endsWith('.ts') ? 10_000 : 5_000)
+      const upstream = await fetch(upstreamUrl, {
+        cache: 'no-store',
+        signal: ctrl.signal,
+        headers: { 'User-Agent': 'andysottiaux.com/camera-hls-proxy' },
+      })
+      clearTimeout(timeoutId)
+      timeoutId = null
+
+      if (!upstream.ok || !upstream.body) {
+        if (attempt < attempts) {
+          await new Promise((resolve) => setTimeout(resolve, 120 * attempt))
+          continue
+        }
+        return new Response(`hls upstream unavailable: ${upstream.status}`, {
+          status: 502,
+          headers: { 'Cache-Control': 'no-store' },
+        })
+      }
+
+      return new Response(upstream.body, {
+        status: 200,
+        headers: {
+          ...cacheHeaders(asset),
+          'Content-Type': upstream.headers.get('content-type') || contentType(asset),
+        },
+      })
+    } catch (error) {
+      if (timeoutId) clearTimeout(timeoutId)
+      if (attempt < attempts) {
+        await new Promise((resolve) => setTimeout(resolve, 120 * attempt))
+        continue
+      }
       return new Response('hls upstream unavailable', {
         status: 502,
         headers: { 'Cache-Control': 'no-store' },
       })
     }
-
-    return new Response(upstream.body, {
-      status: 200,
-      headers: {
-        ...cacheHeaders(asset),
-        'Content-Type': upstream.headers.get('content-type') || contentType(asset),
-      },
-    })
-  } catch {
-    return new Response('hls upstream unreachable', {
-      status: 502,
-      headers: { 'Cache-Control': 'no-store' },
-    })
   }
+
+  return new Response('hls upstream unreachable', {
+    status: 502,
+    headers: { 'Cache-Control': 'no-store' },
+  })
 }
