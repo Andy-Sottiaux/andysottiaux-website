@@ -41,11 +41,11 @@ const HTTP_RTC_MAX_VIDEO_DROP_RATIO = 0.32
 const HTTP_RTC_MAX_PACKET_LOSS_RATIO = 0.04
 const HLS_RETRY_MS = 3_000
 const STALE_CLEAN_FRAME_SEC = 10
-const LIVE_EDGE_TARGET_SEC = 0.75
-const LIVE_EDGE_SOFT_DRIFT_SEC = 1.6
-const LIVE_EDGE_HARD_DRIFT_SEC = 3.2
-const LIVE_EDGE_CATCHUP_RATE = 1.12
-const LIVE_EDGE_MIN_CATCHUP_BUFFER_SEC = 1.0
+const LIVE_EDGE_TARGET_SEC = 2.0
+const LIVE_EDGE_SOFT_DRIFT_SEC = 2.9
+const LIVE_EDGE_HARD_DRIFT_SEC = 4.5
+const LIVE_EDGE_CATCHUP_RATE = 1.04
+const LIVE_EDGE_MIN_CATCHUP_BUFFER_SEC = 1.4
 
 type Phase = 'paused' | 'connecting' | 'preview' | 'live' | 'offline'
 type VideoFit = 'contain' | 'cover' | 'fill'
@@ -826,12 +826,12 @@ export default function FieldCameraFeed({
         }
         const instance = new Hls({
           lowLatencyMode: true,
-          liveSyncDurationCount: 1,
-          liveMaxLatencyDurationCount: 3,
+          liveSyncDuration: LIVE_EDGE_TARGET_SEC,
+          liveMaxLatencyDuration: LIVE_EDGE_HARD_DRIFT_SEC,
           maxLiveSyncPlaybackRate: LIVE_EDGE_CATCHUP_RATE,
-          maxBufferLength: 3,
-          maxMaxBufferLength: 5,
-          backBufferLength: 0,
+          maxBufferLength: 6,
+          maxMaxBufferLength: 8,
+          backBufferLength: 1,
           manifestLoadingTimeOut: 5_000,
           levelLoadingTimeOut: 5_000,
           fragLoadingTimeOut: 6_000,
