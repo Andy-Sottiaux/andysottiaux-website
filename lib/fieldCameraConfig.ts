@@ -6,7 +6,7 @@ export type FieldCameraSource = 'field' | 'thingino'
 
 export const CAMERA_2_URL =
   process.env.NEXT_PUBLIC_V3_CAMERA_2_URL ||
-  'https://andys-macbook-pro-2.tailc7d6b6.ts.net/preview.html'
+  '/api/v3/camera2/mjpeg'
 export const CAMERA_2_NATIVE_URL =
   process.env.NEXT_PUBLIC_V3_CAMERA_2_NATIVE_URL ||
   CAMERA_2_URL

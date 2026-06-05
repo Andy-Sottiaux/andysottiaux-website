@@ -138,7 +138,7 @@ export default function ThinginoCameraFeed({
           WebkitBackdropFilter: 'blur(8px)',
         }}
       >
-        Thingino E220 / Tailnet
+        Thingino E220 / Relay
       </div>
 
       <a
