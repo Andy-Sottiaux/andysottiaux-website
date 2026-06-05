@@ -23,11 +23,13 @@ import FieldCameraPreview from './FieldCameraPreview'
 import FieldHealthCard from './FieldHealthCard'
 import FieldSolarCard from './FieldSolarCard'
 import { FieldThemeProvider, useFieldTheme } from './fieldTheme'
+import CameraSourceToggle from './CameraSourceToggle'
+import type { FieldCameraSource } from '@/lib/fieldCameraConfig'
 import { useReducedMotion } from '@/lib/useReducedMotion'
 
 // Dynamic import: the camera surface is browser-only and starts from the
 // relay-sanitized preview path, so SSR work here does not help first paint.
-const FieldCameraFeed = dynamic(() => import('./FieldCameraFeed'), {
+const CameraFeedSwitcher = dynamic(() => import('./CameraFeedSwitcher'), {
   ssr: false,
   loading: () => <FieldCameraPreview muted />,
 })
@@ -196,6 +198,10 @@ function CameraCardShell() {
   // the rounded edge.
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
+  const [selectedCamera, setSelectedCamera] = useState<FieldCameraSource>('field')
+  const footerCopy = selectedCamera === 'field'
+    ? 'Live edge-AI camera. Public read-only stream.'
+    : 'Thingino E220 camera. Tailnet view.'
 
   return (
     <div
@@ -210,11 +216,19 @@ function CameraCardShell() {
     >
       {/* Header strip */}
       <div className="px-7 md:px-8 pt-7 md:pt-8 pb-5">
-        <div
-          className="text-[10.5px] font-semibold uppercase tracking-[0.22em]"
-          style={{ color: isLight ? '#0a8aa8' : 'rgba(103, 232, 249, 0.9)' /* cyan-300/90 */ }}
-        >
-          Camera
+        <div className="flex items-center justify-between gap-3">
+          <div
+            className="text-[10.5px] font-semibold uppercase tracking-[0.22em]"
+            style={{ color: isLight ? '#0a8aa8' : 'rgba(103, 232, 249, 0.9)' /* cyan-300/90 */ }}
+          >
+            Camera
+          </div>
+          <CameraSourceToggle
+            value={selectedCamera}
+            onChange={setSelectedCamera}
+            isLight={isLight}
+            compact
+          />
         </div>
       </div>
 
@@ -230,7 +244,7 @@ function CameraCardShell() {
               : '0 8px 24px rgba(0,0,0,0.4)',
           }}
         >
-          <FieldCameraFeed />
+          <CameraFeedSwitcher selectedCamera={selectedCamera} />
         </div>
       </div>
 
@@ -240,7 +254,7 @@ function CameraCardShell() {
           className="text-[13px] tracking-tight leading-snug"
           style={{ color: palette.bodyText }}
         >
-          Live edge-AI camera. Public read-only stream.
+          {footerCopy}
         </div>
       </div>
     </div>

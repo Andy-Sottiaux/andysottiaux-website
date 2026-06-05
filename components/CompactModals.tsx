@@ -20,9 +20,11 @@ import { useEffect, useState } from 'react'
 import FieldCameraPreview from './FieldCameraPreview'
 import FieldHealthCard from './FieldHealthCard'
 import FieldSolarCard from './FieldSolarCard'
+import CameraSourceToggle from './CameraSourceToggle'
 import { useFieldTheme } from './fieldTheme'
+import type { FieldCameraSource } from '@/lib/fieldCameraConfig'
 
-const FieldCameraFeed = dynamic(() => import('./FieldCameraFeed'), {
+const CameraFeedSwitcher = dynamic(() => import('./CameraFeedSwitcher'), {
   ssr: false,
   loading: () => <FieldCameraPreview muted />,
 })
@@ -122,16 +124,33 @@ export function AboutModalContent() {
 
 /* ─────────────────── Field Live ─────────────────── */
 
-export function LiveModalContent() {
+export function LiveModalContent({
+  selectedCamera = 'field',
+  onCameraChange = () => undefined,
+}: {
+  selectedCamera?: FieldCameraSource
+  onCameraChange?: (value: FieldCameraSource) => void
+}) {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
+  const intro = selectedCamera === 'field'
+    ? 'Live edge-AI camera and solar telemetry from a board I built end-to-end - hardware, firmware, and the public read-only stream you are seeing.'
+    : 'HatchingPoint-branded Thingino E220 view through the tailnet proxy. The camera stays lightweight; this page only pulls the stream.'
 
   return (
     <div className="flex flex-col gap-5">
-      <p className="text-[14px] sm:text-[15px] leading-relaxed" style={{ color: palette.bodyText }}>
-        Live edge-AI camera and solar telemetry from a board I built end-to-end — hardware, firmware, and
-        the public read-only stream you&apos;re seeing.
-      </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <p className="text-[14px] sm:text-[15px] leading-relaxed" style={{ color: palette.bodyText }}>
+          {intro}
+        </p>
+        <div className="shrink-0">
+          <CameraSourceToggle
+            value={selectedCamera}
+            onChange={onCameraChange}
+            isLight={isLight}
+          />
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div className="md:col-span-2">
@@ -145,7 +164,7 @@ export function LiveModalContent() {
                 : '0 8px 24px rgba(0,0,0,0.4)',
             }}
           >
-            <FieldCameraFeed />
+            <CameraFeedSwitcher selectedCamera={selectedCamera} />
           </div>
         </div>
         <div className="md:col-span-1 [&>div]:h-full">

@@ -38,6 +38,7 @@ import dynamic from 'next/dynamic'
 import FieldSolarCard from './FieldSolarCard'
 import FieldHealthCard from './FieldHealthCard'
 import FieldCameraPreview from './FieldCameraPreview'
+import CameraSourceToggle from './CameraSourceToggle'
 import { FieldThemeProvider, useFieldTheme } from './fieldTheme'
 import Modal from './Modal'
 import { prewarmFieldCameraSurface } from './prewarmFieldCamera'
@@ -53,10 +54,11 @@ import {
 } from './CompactModals'
 import { useBoardLive } from '@/lib/useBoardLive'
 import { haptic } from '@/lib/haptics'
+import type { FieldCameraSource } from '@/lib/fieldCameraConfig'
 
-// Same dynamic import the home page uses — the camera feed embeds go2rtc's
-// native player, so SSR'ing it is wasted work.
-const FieldCameraFeed = dynamic(() => import('./FieldCameraFeed'), {
+// Same dynamic import the home page uses. The switcher keeps Cam 1 on the
+// original relay feed and routes Cam 2 to the Thingino view client-side.
+const CameraFeedSwitcher = dynamic(() => import('./CameraFeedSwitcher'), {
   ssr: false,
   loading: () => <FieldCameraPreview fit="cover" muted />,
 })
@@ -83,6 +85,7 @@ function CompactInner({ initialBoardLive }: { initialBoardLive: boolean }) {
   const boardLive = useBoardLive(initialBoardLive)
 
   const [openModal, setOpenModal] = useState<ModalKey | null>(null)
+  const [selectedCamera, setSelectedCamera] = useState<FieldCameraSource>('field')
   const close = () => setOpenModal(null)
   const open = (key: ModalKey) => {
     if (key === 'live') prewarmFieldCameraSurface()
@@ -114,7 +117,13 @@ function CompactInner({ initialBoardLive }: { initialBoardLive: boolean }) {
           Mobile: keeps `min-h-screen` and natural vertical scrolling. */}
       <div className="bento-shell flex-1 flex flex-col px-4 sm:px-6 md:px-8 py-3 sm:py-4 md:py-5 md:min-h-0">
         <div className="w-full max-w-[1380px] mx-auto md:flex-1 md:flex md:flex-col md:min-h-0">
-          <Bento boardLive={boardLive} cameraEnabled={openModal !== 'live'} onOpen={open} />
+          <Bento
+            boardLive={boardLive}
+            cameraEnabled={openModal !== 'live'}
+            selectedCamera={selectedCamera}
+            onCameraChange={setSelectedCamera}
+            onOpen={open}
+          />
         </div>
       </div>
 
@@ -136,7 +145,7 @@ function CompactInner({ initialBoardLive }: { initialBoardLive: boolean }) {
         eyebrow="Edge-AI deployment"
         size="lg"
       >
-        <LiveModalContent />
+        <LiveModalContent selectedCamera={selectedCamera} onCameraChange={setSelectedCamera} />
       </Modal>
       <Modal
         open={openModal === 'experience'}
@@ -193,10 +202,14 @@ function CompactInner({ initialBoardLive }: { initialBoardLive: boolean }) {
 function Bento({
   boardLive,
   cameraEnabled,
+  selectedCamera,
+  onCameraChange,
   onOpen,
 }: {
   boardLive: boolean
   cameraEnabled: boolean
+  selectedCamera: FieldCameraSource
+  onCameraChange: (value: FieldCameraSource) => void
   onOpen: (key: ModalKey) => void
 }) {
   return (
@@ -213,7 +226,12 @@ function Bento({
       </div>
 
       <div className="col-span-12 md:col-span-6 md:col-start-4 md:row-start-1 md:row-span-2">
-        <CameraTile enabled={cameraEnabled} onOpen={() => onOpen('live')} />
+        <CameraTile
+          enabled={cameraEnabled}
+          selectedCamera={selectedCamera}
+          onCameraChange={onCameraChange}
+          onOpen={() => onOpen('live')}
+        />
       </div>
 
       <div className="col-span-12 md:col-span-3 md:col-start-10 md:row-start-1 md:row-span-2">
@@ -477,7 +495,17 @@ function IdentityTile({ onOpen }: { onOpen?: () => void }) {
 
 /* ───────────────────── Camera tile ──────────────────────── */
 
-function CameraTile({ enabled, onOpen }: { enabled: boolean; onOpen?: () => void }) {
+function CameraTile({
+  enabled,
+  selectedCamera,
+  onCameraChange,
+  onOpen,
+}: {
+  enabled: boolean
+  selectedCamera: FieldCameraSource
+  onCameraChange: (value: FieldCameraSource) => void
+  onOpen?: () => void
+}) {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
 
@@ -490,6 +518,14 @@ function CameraTile({ enabled, onOpen }: { enabled: boolean; onOpen?: () => void
       modalLabel="Open Field Live"
       className="min-h-[280px] md:min-h-0"
     >
+      <div className="absolute right-5 top-3.5 z-20">
+        <CameraSourceToggle
+          value={selectedCamera}
+          onChange={onCameraChange}
+          isLight={isLight}
+          compact
+        />
+      </div>
       <div className="px-3 md:px-[clamp(0.75rem,1.15vw,1rem)] pt-2 md:pt-[clamp(0.35rem,1.0dvh,0.75rem)] pb-3 md:pb-[clamp(0.55rem,1.35dvh,1rem)] flex-1 min-h-0">
         <div
           className="relative w-full h-full min-h-[132px] overflow-hidden rounded-[14px]"
@@ -501,7 +537,7 @@ function CameraTile({ enabled, onOpen }: { enabled: boolean; onOpen?: () => void
               : '0 8px 24px rgba(0,0,0,0.4)',
           }}
         >
-          <FieldCameraFeed enabled={enabled} fit="cover" />
+          <CameraFeedSwitcher enabled={enabled} fit="cover" selectedCamera={selectedCamera} />
         </div>
       </div>
     </Tile>

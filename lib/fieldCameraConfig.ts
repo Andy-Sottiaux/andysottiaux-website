@@ -2,6 +2,21 @@ export const CAMERA_HOST =
   process.env.NEXT_PUBLIC_V3_CAMERA_HOST ||
   'https://cayley-relay.tailc7d6b6.ts.net'
 
+export type FieldCameraSource = 'field' | 'thingino'
+
+export const CAMERA_2_URL =
+  process.env.NEXT_PUBLIC_V3_CAMERA_2_URL ||
+  'https://andys-macbook-pro-2.tailc7d6b6.ts.net/preview.html'
+export const CAMERA_2_NATIVE_URL =
+  process.env.NEXT_PUBLIC_V3_CAMERA_2_NATIVE_URL ||
+  CAMERA_2_URL
+export const CAMERA_2_MJPEG_URL =
+  process.env.NEXT_PUBLIC_V3_CAMERA_2_MJPEG_URL ||
+  '/api/v3/camera2/mjpeg'
+export const CAMERA_2_SNAPSHOT_URL =
+  process.env.NEXT_PUBLIC_V3_CAMERA_2_SNAPSHOT_URL ||
+  '/api/v3/camera2/snapshot'
+
 export const PRIMARY_FEED_STREAM = process.env.NEXT_PUBLIC_V3_FEED_STREAM || 'cayley-sub'
 export const PLAYER_MODE = process.env.NEXT_PUBLIC_V3_PLAYER_MODE || 'webrtc,mse,hls,mjpeg'
 export const FAST_PLAYER_ENABLED = process.env.NEXT_PUBLIC_V3_FAST_PLAYER_ENABLED === '1'
