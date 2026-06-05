@@ -46,16 +46,6 @@ const LIVE_EDGE_SOFT_DRIFT_SEC = 2.9
 const LIVE_EDGE_HARD_DRIFT_SEC = 4.5
 const LIVE_EDGE_CATCHUP_RATE = 1.04
 const LIVE_EDGE_MIN_CATCHUP_BUFFER_SEC = 1.4
-const DEFAULT_HLS_PROXY_URL = '/api/v3/camera/hls/clean.m3u8'
-const DIRECT_RELAY_HLS_URL = `${CAMERA_HOST.replace(/\/+$/, '')}/api/camera/hls/clean.m3u8`
-
-function fieldHlsBaseUrl(): string {
-  return HLS_URL === DEFAULT_HLS_PROXY_URL ? DIRECT_RELAY_HLS_URL : HLS_URL
-}
-
-function cacheBust(url: string, nonce: number): string {
-  return `${url}${url.includes('?') ? '&' : '?'}v=${nonce}`
-}
 
 type Phase = 'paused' | 'connecting' | 'preview' | 'live' | 'offline'
 type VideoFit = 'contain' | 'cover' | 'fill'
@@ -312,9 +302,9 @@ export default function FieldCameraFeed({
   const mediaWidth = overlay.profile?.width || 1280
   const mediaHeight = overlay.profile?.height || 960
   const videoLayout = useOverlayLayout(containerRef, fit, position, mediaWidth, mediaHeight)
-  const snapshotUrl = cacheBust(SNAPSHOT_URL, snapshotNonce)
-  const mjpegUrl = cacheBust(MJPEG_URL, streamNonce)
-  const hlsUrl = cacheBust(fieldHlsBaseUrl(), streamNonce)
+  const snapshotUrl = `${SNAPSHOT_URL}?v=${snapshotNonce}`
+  const mjpegUrl = `${MJPEG_URL}?v=${streamNonce}`
+  const hlsUrl = `${HLS_URL}?v=${streamNonce}`
   const webrtcOfferUrl = `${WEBRTC_OFFER_URL}?stream=${encodeURIComponent(PRIMARY_FEED_STREAM)}&v=${streamNonce}`
   const fastPlayerUrl = nativePlayerUrl(PRIMARY_FEED_STREAM)
   const mediaHealthBad = isConfirmedCameraBad(quality)
@@ -1102,8 +1092,8 @@ export function prewarmFieldCameraFeed() {
   if (typeof window === 'undefined') return
   const image = new Image()
   image.decoding = 'async'
-  image.src = cacheBust(SNAPSHOT_URL, Date.now())
-  fetch(cacheBust(fieldHlsBaseUrl(), Date.now()), { cache: 'no-store' }).catch(() => undefined)
+  image.src = `${SNAPSHOT_URL}?v=${Date.now()}`
+  fetch(`${HLS_URL}?v=${Date.now()}`, { cache: 'no-store' }).catch(() => undefined)
   fetch(QUALITY_URL, { cache: 'no-store' }).catch(() => undefined)
   fetch(TRAINING_STATUS_URL, { cache: 'no-store' }).catch(() => undefined)
 }
