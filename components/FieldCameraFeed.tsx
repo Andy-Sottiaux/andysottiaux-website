@@ -28,7 +28,7 @@ import { useFieldTheme } from './fieldTheme'
 
 const DETECTION_WINDOW_SEC = 60
 const DETECTIONS_URL = `/api/v3/detections?window_sec=${DETECTION_WINDOW_SEC}`
-const SNAPSHOT_REFRESH_MS = 4_000
+const SNAPSHOT_REFRESH_MS = 15_000
 const STREAM_START_TIMEOUT_MS = 20_000
 const FAST_PLAYER_START_TIMEOUT_MS = 8_000
 const HTTP_RTC_START_TIMEOUT_MS = 4_000
@@ -917,7 +917,7 @@ export default function FieldCameraFeed({
     setSnapshotNonce(Date.now())
   }
 
-  const streamActive = streamReady && phase === 'live'
+  const streamActive = streamReady && phase !== 'paused' && phase !== 'offline'
 
   return (
     <div
