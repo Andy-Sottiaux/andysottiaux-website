@@ -292,6 +292,7 @@ export default function FieldCameraFeed({
   const [fastPlayerFailed, setFastPlayerFailed] = useState(!FAST_PLAYER_ENABLED)
   const [httpRtcReady, setHttpRtcReady] = useState(false)
   const [httpRtcFailed, setHttpRtcFailed] = useState(!HTTP_RTC_ENABLED)
+  const [hlsReady, setHlsReady] = useState(false)
   const [hlsFailed, setHlsFailed] = useState(false)
   const [hlsRetryCount, setHlsRetryCount] = useState(0)
   const debugMode = useDebugFlag()
@@ -311,7 +312,8 @@ export default function FieldCameraFeed({
   const showStream = active && !mediaHealthBad
   const showFastPlayer = FAST_PLAYER_ENABLED && showStream && !fastPlayerFailed
   const showHttpRtc = HTTP_RTC_ENABLED && showStream && fastPlayerFailed && !httpRtcFailed
-  const showHls = showStream && fastPlayerFailed && !hlsFailed && !httpRtcReady
+  const showHls = showStream && fastPlayerFailed && !hlsFailed
+  const hasPaintedTransport = streamReady || fastPlayerReady || httpRtcReady || hlsReady
 
   useEffect(() => {
     const el = containerRef.current
@@ -350,6 +352,7 @@ export default function FieldCameraFeed({
       setFastPlayerFailed(!FAST_PLAYER_ENABLED)
       setHttpRtcReady(false)
       setHttpRtcFailed(!HTTP_RTC_ENABLED)
+      setHlsReady(false)
       setHlsFailed(false)
       setHlsRetryCount(0)
       return
@@ -362,6 +365,7 @@ export default function FieldCameraFeed({
     setFastPlayerFailed(!FAST_PLAYER_ENABLED)
     setHttpRtcReady(false)
     setHttpRtcFailed(!HTTP_RTC_ENABLED)
+    setHlsReady(false)
     setHlsFailed(false)
     setHlsRetryCount(0)
     setStreamNonce((n) => n + 1)
@@ -375,10 +379,10 @@ export default function FieldCameraFeed({
   }, [active])
 
   useEffect(() => {
-    if (!active || streamReady) return
+    if (!active || hasPaintedTransport) return
     const refresh = window.setInterval(() => setSnapshotNonce(Date.now()), SNAPSHOT_REFRESH_MS)
     return () => window.clearInterval(refresh)
-  }, [active, streamReady])
+  }, [active, hasPaintedTransport])
 
   useEffect(() => {
     if (!showFastPlayer || fastPlayerReady) return
@@ -420,6 +424,8 @@ export default function FieldCameraFeed({
       videoTimeSec: number
       videoDroppedFrames: number | null
       videoTotalFrames: number | null
+      rtcFramesDecoded: number | null
+      rtcFramesDropped: number | null
       rtcPacketsLost: number | null
       rtcPacketsReceived: number | null
     } | null = null
@@ -489,6 +495,8 @@ export default function FieldCameraFeed({
         videoTimeSec: metrics.videoTimeSec,
         videoDroppedFrames: metrics.videoDroppedFrames ?? null,
         videoTotalFrames: metrics.videoTotalFrames ?? null,
+        rtcFramesDecoded: metrics.rtcFramesDecoded ?? null,
+        rtcFramesDropped: metrics.rtcFramesDropped ?? null,
         rtcPacketsLost: metrics.rtcPacketsLost ?? null,
         rtcPacketsReceived: metrics.rtcPacketsReceived ?? null,
       }
@@ -509,6 +517,14 @@ export default function FieldCameraFeed({
         next.videoTotalFrames != null && lastHealthSample.videoTotalFrames != null
           ? next.videoTotalFrames - lastHealthSample.videoTotalFrames
           : null
+      const rtcFramesDecodedDelta =
+        next.rtcFramesDecoded != null && lastHealthSample.rtcFramesDecoded != null
+          ? next.rtcFramesDecoded - lastHealthSample.rtcFramesDecoded
+          : null
+      const rtcFramesDroppedDelta =
+        next.rtcFramesDropped != null && lastHealthSample.rtcFramesDropped != null
+          ? next.rtcFramesDropped - lastHealthSample.rtcFramesDropped
+          : null
       const packetLostDelta =
         next.rtcPacketsLost != null && lastHealthSample.rtcPacketsLost != null
           ? next.rtcPacketsLost - lastHealthSample.rtcPacketsLost
@@ -521,7 +537,13 @@ export default function FieldCameraFeed({
       const videoDropRatio =
         videoDroppedDelta != null && videoTotalDelta != null && videoTotalDelta > 0
           ? videoDroppedDelta / videoTotalDelta
-          : 0
+          : null
+      const rtcFrameDropRatio =
+        rtcFramesDroppedDelta != null &&
+        rtcFramesDecodedDelta != null &&
+        rtcFramesDecodedDelta + rtcFramesDroppedDelta > 0
+          ? rtcFramesDroppedDelta / (rtcFramesDecodedDelta + rtcFramesDroppedDelta)
+          : null
       const packetLossRatio =
         packetLostDelta != null && packetReceivedDelta != null && packetReceivedDelta + packetLostDelta > 0
           ? packetLostDelta / (packetReceivedDelta + packetLostDelta)
@@ -529,7 +551,11 @@ export default function FieldCameraFeed({
 
       let reason: string | null = null
       if (progressRatio < HTTP_RTC_MIN_PROGRESS_RATIO) reason = 'slow_playback'
-      else if (videoDropRatio > HTTP_RTC_MAX_VIDEO_DROP_RATIO) reason = 'video_drops'
+      else if (
+        rtcFrameDropRatio != null
+          ? rtcFrameDropRatio > HTTP_RTC_MAX_VIDEO_DROP_RATIO
+          : (videoDropRatio ?? 0) > HTTP_RTC_MAX_VIDEO_DROP_RATIO
+      ) reason = 'video_drops'
       else if (packetLossRatio > HTTP_RTC_MAX_PACKET_LOSS_RATIO) reason = 'packet_loss'
 
       if (reason) {
@@ -587,10 +613,11 @@ export default function FieldCameraFeed({
       degradedReason = reason || degradedReason
       metricsWindow.__cayleyCameraLastRtcDegradedReason = degradedReason
       publishMetrics()
+      const hlsPainted = (videoRef.current?.readyState ?? 0) >= 2
       setHttpRtcReady(false)
       setHttpRtcFailed(true)
-      setStreamReady(false)
-      setPhase((p) => (p === 'connecting' || p === 'live' ? 'preview' : p))
+      setStreamReady(hlsPainted)
+      setPhase((p) => (hlsPainted ? 'live' : (p === 'connecting' || p === 'live' ? 'preview' : p)))
     }
     const onVideoError = () => fail('video_error')
     const closePeer = () => {
@@ -710,6 +737,15 @@ export default function FieldCameraFeed({
       return Number.isFinite(end) ? Math.max(0, end - video.currentTime) : null
     }
     const publishMetrics = () => {
+      const rtcVideo = rtcVideoRef.current
+      if (
+        rtcVideo &&
+        rtcVideo.readyState >= 2 &&
+        typeof window !== 'undefined' &&
+        window.getComputedStyle(rtcVideo).opacity !== '0'
+      ) {
+        return
+      }
       const hlsState = hls as ({
         latency?: number
         targetLatency?: number | null
@@ -751,6 +787,7 @@ export default function FieldCameraFeed({
       if (cancelled) return
       painted = true
       publishMetrics()
+      setHlsReady(true)
       setSnapshotReady(true)
       setStreamReady(true)
       setHlsRetryCount(0)
@@ -758,10 +795,12 @@ export default function FieldCameraFeed({
     }
     const fail = () => {
       if (cancelled) return
-      setStreamReady(false)
+      const rtcPainted = (rtcVideoRef.current?.readyState ?? 0) >= 2
+      setHlsReady(false)
+      setStreamReady(rtcPainted)
       setHlsFailed(true)
       setHlsRetryCount((n) => n + 1)
-      setPhase((p) => (p === 'connecting' || p === 'live' ? 'preview' : p))
+      setPhase((p) => (rtcPainted ? 'live' : (p === 'connecting' || p === 'live' ? 'preview' : p)))
     }
 
     video.muted = true
@@ -877,8 +916,11 @@ export default function FieldCameraFeed({
       video.removeEventListener('loadeddata', markLive)
       video.removeEventListener('playing', markLive)
       video.removeEventListener('error', fail)
+      setHlsReady(false)
       video.playbackRate = 1
-      delete metricsWindow.__cayleyCameraMetrics
+      if (metricsWindow.__cayleyCameraMetrics?.mode === 'hls') {
+        delete metricsWindow.__cayleyCameraMetrics
+      }
       hls?.destroy()
       video.removeAttribute('src')
       video.load()
@@ -915,13 +957,14 @@ export default function FieldCameraFeed({
     setFastPlayerFailed(!FAST_PLAYER_ENABLED)
     setHttpRtcReady(false)
     setHttpRtcFailed(!HTTP_RTC_ENABLED)
+    setHlsReady(false)
     setHlsFailed(false)
     setHlsRetryCount(0)
     setStreamNonce((n) => n + 1)
     setSnapshotNonce(Date.now())
   }
 
-  const streamActive = streamReady && phase !== 'paused' && phase !== 'offline'
+  const streamActive = hasPaintedTransport && phase !== 'paused' && phase !== 'offline'
 
   return (
     <div
@@ -945,7 +988,7 @@ export default function FieldCameraFeed({
         }}
         onError={() => {
           setSnapshotReady(false)
-          setPhase((p) => (p === 'live' && streamReady ? p : 'offline'))
+          setPhase((p) => (p === 'live' && hasPaintedTransport ? p : 'offline'))
         }}
         style={{
           objectFit: fit,
@@ -1013,13 +1056,13 @@ export default function FieldCameraFeed({
           style={{
             objectFit: fit,
             objectPosition: position,
-            opacity: streamActive ? 1 : 0,
+            opacity: streamActive && !httpRtcReady ? 1 : 0,
             transition: 'opacity 240ms ease',
           }}
         />
       )}
 
-      {showStream && fastPlayerFailed && hlsFailed && (
+      {showStream && fastPlayerFailed && hlsFailed && !httpRtcReady && (
         <img
           key={streamNonce}
           src={mjpegUrl}

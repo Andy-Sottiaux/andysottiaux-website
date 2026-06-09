@@ -5,7 +5,7 @@ import path from 'node:path'
 import { chromium } from 'playwright'
 
 const targetUrl = process.env.CAMERA_VERIFY_URL || process.argv[2] || 'https://andysottiaux.com/?debug=1'
-const expectedMode = process.env.CAMERA_VERIFY_MODE || 'hls'
+const expectedMode = process.env.CAMERA_VERIFY_MODE || 'any'
 const screenshotPath = process.env.CAMERA_VERIFY_SCREENSHOT ||
   path.join(process.cwd(), 'tmp', 'camera-feed-smoke.png')
 const timeoutMs = Number.parseInt(process.env.CAMERA_VERIFY_TIMEOUT_MS || '45000', 10)
@@ -45,7 +45,8 @@ function evaluateCameraState(state, frameState) {
     state.rtcVideo.videoHeight >= 720 &&
     state.rtcVideo.opacity !== '0' &&
     state.rtcVideo.hasSrcObject &&
-    state.cameraMetrics?.mode === 'rtc'
+    state.cameraMetrics?.mode === 'rtc' &&
+    !state.cameraMetrics?.rtcDegradedReason
 
   return {
     hlsOk: Boolean(hlsOk),
@@ -53,7 +54,9 @@ function evaluateCameraState(state, frameState) {
     embeddedRtcOk: Boolean(embeddedRtcOk),
     expectedOk: expectedMode === 'rtc'
       ? Boolean(rtcOk || embeddedRtcOk)
-      : Boolean(hlsOk || embeddedRtcOk),
+      : expectedMode === 'hls'
+        ? Boolean(hlsOk)
+        : Boolean(hlsOk || rtcOk || embeddedRtcOk),
   }
 }
 
@@ -231,7 +234,7 @@ try {
       screenshotPath,
     })
   }
-  if (expectedMode === 'hls' && blockedEvents.length > 0) {
+  if (expectedMode !== 'rtc' && blockedEvents.length > 0) {
     fail('camera_embed_has_private_network_blocks', {
       state,
       blockedEvents,
@@ -241,7 +244,7 @@ try {
   }
   const hlsLatencySec = state.cameraMetrics?.hlsLatencySec
   if (
-    expectedMode === 'hls' &&
+    expectedMode !== 'rtc' &&
     state.cameraMetrics?.mode === 'hls' &&
     Number.isFinite(maxHlsLatencySec) &&
     maxHlsLatencySec > 0 &&
@@ -258,7 +261,8 @@ try {
 
   console.log(JSON.stringify({
     ok: true,
-    mode: expectedMode,
+    mode: state.cameraMetrics?.mode || (checks.embeddedRtcOk || checks.rtcOk ? 'rtc' : checks.hlsOk ? 'hls' : expectedMode),
+    expectedMode,
     timings,
     checks,
     state,
