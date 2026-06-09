@@ -137,6 +137,10 @@ try {
   }
   await page.screenshot({ path: screenshotPath, fullPage: false })
 
+  const steadySamples = firstPaintMs == null
+    ? []
+    : samples.filter((sample) => sample.elapsedMs >= firstPaintMs)
+  const blankAfterFirstPaintSamples = steadySamples.filter((sample) => !cameraPainted(sample))
   const first = samples[0] || null
   const last = samples[samples.length - 1] || null
   const videoTimeDeltaSec = first?.video && last?.video
@@ -152,13 +156,17 @@ try {
   const videoCorruptedFramesDelta = summarizeVideoCounterDelta(samples, 'corruptedVideoFrames')
 
   const summary = {
-    ok: samples.length > 0 && samples.every((sample) => cameraPainted(sample)),
+    ok: firstPaintMs != null &&
+      steadySamples.length > 0 &&
+      blankAfterFirstPaintSamples.length === 0,
     url: targetUrl,
     blockRtc,
     durationMs,
     intervalMs,
     sampleCount: samples.length,
     firstPaintMs,
+    steadySampleCount: steadySamples.length,
+    blankAfterFirstPaintCount: blankAfterFirstPaintSamples.length,
     mode: last?.cameraMetrics?.mode || null,
     videoWidth: last?.video?.videoWidth || null,
     videoHeight: last?.video?.videoHeight || null,
