@@ -84,8 +84,12 @@ html {
   --field-card-backdrop-filter: blur(10px);
 }
 
-[data-camera-performance="true"] * {
+[data-camera-performance="true"] *,
+[data-camera-performance="true"] *::before,
+[data-camera-performance="true"] *::after {
   animation: none !important;
+  transition-property: none !important;
+  transition-duration: 0s !important;
 }
 
 [data-camera-performance="true"] [data-peek-target="true"],

@@ -32,7 +32,7 @@
  * Mobile: stacks vertically. Modal renders full-bleed-ish.
  */
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
 import FieldSolarCard from './FieldSolarCard'
@@ -242,7 +242,7 @@ function Bento({
       </div>
 
       <div className="col-span-12 md:col-span-3 md:col-start-1 md:row-start-2">
-        <CrossfadeTile
+        <StableSwapTile
           showLive={boardLive}
           live={<HealthTile onOpen={() => onOpen('live')} />}
           fallback={<EducationTile />}
@@ -265,9 +265,9 @@ function Bento({
   )
 }
 
-/* ─────────────────── Cross-fade wrapper ──────────────────────── */
+/* ─────────────────── Stable live/fallback wrapper ──────────────────────── */
 
-function CrossfadeTile({
+function StableSwapTile({
   showLive,
   live,
   fallback,
@@ -276,50 +276,7 @@ function CrossfadeTile({
   live: React.ReactNode
   fallback: React.ReactNode
 }) {
-  // Track previous state to keep both children mounted briefly during the
-  // fade. After the fade we drop the inactive child so its polling timers
-  // (camera feed, etc.) don't run forever.
-  const [activeIsLive, setActiveIsLive] = useState(showLive)
-  const [renderBoth, setRenderBoth] = useState(false)
-  const firstRef = useRef(true)
-
-  useEffect(() => {
-    if (firstRef.current) {
-      firstRef.current = false
-      setActiveIsLive(showLive)
-      return
-    }
-    if (showLive === activeIsLive) return
-    setRenderBoth(true)
-    setActiveIsLive(showLive)
-    const t = window.setTimeout(() => setRenderBoth(false), 320)
-    return () => window.clearTimeout(t)
-  }, [showLive, activeIsLive])
-
-  // While crossfading: render both, the active one fully opaque, the
-  // outgoing fading to 0. Steady state: render only the active one.
-  if (!renderBoth) {
-    return <>{activeIsLive ? live : fallback}</>
-  }
-
-  return (
-    <div className="relative h-full">
-      <div
-        className="absolute inset-0 transition-opacity duration-300"
-        style={{ opacity: activeIsLive ? 0 : 1 }}
-      >
-        {fallback}
-      </div>
-      <div
-        className="absolute inset-0 transition-opacity duration-300"
-        style={{ opacity: activeIsLive ? 1 : 0 }}
-      >
-        {live}
-      </div>
-      {/* Phantom sizer so the wrapper still has the height of one child */}
-      <div className="invisible">{activeIsLive ? live : fallback}</div>
-    </div>
-  )
+  return <>{showLive ? live : fallback}</>
 }
 
 /* ───────────────────── Tile chrome ──────────────────────── */

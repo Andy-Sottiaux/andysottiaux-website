@@ -997,8 +997,8 @@ export default function FieldCameraFeed({
         style={{
           objectFit: fit,
           objectPosition: position,
-          opacity: streamActive ? 0 : 1,
-          transition: 'opacity 240ms ease',
+          opacity: 1,
+          transition: 'none',
           filter: phase === 'offline' ? 'saturate(0.84) brightness(0.7)' : 'saturate(1.02) contrast(1.03)',
         }}
       />
@@ -1027,7 +1027,7 @@ export default function FieldCameraFeed({
           }}
           style={{
             opacity: streamActive && fastPlayerReady ? 1 : 0,
-            transition: 'opacity 180ms ease',
+            transition: 'none',
           }}
         />
       )}
@@ -1044,7 +1044,7 @@ export default function FieldCameraFeed({
             objectFit: fit,
             objectPosition: position,
             opacity: streamActive && httpRtcReady ? 1 : 0,
-            transition: 'opacity 120ms ease',
+            transition: 'none',
           }}
         />
       )}
@@ -1061,7 +1061,7 @@ export default function FieldCameraFeed({
             objectFit: fit,
             objectPosition: position,
             opacity: streamActive && !httpRtcReady ? 1 : 0,
-            transition: 'opacity 240ms ease',
+            transition: 'none',
           }}
         />
       )}
@@ -1086,7 +1086,7 @@ export default function FieldCameraFeed({
             objectFit: fit,
             objectPosition: position,
             opacity: streamActive ? 1 : 0,
-            transition: 'opacity 240ms ease',
+            transition: 'none',
           }}
         />
       )}
