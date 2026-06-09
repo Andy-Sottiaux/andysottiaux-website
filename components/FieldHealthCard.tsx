@@ -541,11 +541,12 @@ export default function FieldHealthCard({
     return (
       <div
         className="relative rounded-2xl h-full min-h-0 flex flex-col overflow-hidden px-4 py-3 md:px-[clamp(0.75rem,1.25vw,1rem)] md:py-[clamp(0.55rem,1.05dvh,0.75rem)]"
+        data-field-card="true"
         style={{
           background: palette.cardBackground,
           border: palette.cardBorder,
-          backdropFilter: 'blur(24px)',
-          WebkitBackdropFilter: 'blur(24px)',
+          backdropFilter: 'var(--field-card-backdrop-filter, blur(24px))',
+          WebkitBackdropFilter: 'var(--field-card-backdrop-filter, blur(24px))',
           boxShadow: palette.cardShadow,
         }}
         role="region"
@@ -759,11 +760,12 @@ export default function FieldHealthCard({
   return (
     <div
       className={`relative rounded-2xl h-full min-h-0 flex flex-col overflow-hidden ${compact ? 'px-5 py-4 md:px-[clamp(1rem,1.7vw,1.5rem)] md:py-[clamp(0.8rem,1.75dvh,1.25rem)]' : 'p-7 md:p-8'}`}
+      data-field-card="true"
       style={{
         background: palette.cardBackground,
         border: palette.cardBorder,
-        backdropFilter: 'blur(24px)',
-        WebkitBackdropFilter: 'blur(24px)',
+        backdropFilter: 'var(--field-card-backdrop-filter, blur(24px))',
+        WebkitBackdropFilter: 'var(--field-card-backdrop-filter, blur(24px))',
         boxShadow: palette.cardShadow,
       }}
       role="region"

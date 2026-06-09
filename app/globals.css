@@ -70,10 +70,28 @@ html {
  * iOS Safari this is the dominant scroll-jank cost. Tiles all carry
  * data-peek-target="true", so we target that single attribute. */
 @media (max-width: 767px) {
-  [data-peek-target="true"] {
+  [data-peek-target="true"],
+  [data-field-card="true"] {
     backdrop-filter: blur(10px) !important;
     -webkit-backdrop-filter: blur(10px) !important;
   }
+}
+
+/* Live-camera pages should let the video be the motion. Continuous decorative
+ * animations and heavy glass compositing compete with the browser video
+ * pipeline, which shows up as perceived flicker and dropped rendered frames. */
+[data-camera-performance="true"] {
+  --field-card-backdrop-filter: blur(10px);
+}
+
+[data-camera-performance="true"] * {
+  animation: none !important;
+}
+
+[data-camera-performance="true"] [data-peek-target="true"],
+[data-camera-performance="true"] [data-field-card="true"] {
+  backdrop-filter: var(--field-card-backdrop-filter) !important;
+  -webkit-backdrop-filter: var(--field-card-backdrop-filter) !important;
 }
 
 /* Tap-active feedback for the whole-tile click target. The Tile button

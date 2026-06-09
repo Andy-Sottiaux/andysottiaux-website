@@ -196,11 +196,12 @@ export default function FieldSolarCard({
   return (
     <div
       className={`relative rounded-2xl h-full min-h-0 flex flex-col overflow-hidden ${compact ? 'p-5 md:p-[clamp(1rem,1.75dvh,1.5rem)]' : 'p-7 md:p-8'}`}
+      data-field-card="true"
       style={{
         background: palette.cardBackground,
         border: palette.cardBorder,
-        backdropFilter: 'blur(24px)',
-        WebkitBackdropFilter: 'blur(24px)',
+        backdropFilter: 'var(--field-card-backdrop-filter, blur(24px))',
+        WebkitBackdropFilter: 'var(--field-card-backdrop-filter, blur(24px))',
         boxShadow: palette.cardShadow,
       }}
       role="region"

@@ -115,7 +115,10 @@ function CompactInner({ initialBoardLive }: { initialBoardLive: boolean }) {
           md+, the grid uses `1fr` rows, so cards auto-size to fit without
           ever scrolling.
           Mobile: keeps `min-h-screen` and natural vertical scrolling. */}
-      <div className="bento-shell flex-1 flex flex-col px-4 sm:px-6 md:px-8 py-3 sm:py-4 md:py-5 md:min-h-0">
+      <div
+        className="bento-shell flex-1 flex flex-col px-4 sm:px-6 md:px-8 py-3 sm:py-4 md:py-5 md:min-h-0"
+        data-camera-performance="true"
+      >
         <div className="w-full max-w-[1380px] mx-auto md:flex-1 md:flex md:flex-col md:min-h-0">
           <Bento
             boardLive={boardLive}
@@ -360,8 +363,8 @@ function Tile({
       style={{
         background: palette.cardBackground,
         border: palette.cardBorder,
-        backdropFilter: 'blur(24px)',
-        WebkitBackdropFilter: 'blur(24px)',
+        backdropFilter: 'var(--field-card-backdrop-filter, blur(24px))',
+        WebkitBackdropFilter: 'var(--field-card-backdrop-filter, blur(24px))',
         boxShadow: palette.cardShadow,
         transition: 'transform 0.4s cubic-bezier(0.16,1,0.3,1), box-shadow 0.4s cubic-bezier(0.16,1,0.3,1)',
       }}
@@ -618,8 +621,8 @@ function EducationTile() {
       style={{
         background: palette.cardBackground,
         border: palette.cardBorder,
-        backdropFilter: 'blur(24px)',
-        WebkitBackdropFilter: 'blur(24px)',
+        backdropFilter: 'var(--field-card-backdrop-filter, blur(24px))',
+        WebkitBackdropFilter: 'var(--field-card-backdrop-filter, blur(24px))',
         boxShadow: palette.cardShadow,
       }}
       data-peek-target="true"
@@ -723,8 +726,8 @@ function BuildingTile() {
       style={{
         background: palette.cardBackground,
         border: palette.cardBorder,
-        backdropFilter: 'blur(24px)',
-        WebkitBackdropFilter: 'blur(24px)',
+        backdropFilter: 'var(--field-card-backdrop-filter, blur(24px))',
+        WebkitBackdropFilter: 'var(--field-card-backdrop-filter, blur(24px))',
         boxShadow: palette.cardShadow,
       }}
       data-peek-target="true"
@@ -1018,8 +1021,8 @@ function MoreProjectsTile({ onOpen }: { onOpen?: (key: ModalKey) => void }) {
       style={{
         background: palette.cardBackground,
         border: palette.cardBorder,
-        backdropFilter: 'blur(24px)',
-        WebkitBackdropFilter: 'blur(24px)',
+        backdropFilter: 'var(--field-card-backdrop-filter, blur(24px))',
+        WebkitBackdropFilter: 'var(--field-card-backdrop-filter, blur(24px))',
         boxShadow: palette.cardShadow,
       }}
       data-peek-target="true"
@@ -1473,8 +1476,8 @@ function MarathonTile({ onOpen }: { onOpen?: () => void }) {
         boxShadow: isLight
           ? '0 0 0 1.5px #E8642C, 0 8px 24px rgba(232,100,44,0.10), inset 0 1px 0 rgba(255,255,255,0.6)'
           : '0 0 0 1.5px #E8642C, 0 12px 32px rgba(232,100,44,0.18), inset 0 1px 0 rgba(255,255,255,0.05)',
-        backdropFilter: 'blur(24px)',
-        WebkitBackdropFilter: 'blur(24px)',
+        backdropFilter: 'var(--field-card-backdrop-filter, blur(24px))',
+        WebkitBackdropFilter: 'var(--field-card-backdrop-filter, blur(24px))',
       }}
     >
       {/* Whole-tile clickable layer that opens the modal (sits behind the

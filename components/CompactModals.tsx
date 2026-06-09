@@ -138,7 +138,7 @@ export function LiveModalContent({
     : 'HatchingPoint-branded Thingino E220 view through the tailnet proxy. The camera stays lightweight; this page only pulls the stream.'
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-5" data-camera-performance="true">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <p className="text-[14px] sm:text-[15px] leading-relaxed" style={{ color: palette.bodyText }}>
           {intro}

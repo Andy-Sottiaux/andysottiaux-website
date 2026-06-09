@@ -38,7 +38,8 @@ const HTTP_RTC_HEALTH_SAMPLE_MS = 3_000
 const HTTP_RTC_BAD_SAMPLE_LIMIT = 2
 const HTTP_RTC_MIN_PROGRESS_RATIO = 0.9
 const HTTP_RTC_MAX_VIDEO_DROP_RATIO = 0.32
-const HTTP_RTC_MAX_PACKET_LOSS_RATIO = 0.04
+const HTTP_RTC_MAX_PACKET_LOSS_RATIO = 0.2
+const HTTP_RTC_PACKET_LOSS_FRAME_DROP_RATIO = 0.08
 const HLS_RETRY_MS = 3_000
 const STALE_CLEAN_FRAME_SEC = 10
 const LIVE_EDGE_TARGET_SEC = 2.0
@@ -556,7 +557,10 @@ export default function FieldCameraFeed({
           ? rtcFrameDropRatio > HTTP_RTC_MAX_VIDEO_DROP_RATIO
           : (videoDropRatio ?? 0) > HTTP_RTC_MAX_VIDEO_DROP_RATIO
       ) reason = 'video_drops'
-      else if (packetLossRatio > HTTP_RTC_MAX_PACKET_LOSS_RATIO) reason = 'packet_loss'
+      else if (
+        packetLossRatio > HTTP_RTC_MAX_PACKET_LOSS_RATIO &&
+        (rtcFrameDropRatio ?? videoDropRatio ?? 0) > HTTP_RTC_PACKET_LOSS_FRAME_DROP_RATIO
+      ) reason = 'packet_loss'
 
       if (reason) {
         badHealthSamples += 1
@@ -1404,20 +1408,15 @@ function CameraSpecsOverlay({ data, quality }: { data: CameraHealthOverlay; qual
     : typeof profile?.bitrate_kbps === 'number' && profile.bitrate_kbps > 0
       ? profile.bitrate_kbps / 1000
       : null
-  const cleanAge = typeof quality.sanitizer?.latest_clean_age_s === 'number'
-    ? `${quality.sanitizer.latest_clean_age_s.toFixed(1)}s clean`
-    : null
-  const hlsAge = typeof quality.sanitizer?.hls_latest_write_age_s === 'number'
-    ? `${quality.sanitizer.hls_latest_write_age_s.toFixed(1)}s hls`
-    : null
   const cleanOutput = quality.sanitizer?.width && quality.sanitizer?.height
     ? `${quality.sanitizer.width}x${quality.sanitizer.height}`
     : null
-  const deliveredFps = typeof quality.sanitizer?.observed_hls_fps === 'number' && quality.sanitizer.observed_hls_fps > 0
-    ? `${formatFps(quality.sanitizer.observed_hls_fps)}fps delivered`
-    : null
   const targetFps = typeof quality.sanitizer?.fps_target === 'number' && quality.sanitizer.fps_target > 0
     ? `${formatFps(quality.sanitizer.fps_target)}fps target`
+    : null
+  const staleClean = typeof quality.sanitizer?.latest_clean_age_s === 'number' &&
+    quality.sanitizer.latest_clean_age_s > STALE_CLEAN_FRAME_SEC
+    ? 'stale'
     : null
   const transport = quality.sanitizer?.framed_udp_listen
     ? `udp${(quality.sanitizer?.framed_udp_fec_packets ?? 0) > 0 ? '+fec' : ''}`
@@ -1432,14 +1431,14 @@ function CameraSpecsOverlay({ data, quality }: { data: CameraHealthOverlay; qual
     : null
   const cleanParts = [
     cleanOutput,
-    deliveredFps || targetFps,
+    targetFps,
     transport,
     fecRecovered,
     quality.mode === 'sanitized-preview' || quality.snapshot?.source === 'sanitized' ? 'sanitized' : null,
     cleanDrops > 0 ? `${cleanDrops} drops` : null,
     hlsDrops > 0 ? `${hlsDrops} hls drops` : null,
     cleanRestart,
-    hlsAge || cleanAge,
+    staleClean,
   ].filter(Boolean)
   if (cleanParts.length > 0) {
     return (
@@ -1466,7 +1465,6 @@ function CameraSpecsOverlay({ data, quality }: { data: CameraHealthOverlay; qual
     fps,
     codec,
     mbps != null ? `${mbps.toFixed(1)} Mbps` : null,
-    cleanAge,
   ].filter(Boolean)
 
   if (parts.length === 0) return null
