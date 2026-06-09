@@ -369,12 +369,16 @@ export default function FieldCameraFeed({
     const timeout = window.setTimeout(() => {
       setPhase((p) => (p === 'connecting' ? 'offline' : p))
     }, STREAM_START_TIMEOUT_MS)
-    const refresh = window.setInterval(() => setSnapshotNonce(Date.now()), SNAPSHOT_REFRESH_MS)
     return () => {
       window.clearTimeout(timeout)
-      window.clearInterval(refresh)
     }
   }, [active])
+
+  useEffect(() => {
+    if (!active || streamReady) return
+    const refresh = window.setInterval(() => setSnapshotNonce(Date.now()), SNAPSHOT_REFRESH_MS)
+    return () => window.clearInterval(refresh)
+  }, [active, streamReady])
 
   useEffect(() => {
     if (!showFastPlayer || fastPlayerReady) return

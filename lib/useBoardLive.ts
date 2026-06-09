@@ -11,17 +11,19 @@
  *
  * Polls `/api/v3/health` every 15 s. Live = at least one successful 2xx
  * response with `ok: true` within the last `OFFLINE_GRACE_MS`. Hysteresis:
- * a single failed poll does NOT flip the tile set — we only flip after we
- * haven't heard a healthy response for 30 s (which is 2 consecutive failed
- * polls plus a small slack). Same idea on the way back up: one good poll
- * brings us back to live immediately.
+ * transient health failures do not flip the tile set; a page-level fallback
+ * only appears after several consecutive failures and a long stale window.
+ * Same idea on the way back up: one good poll brings us back to live
+ * immediately.
  */
 
 import { useEffect, useRef, useState } from 'react'
 
 const HEALTH_URL = '/api/v3/health'
-const POLL_MS = 8_000
-const OFFLINE_GRACE_MS = 10_000
+const POLL_MS = 15_000
+const REQUEST_TIMEOUT_MS = 6_000
+const OFFLINE_GRACE_MS = 45_000
+const OFFLINE_FAIL_LIMIT = 3
 
 type HealthLoose = { ok?: boolean; error?: string }
 
@@ -32,10 +34,9 @@ export function useBoardLive(initial = true): boolean {
   // for visitors arriving while the board is down.
   const [live, setLive] = useState(initial)
   // If we already know we're offline, treat "last success" as ancient so
-  // a single failed client poll is enough to keep us in offline (no extra
-  // grace needed since the server already observed it offline).
+  // client polling keeps us offline until the first good response.
   const lastSuccessRef = useRef<number>(initial ? Date.now() : 0)
-  const consecutiveFailRef = useRef<number>(initial ? 0 : 1)
+  const consecutiveFailRef = useRef<number>(initial ? 0 : OFFLINE_FAIL_LIMIT)
 
   useEffect(() => {
     let cancelled = false
@@ -45,7 +46,7 @@ export function useBoardLive(initial = true): boolean {
       let ok = false
       try {
         const ctrl = new AbortController()
-        const timeoutId = setTimeout(() => ctrl.abort(), 8_000)
+        const timeoutId = setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT_MS)
         const res = await fetch(HEALTH_URL, { signal: ctrl.signal, cache: 'no-store' })
         clearTimeout(timeoutId)
         if (res.ok) {
@@ -66,10 +67,10 @@ export function useBoardLive(initial = true): boolean {
       } else {
         consecutiveFailRef.current += 1
         const sinceLastOk = Date.now() - lastSuccessRef.current
-        // Flip to offline once a single failure has persisted past the grace
-        // window. Tightened from "2 consecutive + 30s" so the swap is
-        // observable within ~10s of the board going down.
-        if (sinceLastOk >= OFFLINE_GRACE_MS) {
+        if (
+          consecutiveFailRef.current >= OFFLINE_FAIL_LIMIT &&
+          sinceLastOk >= OFFLINE_GRACE_MS
+        ) {
           setLive(false)
         }
       }
