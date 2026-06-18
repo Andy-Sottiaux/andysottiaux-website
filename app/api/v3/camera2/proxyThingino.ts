@@ -5,9 +5,15 @@ const UPSTREAM =
 const USERNAME = process.env.V3_CAMERA_2_USERNAME || 'root'
 const PASSWORD = process.env.V3_CAMERA_2_PASSWORD || 'root'
 
+type ThinginoError = 'auth_unavailable' | 'camera_unreachable' | 'login_status' | 'login_timeout'
+
 type ThinginoLoginResult =
   | { ok: true; cookie: string }
-  | { ok: false; error: 'auth_unavailable' | 'camera_unreachable' | 'login_status' | 'login_timeout'; upstreamStatus?: number }
+  | { ok: false; error: ThinginoError; upstreamStatus?: number }
+
+type ThinginoRequestResult =
+  | { ok: true; response: Response }
+  | { ok: false; error: ThinginoError; upstreamStatus?: number }
 
 function encodeBase64(value: string) {
   return Buffer.from(value, 'utf8').toString('base64')
@@ -52,6 +58,42 @@ async function thinginoSessionCookie(signal: AbortSignal): Promise<ThinginoLogin
         ? 'login_timeout'
         : 'camera_unreachable',
     }
+  }
+}
+
+export async function requestThinginoPath(
+  path: string,
+  init: RequestInit = {},
+  timeoutMs = 8000,
+): Promise<ThinginoRequestResult> {
+  const ctrl = new AbortController()
+  const timeoutId = setTimeout(() => ctrl.abort(), timeoutMs)
+
+  try {
+    const login = await thinginoSessionCookie(ctrl.signal)
+    if (!login.ok) return login
+
+    const headers = new Headers(init.headers)
+    headers.set('Cookie', login.cookie)
+    headers.set('User-Agent', 'andysottiaux.com/camera2-proxy')
+
+    const response = await fetch(`${UPSTREAM}${path}`, {
+      ...init,
+      cache: 'no-store',
+      signal: ctrl.signal,
+      headers,
+    })
+
+    return { ok: true, response }
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof DOMException && error.name === 'AbortError'
+        ? 'login_timeout'
+        : 'camera_unreachable',
+    }
+  } finally {
+    clearTimeout(timeoutId)
   }
 }
 

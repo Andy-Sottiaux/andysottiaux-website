@@ -1,10 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
+  CAMERA_2_CONTROL_URL,
   CAMERA_2_MJPEG_URL,
   CAMERA_2_NATIVE_URL,
   CAMERA_2_SNAPSHOT_URL,
+  CAMERA_2_SETTINGS_URL,
   CAMERA_2_STATUS_URL,
   CAMERA_2_URL,
 } from '@/lib/fieldCameraConfig'
@@ -16,6 +18,16 @@ type Cam2Status = {
   error?: string
   upstream_status?: number
 }
+type Cam2Settings = {
+  ok?: boolean
+  stream0?: {
+    width?: number
+    height?: number
+    fps?: number
+    bitrate?: number
+  } | null
+}
+type Cam2Command = 'ul' | 'uc' | 'ur' | 'cl' | 'center' | 'cr' | 'dl' | 'dc' | 'dr' | 'home'
 
 function cam2StatusCopy(status: Cam2Status | null) {
   if (!status) return 'Checking relay and camera status...'
@@ -46,6 +58,11 @@ export default function ThinginoCameraFeed({
   const [streamReady, setStreamReady] = useState(false)
   const [streamFailed, setStreamFailed] = useState(false)
   const [status, setStatus] = useState<Cam2Status | null>(null)
+  const [settings, setSettings] = useState<Cam2Settings | null>(null)
+  const [controlPending, setControlPending] = useState<Cam2Command | null>(null)
+  const [qualityPending, setQualityPending] = useState<string | null>(null)
+  const holdTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const controlBusyRef = useRef(false)
   const mjpegUrl = `${CAMERA_2_MJPEG_URL}?v=${streamVersion}`
   const snapshotUrl = `${CAMERA_2_SNAPSHOT_URL}?v=${streamVersion}`
   const statusCopy = cam2StatusCopy(status)
@@ -57,6 +74,65 @@ export default function ThinginoCameraFeed({
     setStatus(null)
     setStreamVersion(Date.now())
   }
+
+  const loadSettings = () => {
+    fetch(CAMERA_2_SETTINGS_URL, { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((next: Cam2Settings) => setSettings(next))
+      .catch(() => setSettings({ ok: false }))
+  }
+
+  const sendControl = async (command: Cam2Command, step: 'fine' | 'normal' | 'coarse' = 'normal') => {
+    if (controlBusyRef.current) return
+    controlBusyRef.current = true
+    setControlPending(command)
+    try {
+      await fetch(CAMERA_2_CONTROL_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ command, step }),
+      })
+    } finally {
+      controlBusyRef.current = false
+      setControlPending(null)
+    }
+  }
+
+  const stopHold = () => {
+    if (holdTimerRef.current) {
+      clearInterval(holdTimerRef.current)
+      holdTimerRef.current = null
+    }
+  }
+
+  const startHold = (command: Cam2Command) => {
+    stopHold()
+    void sendControl(command, 'fine')
+    holdTimerRef.current = setInterval(() => {
+      void sendControl(command, 'fine')
+    }, 180)
+  }
+
+  const applyPreset = async (preset: 'hq30' | 'balanced24') => {
+    setQualityPending(preset)
+    try {
+      const res = await fetch(CAMERA_2_SETTINGS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ preset }),
+      })
+      const next = await res.json().catch(() => null)
+      if (next) setSettings({ ok: res.ok, stream0: next.stream0 ?? settings?.stream0 ?? null })
+      reload()
+    } finally {
+      setQualityPending(null)
+    }
+  }
+
+  useEffect(() => {
+    loadSettings()
+    return stopHold
+  }, [])
 
   useEffect(() => {
     if (!streamFailed) return
@@ -173,7 +249,7 @@ export default function ThinginoCameraFeed({
       </div>
 
       <div
-        className="pointer-events-none absolute right-3 top-3 hidden rounded-full px-2.5 py-1 text-[9px] font-semibold uppercase sm:block"
+        className="pointer-events-none absolute right-3 top-11 hidden rounded-full px-2.5 py-1 text-[9px] font-semibold uppercase sm:block"
         style={{
           background: 'rgba(0,0,0,0.58)',
           color: '#fff',
@@ -184,11 +260,98 @@ export default function ThinginoCameraFeed({
         Thingino E220 / Relay
       </div>
 
+      <div
+        className="pointer-events-auto absolute bottom-3 left-3 z-30 flex items-end gap-2"
+        onClick={(event) => event.stopPropagation()}
+        onPointerDown={(event) => event.stopPropagation()}
+      >
+        <div
+          className="grid grid-cols-3 gap-1 rounded-[14px] p-1"
+          aria-label="Cam 2 pan and tilt controls"
+          style={{
+            background: 'rgba(0,0,0,0.58)',
+            border: '1px solid rgba(255,255,255,0.12)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+          }}
+        >
+          {[
+            ['ul', '↖', 'Pan up left'],
+            ['uc', '↑', 'Tilt up'],
+            ['ur', '↗', 'Pan up right'],
+            ['cl', '←', 'Pan left'],
+            ['home', '⌂', 'Home camera'],
+            ['cr', '→', 'Pan right'],
+            ['dl', '↙', 'Pan down left'],
+            ['dc', '↓', 'Tilt down'],
+            ['dr', '↘', 'Pan down right'],
+          ].map(([command, label, aria]) => (
+            <button
+              key={command}
+              type="button"
+              aria-label={aria}
+              disabled={controlPending != null && controlPending !== command}
+              onPointerDown={(event) => {
+                event.preventDefault()
+                const cmd = command as Cam2Command
+                if (cmd === 'home') {
+                  void sendControl(cmd)
+                } else {
+                  startHold(cmd)
+                }
+              }}
+              onPointerUp={stopHold}
+              onPointerLeave={stopHold}
+              onPointerCancel={stopHold}
+              className="flex h-7 w-7 items-center justify-center rounded-[8px] text-[13px] font-bold text-white/85 transition hover:bg-white/18 hover:text-white disabled:opacity-45"
+              style={{ background: command === 'home' ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.08)' }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <div
+          className="hidden min-w-[132px] flex-col gap-1 rounded-[14px] p-1.5 sm:flex"
+          aria-label="Cam 2 quality controls"
+          style={{
+            background: 'rgba(0,0,0,0.58)',
+            border: '1px solid rgba(255,255,255,0.12)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+          }}
+        >
+          <div className="px-1 text-[8px] font-semibold uppercase tracking-[0.16em] text-white/45">
+            {formatStreamSettings(settings)}
+          </div>
+          <div className="grid grid-cols-2 gap-1">
+            <button
+              type="button"
+              onClick={() => applyPreset('hq30')}
+              disabled={qualityPending != null}
+              className="rounded-[8px] px-2 py-1 text-[9px] font-bold uppercase text-white/88 transition hover:bg-white/18 disabled:opacity-45"
+              style={{ background: qualityPending === 'hq30' ? 'rgba(103,232,249,0.24)' : 'rgba(255,255,255,0.10)' }}
+            >
+              HQ 30
+            </button>
+            <button
+              type="button"
+              onClick={() => applyPreset('balanced24')}
+              disabled={qualityPending != null}
+              className="rounded-[8px] px-2 py-1 text-[9px] font-bold uppercase text-white/78 transition hover:bg-white/18 disabled:opacity-45"
+              style={{ background: qualityPending === 'balanced24' ? 'rgba(103,232,249,0.24)' : 'rgba(255,255,255,0.08)' }}
+            >
+              24 fps
+            </button>
+          </div>
+        </div>
+      </div>
+
       <a
         href={CAMERA_2_NATIVE_URL || CAMERA_2_URL}
         target="_blank"
         rel="noreferrer"
-        className="absolute bottom-3 right-3 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase opacity-70 transition-opacity hover:opacity-100"
+        className="absolute bottom-3 right-3 z-30 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase opacity-70 transition-opacity hover:opacity-100"
         style={{
           background: 'rgba(0,0,0,0.58)',
           color: '#fff',
@@ -207,4 +370,13 @@ export default function ThinginoCameraFeed({
       `}</style>
     </div>
   )
+}
+
+function formatStreamSettings(settings: Cam2Settings | null) {
+  const stream = settings?.stream0
+  if (!stream) return 'loading'
+  const resolution = stream.width && stream.height ? `${stream.width}×${stream.height}` : 'stream'
+  const fps = stream.fps ? `${stream.fps} fps` : 'fps'
+  const bitrate = stream.bitrate ? `${Math.round(stream.bitrate / 100) / 10} Mbps` : ''
+  return [resolution, fps, bitrate].filter(Boolean).join(' · ')
 }

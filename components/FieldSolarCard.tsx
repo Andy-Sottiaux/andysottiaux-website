@@ -384,7 +384,10 @@ export default function FieldSolarCard({
       </div>
 
       {compact ? (
-        <div className="mt-auto grid grid-rows-2 gap-2 min-h-[176px] flex-1">
+        <div
+          className="mt-auto grid grid-rows-2 gap-2 flex-1 md:min-h-0"
+          style={{ minHeight: 'clamp(176px, 30dvh, 280px)' }}
+        >
           {hasHistory ? (
             <>
               <CompactTrendPanel
@@ -547,7 +550,7 @@ function CompactTrendPanel({
           {value}
         </div>
       </div>
-      <div className="mt-1 flex-1 min-h-0">
+      <div className="mt-1 h-[clamp(58px,10dvh,112px)] min-h-0 md:h-full">
         {children}
       </div>
     </div>
@@ -578,7 +581,7 @@ function MiniTrendChart({
 
   if (data.length < 2) {
     return (
-      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="w-full h-full" aria-hidden="true">
+      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet" className="w-full h-full" aria-hidden="true">
         <line x1={PAD_X} y1={PAD_T + innerH} x2={W - PAD_X} y2={PAD_T + innerH} stroke={gridColor} strokeWidth="1" />
       </svg>
     )
@@ -602,7 +605,7 @@ function MiniTrendChart({
     : [yMax, yMin + range / 2, yMin]
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="w-full h-full" aria-hidden="true">
+    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet" className="w-full h-full" aria-hidden="true">
       {tickValues.map((value, index) => {
         const y = yFor(value)
         return (

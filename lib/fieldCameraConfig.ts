@@ -19,6 +19,12 @@ export const CAMERA_2_SNAPSHOT_URL =
 export const CAMERA_2_STATUS_URL =
   process.env.NEXT_PUBLIC_V3_CAMERA_2_STATUS_URL ||
   '/api/v3/camera2/status'
+export const CAMERA_2_CONTROL_URL =
+  process.env.NEXT_PUBLIC_V3_CAMERA_2_CONTROL_URL ||
+  '/api/v3/camera2/control'
+export const CAMERA_2_SETTINGS_URL =
+  process.env.NEXT_PUBLIC_V3_CAMERA_2_SETTINGS_URL ||
+  '/api/v3/camera2/settings'
 
 export const PRIMARY_FEED_STREAM = process.env.NEXT_PUBLIC_V3_FEED_STREAM || 'cayley-sub'
 export const PLAYER_MODE = process.env.NEXT_PUBLIC_V3_PLAYER_MODE || 'webrtc,mse,hls,mjpeg'
