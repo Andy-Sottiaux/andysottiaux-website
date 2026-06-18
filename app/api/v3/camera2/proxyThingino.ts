@@ -1,6 +1,6 @@
 const UPSTREAM =
   process.env.V3_CAMERA_2_UPSTREAM_HOST ||
-  'http://192.168.4.45'
+  'http://192.168.4.52'
 
 const USERNAME = process.env.V3_CAMERA_2_USERNAME || 'root'
 const PASSWORD = process.env.V3_CAMERA_2_PASSWORD || 'root'

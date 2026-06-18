@@ -7,8 +7,11 @@ import {
   CAMERA_2_NATIVE_URL,
   CAMERA_2_SNAPSHOT_URL,
   CAMERA_2_SETTINGS_URL,
+  CAMERA_2_STREAM,
   CAMERA_2_STATUS_URL,
   CAMERA_2_URL,
+  CAMERA_HOST,
+  PLAYER_MODE,
 } from '@/lib/fieldCameraConfig'
 import { useFieldTheme } from './fieldTheme'
 
@@ -55,6 +58,8 @@ export default function ThinginoCameraFeed({
   const isLight = palette.mode === 'light'
   const [streamVersion, setStreamVersion] = useState(0)
   const [snapshotReady, setSnapshotReady] = useState(false)
+  const [playerReady, setPlayerReady] = useState(false)
+  const [playerFailed, setPlayerFailed] = useState(false)
   const [streamReady, setStreamReady] = useState(false)
   const [streamFailed, setStreamFailed] = useState(false)
   const [status, setStatus] = useState<Cam2Status | null>(null)
@@ -65,10 +70,14 @@ export default function ThinginoCameraFeed({
   const controlBusyRef = useRef(false)
   const mjpegUrl = `${CAMERA_2_MJPEG_URL}?v=${streamVersion}`
   const snapshotUrl = `${CAMERA_2_SNAPSHOT_URL}?v=${streamVersion}`
+  const playerUrl = nativePlayerUrl(CAMERA_2_STREAM)
+  const openUrl = CAMERA_2_NATIVE_URL === CAMERA_2_URL ? playerUrl : CAMERA_2_NATIVE_URL
   const statusCopy = cam2StatusCopy(status)
 
   const reload = () => {
     setSnapshotReady(false)
+    setPlayerReady(false)
+    setPlayerFailed(false)
     setStreamReady(false)
     setStreamFailed(false)
     setStatus(null)
@@ -135,7 +144,7 @@ export default function ThinginoCameraFeed({
   }, [])
 
   useEffect(() => {
-    if (!streamFailed) return
+    if (!(playerFailed && streamFailed)) return
     let cancelled = false
     fetch(CAMERA_2_STATUS_URL, { cache: 'no-store' })
       .then((r) => r.json())
@@ -148,7 +157,7 @@ export default function ThinginoCameraFeed({
     return () => {
       cancelled = true
     }
-  }, [streamFailed, streamVersion])
+  }, [playerFailed, streamFailed, streamVersion])
 
   return (
     <div className="relative h-full w-full overflow-hidden rounded-[16px] bg-black">
@@ -163,35 +172,60 @@ export default function ThinginoCameraFeed({
         style={{
           objectFit: fit,
           objectPosition: position,
-          opacity: streamReady ? 0 : snapshotReady ? 1 : 0,
+          opacity: playerReady || streamReady ? 0 : snapshotReady ? 1 : 0,
           transition: 'opacity 240ms ease',
           filter: 'saturate(1.02) contrast(1.03)',
         }}
       />
 
-      <img
-        key={streamVersion}
-        src={mjpegUrl}
-        alt=""
-        aria-label="HatchingPoint Cam 2 live preview"
+      <iframe
+        key={`player-${streamVersion}`}
+        src={playerUrl}
+        title="HatchingPoint Cam 2 high-quality live preview"
+        aria-label="HatchingPoint Cam 2 high-quality live preview"
+        allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+        allowFullScreen
         className="absolute inset-0 h-full w-full"
         onLoad={() => {
-          setStreamReady(true)
-          setStreamFailed(false)
+          setPlayerReady(true)
+          setPlayerFailed(false)
         }}
         onError={() => {
-          setStreamReady(false)
-          setStreamFailed(true)
+          setPlayerReady(false)
+          setPlayerFailed(true)
         }}
         style={{
-          objectFit: fit,
-          objectPosition: position,
-          opacity: streamReady ? 1 : 0,
+          opacity: playerReady ? 1 : 0,
           transition: 'opacity 240ms ease',
+          border: 0,
         }}
       />
 
-      {!snapshotReady && !streamReady && !streamFailed && (
+      {playerFailed && (
+        <img
+          key={streamVersion}
+          src={mjpegUrl}
+          alt=""
+          aria-label="HatchingPoint Cam 2 live preview"
+          className="absolute inset-0 h-full w-full"
+          onLoad={() => {
+            setStreamReady(true)
+            setStreamFailed(false)
+          }}
+          onError={() => {
+            setStreamReady(false)
+            setStreamFailed(true)
+          }}
+          style={{
+            objectFit: fit,
+            objectPosition: position,
+            opacity: streamReady ? 1 : 0,
+            transition: 'opacity 240ms ease',
+          }}
+        />
+      )}
+
+      {!snapshotReady && !playerReady && !streamReady && !streamFailed && (
         <div className="absolute inset-0 flex items-center justify-center bg-black">
           <div
             className="rounded-full px-3 py-1 text-[10px] font-semibold uppercase text-white/70"
@@ -207,7 +241,7 @@ export default function ThinginoCameraFeed({
         </div>
       )}
 
-      {streamFailed && (
+      {playerFailed && streamFailed && !streamReady && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/70 px-6 text-center">
           <div className="flex max-w-[18rem] flex-col items-center gap-3">
             <img
@@ -257,7 +291,7 @@ export default function ThinginoCameraFeed({
           WebkitBackdropFilter: 'blur(8px)',
         }}
       >
-        Thingino E220 / Relay
+        H.264 · 30fps · go2rtc
       </div>
 
       <div
@@ -348,7 +382,7 @@ export default function ThinginoCameraFeed({
       </div>
 
       <a
-        href={CAMERA_2_NATIVE_URL || CAMERA_2_URL}
+        href={openUrl}
         target="_blank"
         rel="noreferrer"
         className="absolute bottom-3 right-3 z-30 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase opacity-70 transition-opacity hover:opacity-100"
@@ -379,4 +413,12 @@ function formatStreamSettings(settings: Cam2Settings | null) {
   const fps = stream.fps ? `${stream.fps} fps` : 'fps'
   const bitrate = stream.bitrate ? `${Math.round(stream.bitrate / 100) / 10} Mbps` : ''
   return [resolution, fps, bitrate].filter(Boolean).join(' · ')
+}
+
+function nativePlayerUrl(stream: string): string {
+  return `${CAMERA_HOST}/stream.html` +
+    `?src=${encodeURIComponent(stream)}` +
+    `&mode=${encodeURIComponent(PLAYER_MODE)}` +
+    '&background=false' +
+    '&width=100%'
 }
