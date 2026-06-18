@@ -21,10 +21,13 @@ export const CAMERA_2_STATUS_URL =
   '/api/v3/camera2/status'
 export const CAMERA_2_CONTROL_URL =
   process.env.NEXT_PUBLIC_V3_CAMERA_2_CONTROL_URL ||
-  `${CAMERA_HOST}/api/camera2/control`
+  '/api/v3/camera2/control'
 export const CAMERA_2_SETTINGS_URL =
   process.env.NEXT_PUBLIC_V3_CAMERA_2_SETTINGS_URL ||
   '/api/v3/camera2/settings'
+export const CAMERA_2_WEBRTC_OFFER_URL =
+  process.env.NEXT_PUBLIC_V3_CAMERA_2_WEBRTC_OFFER_URL ||
+  '/api/v3/camera2/webrtc/offer'
 export const CAMERA_2_STREAM = process.env.NEXT_PUBLIC_V3_CAMERA_2_STREAM || 'cam2'
 
 export const PRIMARY_FEED_STREAM = process.env.NEXT_PUBLIC_V3_FEED_STREAM || 'cayley-sub'

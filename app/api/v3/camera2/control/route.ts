@@ -13,6 +13,9 @@ type MotorParams = {
 
 const DIRECTIONS = new Set(['uc', 'ur', 'cr', 'dr', 'dc', 'dl', 'cl', 'ul'])
 const MOTOR_PARAMS_TTL_MS = 60 * 1000
+const RELAY_CONTROL_URL =
+  process.env.V3_CAMERA_2_CONTROL_RELAY_URL ||
+  'https://cayley-relay.tailc7d6b6.ts.net/api/camera2/control'
 
 let cachedMotorParams: { params: MotorParams; expiresAt: number } | null = null
 
@@ -53,6 +56,39 @@ async function runMotorQuery(query: URLSearchParams) {
   return NextResponse.json({ ok: true, data }, { headers: { 'Cache-Control': 'no-store' } })
 }
 
+async function runRelayControl(body: unknown) {
+  const ctrl = new AbortController()
+  const timeoutId = setTimeout(() => ctrl.abort(), 2500)
+  try {
+    const res = await fetch(RELAY_CONTROL_URL, {
+      method: 'POST',
+      cache: 'no-store',
+      signal: ctrl.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'andysottiaux.com/camera2-control-proxy',
+      },
+      body: JSON.stringify(body),
+    })
+    const text = await res.text()
+    const contentType = res.headers.get('content-type') || 'application/json; charset=utf-8'
+    if (res.ok || res.status < 500) {
+      return new NextResponse(text, {
+        status: res.status,
+        headers: {
+          'Cache-Control': 'no-store',
+          'Content-Type': contentType,
+        },
+      })
+    }
+  } catch {
+    // Fall through to the slower Thingino proxy path when the relay endpoint is unavailable.
+  } finally {
+    clearTimeout(timeoutId)
+  }
+  return null
+}
+
 function relativeMove(direction: string, params: MotorParams, granularity: number) {
   const panMax = Math.max(1, numeric(params.steps_pan, 1000))
   const tiltMax = Math.max(1, numeric(params.steps_tilt, 1000))
@@ -72,6 +108,12 @@ export async function POST(request: NextRequest) {
   const command = body?.command || body?.direction
 
   if (!command) return jsonError('missing_command')
+
+  const relayResponse = await runRelayControl({
+    command,
+    step: body?.step || 'normal',
+  })
+  if (relayResponse) return relayResponse
 
   if (command === 'stop') {
     return runMotorQuery(new URLSearchParams({ d: 's' }))

@@ -10,6 +10,7 @@ import {
   CAMERA_2_STREAM,
   CAMERA_2_STATUS_URL,
   CAMERA_2_URL,
+  CAMERA_2_WEBRTC_OFFER_URL,
   CAMERA_HOST,
   PLAYER_MODE,
 } from '@/lib/fieldCameraConfig'
@@ -66,12 +67,14 @@ export default function ThinginoCameraFeed({
   const [settings, setSettings] = useState<Cam2Settings | null>(null)
   const [controlPending, setControlPending] = useState<Cam2Command | null>(null)
   const [qualityPending, setQualityPending] = useState<string | null>(null)
+  const rtcVideoRef = useRef<HTMLVideoElement>(null)
   const holdTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const heldCommandRef = useRef<Cam2Command | null>(null)
   const controlBusyRef = useRef(false)
   const mjpegUrl = `${CAMERA_2_MJPEG_URL}?v=${streamVersion}`
   const snapshotUrl = `${CAMERA_2_SNAPSHOT_URL}?v=${streamVersion}`
   const playerUrl = nativePlayerUrl(CAMERA_2_STREAM)
+  const webrtcOfferUrl = `${CAMERA_2_WEBRTC_OFFER_URL}?stream=${encodeURIComponent(CAMERA_2_STREAM)}`
   const openUrl = CAMERA_2_NATIVE_URL === CAMERA_2_URL ? playerUrl : CAMERA_2_NATIVE_URL
   const statusCopy = cam2StatusCopy(status)
 
@@ -157,6 +160,106 @@ export default function ThinginoCameraFeed({
   }, [loadSettings, stopHold])
 
   useEffect(() => {
+    const video = rtcVideoRef.current
+    if (!video || typeof RTCPeerConnection === 'undefined') {
+      setPlayerReady(false)
+      setPlayerFailed(true)
+      return
+    }
+
+    let cancelled = false
+    let painted = false
+    const pc = new RTCPeerConnection({
+      bundlePolicy: 'max-bundle',
+      iceServers: [{ urls: ['stun:stun.cloudflare.com:3478', 'stun:stun.l.google.com:19302'] }],
+    })
+
+    const markLive = () => {
+      if (cancelled) return
+      painted = true
+      setSnapshotReady(true)
+      setPlayerReady(true)
+      setPlayerFailed(false)
+      setStreamReady(false)
+    }
+    const fail = () => {
+      if (cancelled || painted) return
+      setPlayerReady(false)
+      setPlayerFailed(true)
+    }
+    const closePeer = () => {
+      try {
+        pc.getSenders().forEach((sender) => sender.track?.stop())
+        pc.getReceivers().forEach((receiver) => receiver.track?.stop())
+        pc.close()
+      } catch {
+        // Best effort cleanup only.
+      }
+    }
+
+    video.muted = true
+    video.playsInline = true
+    video.addEventListener('loadeddata', markLive)
+    video.addEventListener('playing', markLive)
+    video.addEventListener('error', fail)
+
+    pc.addTransceiver('video', { direction: 'recvonly' })
+    pc.addEventListener('track', (event) => {
+      const stream = event.streams[0] || new MediaStream([event.track])
+      video.srcObject = stream
+      video.play().catch(() => undefined)
+    })
+    pc.addEventListener('connectionstatechange', () => {
+      if (pc.connectionState === 'failed' || pc.connectionState === 'closed') fail()
+    })
+    pc.addEventListener('iceconnectionstatechange', () => {
+      if (pc.iceConnectionState === 'failed') fail()
+    })
+
+    const startTimeout = window.setTimeout(() => {
+      if (!painted) fail()
+    }, 8_000)
+
+    const start = async () => {
+      try {
+        const offer = await pc.createOffer()
+        await pc.setLocalDescription(offer)
+        await waitForIceGatheringComplete(pc, 1_500)
+        if (cancelled) return
+
+        const sdp = pc.localDescription?.sdp
+        if (!sdp) throw new Error('missing local SDP')
+        const res = await fetch(webrtcOfferUrl, {
+          method: 'POST',
+          cache: 'no-store',
+          headers: { 'Content-Type': 'application/sdp' },
+          body: sdp,
+        })
+        if (!res.ok) throw new Error(`webrtc offer failed: ${res.status}`)
+        const answer = await res.text()
+        if (cancelled) return
+        await pc.setRemoteDescription({ type: 'answer', sdp: answer })
+      } catch {
+        fail()
+      }
+    }
+
+    setPlayerReady(false)
+    setPlayerFailed(false)
+    start()
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(startTimeout)
+      video.removeEventListener('loadeddata', markLive)
+      video.removeEventListener('playing', markLive)
+      video.removeEventListener('error', fail)
+      video.srcObject = null
+      closePeer()
+    }
+  }, [streamVersion, webrtcOfferUrl])
+
+  useEffect(() => {
     if (!(playerFailed && streamFailed)) return
     let cancelled = false
     fetch(CAMERA_2_STATUS_URL, { cache: 'no-store' })
@@ -191,26 +294,19 @@ export default function ThinginoCameraFeed({
         }}
       />
 
-      <iframe
-        key={`player-${streamVersion}`}
-        src={playerUrl}
+      <video
+        ref={rtcVideoRef}
+        muted
+        playsInline
+        autoPlay
         title="HatchingPoint Cam 2 high-quality live preview"
         aria-label="HatchingPoint Cam 2 high-quality live preview"
-        allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
-        allowFullScreen
         className="absolute inset-0 h-full w-full"
-        onLoad={() => {
-          setPlayerReady(true)
-          setPlayerFailed(false)
-        }}
-        onError={() => {
-          setPlayerReady(false)
-          setPlayerFailed(true)
-        }}
         style={{
+          objectFit: fit,
+          objectPosition: position,
           opacity: playerReady ? 1 : 0,
           transition: 'opacity 240ms ease',
-          border: 0,
         }}
       />
 
@@ -304,7 +400,7 @@ export default function ThinginoCameraFeed({
           WebkitBackdropFilter: 'blur(8px)',
         }}
       >
-        H.264 · 30fps · go2rtc
+        H.264 · 30fps · WebRTC
       </div>
 
       <div
@@ -444,4 +540,24 @@ function nativePlayerUrl(stream: string): string {
     width: '100%',
   })
   return `${CAMERA_HOST}/stream.html?${params.toString()}`
+}
+
+function waitForIceGatheringComplete(pc: RTCPeerConnection, timeoutMs: number): Promise<void> {
+  if (pc.iceGatheringState === 'complete') return Promise.resolve()
+
+  return new Promise((resolve) => {
+    let settled = false
+    const done = () => {
+      if (settled) return
+      settled = true
+      window.clearTimeout(timeout)
+      pc.removeEventListener('icegatheringstatechange', onStateChange)
+      resolve()
+    }
+    const onStateChange = () => {
+      if (pc.iceGatheringState === 'complete') done()
+    }
+    const timeout = window.setTimeout(done, timeoutMs)
+    pc.addEventListener('icegatheringstatechange', onStateChange)
+  })
 }
