@@ -4,6 +4,9 @@ const UPSTREAM =
 
 const USERNAME = process.env.V3_CAMERA_2_USERNAME || 'root'
 const PASSWORD = process.env.V3_CAMERA_2_PASSWORD || 'root'
+const SESSION_TTL_MS = 5 * 60 * 1000
+
+let cachedSession: { cookie: string; expiresAt: number } | null = null
 
 type ThinginoError = 'auth_unavailable' | 'camera_unreachable' | 'login_status' | 'login_timeout'
 
@@ -19,7 +22,11 @@ function encodeBase64(value: string) {
   return Buffer.from(value, 'utf8').toString('base64')
 }
 
-async function thinginoSessionCookie(signal: AbortSignal): Promise<ThinginoLoginResult> {
+async function thinginoSessionCookie(signal: AbortSignal, forceRefresh = false): Promise<ThinginoLoginResult> {
+  if (!forceRefresh && cachedSession && cachedSession.expiresAt > Date.now()) {
+    return { ok: true, cookie: cachedSession.cookie }
+  }
+
   try {
     const login = await fetch(`${UPSTREAM}/x/login.cgi`, {
       method: 'POST',
@@ -48,9 +55,12 @@ async function thinginoSessionCookie(signal: AbortSignal): Promise<ThinginoLogin
     }
 
     const cookie = login.headers.get('set-cookie')?.split(';')[0] || null
-    return cookie
-      ? { ok: true, cookie }
-      : { ok: false, error: 'auth_unavailable' }
+    if (cookie) {
+      cachedSession = { cookie, expiresAt: Date.now() + SESSION_TTL_MS }
+      return { ok: true, cookie }
+    }
+
+    return { ok: false, error: 'auth_unavailable' }
   } catch (error) {
     return {
       ok: false,
@@ -77,12 +87,25 @@ export async function requestThinginoPath(
     headers.set('Cookie', login.cookie)
     headers.set('User-Agent', 'andysottiaux.com/camera2-proxy')
 
-    const response = await fetch(`${UPSTREAM}${path}`, {
+    let response = await fetch(`${UPSTREAM}${path}`, {
       ...init,
       cache: 'no-store',
       signal: ctrl.signal,
       headers,
     })
+
+    if (response.status === 401 || response.status === 403) {
+      cachedSession = null
+      const freshLogin = await thinginoSessionCookie(ctrl.signal, true)
+      if (!freshLogin.ok) return freshLogin
+      headers.set('Cookie', freshLogin.cookie)
+      response = await fetch(`${UPSTREAM}${path}`, {
+        ...init,
+        cache: 'no-store',
+        signal: ctrl.signal,
+        headers,
+      })
+    }
 
     return { ok: true, response }
   } catch (error) {

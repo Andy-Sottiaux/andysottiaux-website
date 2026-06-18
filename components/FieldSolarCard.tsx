@@ -578,12 +578,17 @@ function MiniTrendChart({
     : (isLight ? '#0a8aa8' : '#67e8f9')
   const gridColor = isLight ? 'rgba(0,0,0,0.09)' : 'rgba(255,255,255,0.09)'
   const axisColor = isLight ? 'rgba(28,26,28,0.46)' : 'rgba(255,255,255,0.44)'
+  const labelShadow = isLight
+    ? '0 1px 2px rgba(255,255,255,0.85)'
+    : '0 1px 2px rgba(0,0,0,0.7)'
 
   if (data.length < 2) {
     return (
-      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet" className="w-full h-full" aria-hidden="true">
-        <line x1={PAD_X} y1={PAD_T + innerH} x2={W - PAD_X} y2={PAD_T + innerH} stroke={gridColor} strokeWidth="1" />
-      </svg>
+      <div className="relative h-full min-h-0 w-full overflow-hidden" aria-hidden="true">
+        <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="absolute inset-0 h-full w-full">
+          <line x1={PAD_X} y1={PAD_T + innerH} x2={W - PAD_X} y2={PAD_T + innerH} stroke={gridColor} strokeWidth="1" vectorEffect="non-scaling-stroke" />
+        </svg>
+      </div>
     )
   }
 
@@ -605,53 +610,86 @@ function MiniTrendChart({
     : [yMax, yMin + range / 2, yMin]
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet" className="w-full h-full" aria-hidden="true">
-      {tickValues.map((value, index) => {
-        const y = yFor(value)
-        return (
-          <g key={`${value}-${index}`}>
-            <line x1={PAD_X} y1={y} x2={W - PAD_X} y2={y} stroke={gridColor} strokeWidth={index === tickValues.length - 1 ? 1 : 0.8} />
-          </g>
-        )
-      })}
-      <path d={areaPath} fill={areaColor} />
-      <path d={linePath} fill="none" stroke={strokeColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    <div className="relative h-full min-h-0 w-full overflow-hidden" aria-hidden="true">
+      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="absolute inset-0 h-full w-full">
+        {tickValues.map((value, index) => {
+          const y = yFor(value)
+          return (
+            <g key={`${value}-${index}`}>
+              <line
+                x1={PAD_X}
+                y1={y}
+                x2={W - PAD_X}
+                y2={y}
+                stroke={gridColor}
+                strokeWidth={index === tickValues.length - 1 ? 1 : 0.8}
+                vectorEffect="non-scaling-stroke"
+              />
+            </g>
+          )
+        })}
+        <path d={areaPath} fill={areaColor} />
+        <path
+          d={linePath}
+          fill="none"
+          stroke={strokeColor}
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          vectorEffect="non-scaling-stroke"
+        />
+        {['24h', '12h', 'now'].map((label, index) => {
+          const x = PAD_X + (index / 2) * innerW
+          return (
+            <line
+              key={label}
+              x1={x}
+              y1={PAD_T + innerH - 2.5}
+              x2={x}
+              y2={PAD_T + innerH + 1.5}
+              stroke={axisColor}
+              strokeWidth="0.65"
+              opacity="0.72"
+              vectorEffect="non-scaling-stroke"
+            />
+          )
+        })}
+      </svg>
+
       {tickValues.map((value, index) => {
         const y = yFor(value)
         const clampedY = Math.max(PAD_T + 5, Math.min(H - 9, y + 2.2))
         return (
-          <text
+          <span
             key={`label-${value}-${index}`}
-            x={PAD_X + 3}
-            y={clampedY}
-            textAnchor="start"
-            fontSize="6.7"
-            fontWeight="700"
-            fill={axisColor}
+            className="pointer-events-none absolute left-1 text-[9px] font-bold tabular-nums leading-none md:text-[8px]"
+            style={{
+              top: `${(clampedY / H) * 100}%`,
+              color: axisColor,
+              textShadow: labelShadow,
+              transform: 'translateY(-50%)',
+            }}
           >
             {formatTick(value, tone)}
-          </text>
+          </span>
         )
       })}
-      {['24h', '12h', 'now'].map((label, index) => {
-        const x = PAD_X + (index / 2) * innerW
-        return (
-          <g key={label}>
-            <line x1={x} y1={PAD_T + innerH - 2.5} x2={x} y2={PAD_T + innerH + 1.5} stroke={axisColor} strokeWidth="0.65" opacity="0.72" />
-            <text
-              x={x}
-              y={H - 1.5}
-              textAnchor={index === 0 ? 'start' : index === 2 ? 'end' : 'middle'}
-              fontSize="6.5"
-              fontWeight="700"
-              fill={axisColor}
-            >
-              {label}
-            </text>
-          </g>
-        )
-      })}
-    </svg>
+
+      {['24h', '12h', 'now'].map((label, index) => (
+        <span
+          key={label}
+          className="pointer-events-none absolute bottom-0 text-[9px] font-bold leading-none md:text-[8px]"
+          style={{
+            left: `${index * 50}%`,
+            color: axisColor,
+            textShadow: labelShadow,
+            transform: index === 0 ? 'translateX(0)' : index === 2 ? 'translateX(-100%)' : 'translateX(-50%)',
+          }}
+        >
+          {label}
+        </span>
+      ))}
+    </div>
   )
 }
 

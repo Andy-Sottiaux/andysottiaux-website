@@ -12,6 +12,9 @@ type MotorParams = {
 }
 
 const DIRECTIONS = new Set(['uc', 'ur', 'cr', 'dr', 'dc', 'dl', 'cl', 'ul'])
+const MOTOR_PARAMS_TTL_MS = 60 * 1000
+
+let cachedMotorParams: { params: MotorParams; expiresAt: number } | null = null
 
 function numeric(value: unknown, fallback = 0) {
   const parsed = typeof value === 'number' ? value : Number(value)
@@ -26,9 +29,15 @@ function jsonError(message: string, status = 400) {
 }
 
 async function readMotorParams(): Promise<MotorParams> {
+  if (cachedMotorParams && cachedMotorParams.expiresAt > Date.now()) {
+    return cachedMotorParams.params
+  }
+
   const res = await requestThinginoPath('/x/json-motor-params.cgi', {}, 5000)
-  if (!res.ok || !res.response.ok) return {}
-  return res.response.json().catch(() => ({}))
+  if (!res.ok || !res.response.ok) return cachedMotorParams?.params ?? {}
+  const params = await res.response.json().catch(() => ({}))
+  cachedMotorParams = { params, expiresAt: Date.now() + MOTOR_PARAMS_TTL_MS }
+  return params
 }
 
 async function runMotorQuery(query: URLSearchParams) {
@@ -66,7 +75,7 @@ export async function POST(request: NextRequest) {
 
   if (DIRECTIONS.has(command)) {
     const params = await readMotorParams()
-    const granularity = body?.step === 'fine' ? 160 : body?.step === 'coarse' ? 40 : 90
+    const granularity = body?.step === 'fine' ? 110 : body?.step === 'coarse' ? 24 : 45
     const move = relativeMove(command, params, granularity)
     const query = new URLSearchParams({
       d: 'g',

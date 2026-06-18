@@ -107,10 +107,10 @@ export default function ThinginoCameraFeed({
 
   const startHold = (command: Cam2Command) => {
     stopHold()
-    void sendControl(command, 'fine')
+    void sendControl(command, 'normal')
     holdTimerRef.current = setInterval(() => {
-      void sendControl(command, 'fine')
-    }, 180)
+      void sendControl(command, 'normal')
+    }, 120)
   }
 
   const applyPreset = async (preset: 'hq30' | 'balanced24') => {
