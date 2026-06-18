@@ -2046,11 +2046,13 @@ function formatDetectionAge(seconds: number): string {
 }
 
 function nativePlayerUrl(stream: string): string {
-  return `${CAMERA_HOST}/stream.html` +
-    `?src=${encodeURIComponent(stream)}` +
-    `&mode=${encodeURIComponent(PLAYER_MODE)}` +
-    '&background=false' +
-    '&width=100%'
+  const params = new URLSearchParams({
+    src: stream,
+    mode: PLAYER_MODE,
+    background: 'false',
+    width: '100%',
+  })
+  return `${CAMERA_HOST}/stream.html?${params.toString()}`
 }
 
 function waitForIceGatheringComplete(pc: RTCPeerConnection, timeoutMs: number): Promise<void> {

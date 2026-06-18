@@ -42,7 +42,7 @@ const PRESETS: Record<string, StreamSettings> = {
     width: 2304,
     height: 1296,
     fps: 30,
-    bitrate: 6000,
+    bitrate: 12000,
     gop: 30,
     max_gop: 60,
     format: 'H264',

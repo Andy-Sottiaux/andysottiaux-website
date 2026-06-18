@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   CAMERA_2_CONTROL_URL,
   CAMERA_2_MJPEG_URL,
@@ -30,7 +30,7 @@ type Cam2Settings = {
     bitrate?: number
   } | null
 }
-type Cam2Command = 'ul' | 'uc' | 'ur' | 'cl' | 'center' | 'cr' | 'dl' | 'dc' | 'dr' | 'home'
+type Cam2Command = 'ul' | 'uc' | 'ur' | 'cl' | 'center' | 'cr' | 'dl' | 'dc' | 'dr' | 'home' | 'stop'
 
 function cam2StatusCopy(status: Cam2Status | null) {
   if (!status) return 'Checking relay and camera status...'
@@ -67,6 +67,7 @@ export default function ThinginoCameraFeed({
   const [controlPending, setControlPending] = useState<Cam2Command | null>(null)
   const [qualityPending, setQualityPending] = useState<string | null>(null)
   const holdTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const heldCommandRef = useRef<Cam2Command | null>(null)
   const controlBusyRef = useRef(false)
   const mjpegUrl = `${CAMERA_2_MJPEG_URL}?v=${streamVersion}`
   const snapshotUrl = `${CAMERA_2_SNAPSHOT_URL}?v=${streamVersion}`
@@ -84,17 +85,23 @@ export default function ThinginoCameraFeed({
     setStreamVersion(Date.now())
   }
 
-  const loadSettings = () => {
+  const loadSettings = useCallback(() => {
     fetch(CAMERA_2_SETTINGS_URL, { cache: 'no-store' })
       .then((r) => r.json())
       .then((next: Cam2Settings) => setSettings(next))
       .catch(() => setSettings({ ok: false }))
-  }
+  }, [])
 
-  const sendControl = async (command: Cam2Command, step: 'fine' | 'normal' | 'coarse' = 'normal') => {
-    if (controlBusyRef.current) return
-    controlBusyRef.current = true
-    setControlPending(command)
+  const sendControl = useCallback(async (
+    command: Cam2Command,
+    step: 'fine' | 'normal' | 'coarse' = 'normal',
+    trackPending = true,
+  ) => {
+    if (trackPending) {
+      if (controlBusyRef.current) return
+      controlBusyRef.current = true
+      setControlPending(command)
+    }
     try {
       await fetch(CAMERA_2_CONTROL_URL, {
         method: 'POST',
@@ -102,25 +109,31 @@ export default function ThinginoCameraFeed({
         body: JSON.stringify({ command, step }),
       })
     } finally {
-      controlBusyRef.current = false
-      setControlPending(null)
+      if (trackPending) {
+        controlBusyRef.current = false
+        setControlPending(null)
+      }
     }
-  }
+  }, [])
 
-  const stopHold = () => {
+  const stopHold = useCallback(() => {
+    const wasHolding = heldCommandRef.current != null
+    heldCommandRef.current = null
     if (holdTimerRef.current) {
       clearInterval(holdTimerRef.current)
       holdTimerRef.current = null
     }
-  }
+    if (wasHolding) void sendControl('stop', 'fine', false)
+  }, [sendControl])
 
-  const startHold = (command: Cam2Command) => {
+  const startHold = useCallback((command: Cam2Command) => {
     stopHold()
-    void sendControl(command, 'normal')
+    heldCommandRef.current = command
+    void sendControl(command, 'fine', false)
     holdTimerRef.current = setInterval(() => {
-      void sendControl(command, 'normal')
-    }, 120)
-  }
+      if (heldCommandRef.current === command) void sendControl(command, 'fine', false)
+    }, 90)
+  }, [sendControl, stopHold])
 
   const applyPreset = async (preset: 'hq30' | 'balanced24') => {
     setQualityPending(preset)
@@ -141,7 +154,7 @@ export default function ThinginoCameraFeed({
   useEffect(() => {
     loadSettings()
     return stopHold
-  }, [])
+  }, [loadSettings, stopHold])
 
   useEffect(() => {
     if (!(playerFailed && streamFailed)) return
@@ -324,9 +337,10 @@ export default function ThinginoCameraFeed({
               key={command}
               type="button"
               aria-label={aria}
-              disabled={controlPending != null && controlPending !== command}
+              disabled={command === 'home' && controlPending != null}
               onPointerDown={(event) => {
                 event.preventDefault()
+                event.currentTarget.setPointerCapture(event.pointerId)
                 const cmd = command as Cam2Command
                 if (cmd === 'home') {
                   void sendControl(cmd)
@@ -334,9 +348,16 @@ export default function ThinginoCameraFeed({
                   startHold(cmd)
                 }
               }}
-              onPointerUp={stopHold}
+              onPointerUp={(event) => {
+                if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+                  event.currentTarget.releasePointerCapture(event.pointerId)
+                }
+                stopHold()
+              }}
               onPointerLeave={stopHold}
               onPointerCancel={stopHold}
+              onLostPointerCapture={stopHold}
+              onContextMenu={(event) => event.preventDefault()}
               className="flex h-7 w-7 items-center justify-center rounded-[8px] text-[13px] font-bold text-white/85 transition hover:bg-white/18 hover:text-white disabled:opacity-45"
               style={{ background: command === 'home' ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.08)' }}
             >
@@ -366,7 +387,7 @@ export default function ThinginoCameraFeed({
               className="rounded-[8px] px-2 py-1 text-[9px] font-bold uppercase text-white/88 transition hover:bg-white/18 disabled:opacity-45"
               style={{ background: qualityPending === 'hq30' ? 'rgba(103,232,249,0.24)' : 'rgba(255,255,255,0.10)' }}
             >
-              HQ 30
+              Max 30
             </button>
             <button
               type="button"
@@ -416,9 +437,11 @@ function formatStreamSettings(settings: Cam2Settings | null) {
 }
 
 function nativePlayerUrl(stream: string): string {
-  return `${CAMERA_HOST}/stream.html` +
-    `?src=${encodeURIComponent(stream)}` +
-    `&mode=${encodeURIComponent(PLAYER_MODE)}` +
-    '&background=false' +
-    '&width=100%'
+  const params = new URLSearchParams({
+    src: stream,
+    mode: PLAYER_MODE,
+    background: 'false',
+    width: '100%',
+  })
+  return `${CAMERA_HOST}/stream.html?${params.toString()}`
 }

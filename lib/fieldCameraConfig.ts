@@ -21,7 +21,7 @@ export const CAMERA_2_STATUS_URL =
   '/api/v3/camera2/status'
 export const CAMERA_2_CONTROL_URL =
   process.env.NEXT_PUBLIC_V3_CAMERA_2_CONTROL_URL ||
-  '/api/v3/camera2/control'
+  `${CAMERA_HOST}/api/camera2/control`
 export const CAMERA_2_SETTINGS_URL =
   process.env.NEXT_PUBLIC_V3_CAMERA_2_SETTINGS_URL ||
   '/api/v3/camera2/settings'

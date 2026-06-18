@@ -73,9 +73,13 @@ export async function POST(request: NextRequest) {
 
   if (!command) return jsonError('missing_command')
 
+  if (command === 'stop') {
+    return runMotorQuery(new URLSearchParams({ d: 's' }))
+  }
+
   if (DIRECTIONS.has(command)) {
     const params = await readMotorParams()
-    const granularity = body?.step === 'fine' ? 110 : body?.step === 'coarse' ? 24 : 45
+    const granularity = body?.step === 'fine' ? 100 : body?.step === 'coarse' ? 25 : 60
     const move = relativeMove(command, params, granularity)
     const query = new URLSearchParams({
       d: 'g',
@@ -97,12 +101,12 @@ export async function POST(request: NextRequest) {
 }
 
 async function runHomeCommand() {
-  const reset = await requestThinginoPath('/x/json-motor.cgi?d=r', {}, 2500)
+  const reset = await requestThinginoPath('/x/json-motor.cgi?d=b', {}, 6000)
   if (!reset.ok) {
     if (reset.error === 'login_timeout') {
       return NextResponse.json({
         ok: true,
-        data: { result: 'started', note: 'Thingino homing command does not return before the HTTP timeout.' },
+        data: { result: 'started', note: 'Thingino home command did not return before the HTTP timeout.' },
       }, { headers: { 'Cache-Control': 'no-store' } })
     }
     return jsonError(reset.error, 502)
