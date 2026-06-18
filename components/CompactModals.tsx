@@ -134,8 +134,14 @@ export function LiveModalContent({
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
   const intro = selectedCamera === 'field'
-    ? 'Live edge-AI camera and solar telemetry from a board I built end-to-end - hardware, firmware, and the public read-only stream you are seeing.'
-    : 'HatchingPoint-branded Thingino E220 view through the tailnet proxy. The camera stays lightweight; this page only pulls the stream.'
+    ? 'Live edge-AI camera and solar telemetry from a board I built end-to-end: hardware integration, Linux services, relay APIs, and the public read-only stream you are seeing.'
+    : 'HatchingPoint-branded Thingino E220 view through the tailnet proxy. The site only consumes a read-only relay; control and device credentials stay off the browser.'
+  const proof = [
+    { label: 'Edge stack', value: 'Linux board, 5 MP camera, on-device inference, thermal/fan health' },
+    { label: 'Power stack', value: 'Solar + LiFePO4 telemetry with graceful stale/offline behavior' },
+    { label: 'Web stack', value: 'Same-origin Next.js APIs, stream fallback, public read-only surface' },
+  ]
+  const roles = ['Hardware integration', 'Embedded services', 'Camera relay', 'Telemetry UI', 'Failure states']
 
   return (
     <div className="flex flex-col gap-5" data-camera-performance="true">
@@ -150,6 +156,47 @@ export function LiveModalContent({
             isLight={isLight}
           />
         </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+        {proof.map((item) => (
+          <div
+            key={item.label}
+            className="rounded-xl p-3"
+            style={{
+              background: isLight ? 'rgba(0,0,0,0.025)' : 'rgba(255,255,255,0.035)',
+              border: palette.cardBorder,
+            }}
+          >
+            <div
+              className="text-[9.5px] font-semibold uppercase tracking-[0.18em]"
+              style={{ color: palette.mutedText }}
+            >
+              {item.label}
+            </div>
+            <div
+              className="mt-1 text-[12px] leading-snug"
+              style={{ color: palette.bodyText }}
+            >
+              {item.value}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex flex-wrap gap-1.5 -mt-1">
+        {roles.map((role) => (
+          <span
+            key={role}
+            className="rounded-md px-2 py-1 text-[10.5px] font-medium"
+            style={{
+              background: isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.06)',
+              color: palette.bodyText,
+            }}
+          >
+            {role}
+          </span>
+        ))}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -197,6 +244,7 @@ const EXPERIENCE_FULL = [
     companyUrl: 'https://www.avxaircraft.com/',
     period: 'Sep 2023 — Present',
     logo: '/images/avx.png',
+    scope: 'Owns cross-discipline UAV execution across rotor hardware, flight-control integration, autonomy scaffolding, and test telemetry.',
     achievements: [
       'Designed, manufactured, and tested complete rotor systems — blades, hubs, grips, and fixtures for subscale and coaxial UAV platforms',
       'Built and managed the CubePilot/CubeNode flight-control architecture, integrating sensors, actuators, ESCs, and communication networks',
@@ -212,6 +260,7 @@ const EXPERIENCE_FULL = [
     companyUrl: 'https://www.hatchingpoint.com',
     period: 'Jan 2021 — Present',
     logo: '/images/hatchingpoint-logo.jpeg',
+    scope: 'Ships production mobile/web products end-to-end, from product shape and UI to backend data models and release operations.',
     achievements: [
       'Designed and developed 10+ production iPhone apps in Swift, owning UI/UX and App Store deployment',
       'Built modern web applications using React, JavaScript/TypeScript, focusing on component-driven architectures',
@@ -225,6 +274,7 @@ const EXPERIENCE_FULL = [
     companyUrl: 'https://www.bellflight.com',
     period: 'Feb 2020 — Sep 2023',
     logo: '/images/bell.svg',
+    scope: 'Worked in the rotorcraft engineering loop between CAD, PLM, manufacturing, suppliers, testing, and fleet issue resolution.',
     achievements: [
       'Investigated issues from supply chain, manufacturing, and fleet operations and drove resolutions',
       'Developed detailed 2D/3D CAD and PLM documentation for assembly and installation',
@@ -239,6 +289,7 @@ const EXPERIENCE_FULL = [
     companyUrl: 'https://www.texasairsystems.com/',
     period: 'Aug 2016 — Feb 2020',
     logo: '/images/texasairsystems-logo.jpeg',
+    scope: 'Managed technical HVAC projects where requirements, constraints, vendors, and customer expectations had to converge.',
     achievements: [
       'Built and grew relationships with customers, contractors, project engineers, and manufacturers',
       'Determined project requirements and constraints to meet customer expectations',
@@ -301,6 +352,12 @@ export function ExperienceModalContent() {
               >
                 {exp.period}
               </div>
+              <div
+                className="text-[12px] leading-snug tracking-tight mt-2"
+                style={{ color: palette.bodyText }}
+              >
+                {exp.scope}
+              </div>
             </div>
           </div>
           <ul className="space-y-1.5 mb-3">
@@ -346,7 +403,9 @@ export function ExperienceModalContent() {
 const PROJECTS_FULL = [
   {
     title: 'WYZECAR',
-    description: 'Vision-based autonomous RC car using YOLOv8 for real-time human detection and following. Web-based WASD control, live video, PID-controlled motion.',
+    problem: 'Turn a small RC platform into a controllable autonomy testbed with live video and person-following behavior.',
+    built: 'Integrated YOLOv8 perception, ROS2-style control plumbing, web-based WASD control, live video, and PID motion.',
+    proof: 'Shows the robotics loop end-to-end: perception, control, hardware interface, operator UI, and field iteration.',
     tech: ['Python', 'YOLOv8', 'ROS2', 'DART-MX95', 'ESP32'],
     link: 'https://github.com/Andy-Sottiaux/WYZECAR',
     icon: '/images/wyzecar.png',
@@ -354,21 +413,27 @@ const PROJECTS_FULL = [
   },
   {
     title: 'Rot Dot',
-    description: 'Block distracting apps with a physical tap. NFC stickers around your space — scan to lock or unlock apps via Apple Screen Time API.',
+    problem: 'Create real physical friction for phone distraction without making the app feel like a punishment tool.',
+    built: 'Used NFC stickers, SwiftUI, FamilyControls, and the Screen Time API to bind lock/unlock behavior to places.',
+    proof: 'Combines product judgment with a restricted Apple API surface and real-world interaction design.',
     tech: ['iOS', 'Swift', 'SwiftUI', 'NFC', 'FamilyControls'],
     link: 'https://apps.apple.com/us/app/rot-dot/id6758902103',
     icon: '/images/rotdot-icon.png',
   },
   {
     title: 'Record + Transcribe',
-    description: 'Voice recordings with real-time live transcription. AI-powered summaries that extract key points, decisions, and action items.',
+    problem: 'Make long voice notes and meetings useful immediately after capture.',
+    built: 'Built recording, live transcription, and AI summary flows that extract decisions, key points, and action items.',
+    proof: 'Demonstrates a production mobile AI workflow: capture, streaming text, summary UX, and shipped App Store release.',
     tech: ['iOS', 'Swift', 'SwiftUI', 'Speech Recognition', 'OpenAI'],
     link: 'https://apps.apple.com/app/record-transcribe/id6758643630',
     icon: '/images/recordtranscribe-icon.png',
   },
   {
     title: 'AirMD+',
-    description: 'Monitor your HVAC system with real-time temperature tracking. Full-stack iOS plus custom hardware for climate control oversight.',
+    problem: 'Expose HVAC behavior as live telemetry instead of intermittent technician observations.',
+    built: 'Built the custom monitoring hardware path plus iOS and web surfaces for temperature tracking and system visibility.',
+    proof: 'Bridges embedded data collection, full-stack product work, and a practical operational monitoring use case.',
     tech: ['iOS', 'Swift', 'Hardware', 'IoT', 'Embedded'],
     link: 'https://www.hatchingpoint.com/airmd',
     icon: '/images/airmd-icon.jpg',
@@ -424,10 +489,12 @@ export function ProjectsModalContent() {
               </div>
             </div>
             <div
-              className="text-[12px] leading-snug mb-2.5 flex-1"
+              className="space-y-1.5 text-[12px] leading-snug mb-2.5 flex-1"
               style={{ color: palette.bodyText }}
             >
-              {p.description}
+              <div><span className="font-semibold">Problem:</span> {p.problem}</div>
+              <div><span className="font-semibold">Built:</span> {p.built}</div>
+              <div><span className="font-semibold">Proof:</span> {p.proof}</div>
             </div>
             <div className="flex flex-wrap gap-1">
               {p.tech.map((t) => (
@@ -686,8 +753,9 @@ export function ContactModalContent() {
         className="text-[14px] sm:text-[15px] leading-relaxed"
         style={{ color: palette.bodyText }}
       >
-        Available for aerospace hardware, embedded systems, and full-stack product engineering.
-        Open to collaboration, contracting, and conversations about UAV and rotor work.
+        Best fit: hardware/software integration, UAV systems, embedded dashboards,
+        rapid prototypes, and production apps that need both engineering depth and
+        practical execution.
       </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">

@@ -2,7 +2,7 @@ import { ImageResponse } from '@vercel/og'
 
 export const runtime = 'edge'
 
-export const alt = 'Andy Sottiaux - Engineer & Founder'
+export const alt = 'Andy Sottiaux - Hardware/Software Engineer'
 export const size = {
   width: 1200,
   height: 630,
@@ -93,7 +93,7 @@ export default async function Image() {
               fontFamily: 'system-ui, sans-serif',
             }}
           >
-            Engineer & Founder
+            Hardware / Software Engineer
           </p>
 
           {/* Tags */}
@@ -103,7 +103,7 @@ export default async function Image() {
               gap: '16px',
             }}
           >
-            {['AVX Aircraft', 'HatchingPoint', 'Hardware to Software'].map((tag) => (
+            {['UAV Systems', 'Edge AI', 'Embedded Products'].map((tag) => (
               <div
                 key={tag}
                 style={{

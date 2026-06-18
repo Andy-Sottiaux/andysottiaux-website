@@ -98,6 +98,7 @@ function CompactInner({ initialBoardLive }: { initialBoardLive: boolean }) {
 
   return (
     <main
+      id="main-content"
       className="relative w-full flex flex-col min-h-screen md:h-[100dvh] md:overflow-hidden"
       style={{
         background: palette.sectionBackground,
@@ -312,10 +313,18 @@ function Tile({
       ? accent.light
       : accent.dark
     : undefined
+  const openFromTileChrome = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (!onOpen) return
+    const target = event.target as HTMLElement | null
+    if (target?.closest('a, button, input, select, textarea, [role="button"], [role="link"]')) return
+    haptic('open')
+    onOpen()
+  }
 
   return (
     <div
       data-peek-target="true"
+      onClick={openFromTileChrome}
       className={`group relative z-[1] rounded-2xl overflow-hidden h-full flex flex-col ${className}`}
       style={{
         background: palette.cardBackground,
@@ -498,6 +507,14 @@ function CameraTile({
           }}
         >
           <CameraFeedSwitcher enabled={enabled} fit="cover" selectedCamera={selectedCamera} />
+          {onOpen && (
+            <button
+              type="button"
+              aria-label="Expand Field Live camera"
+              onClick={() => { haptic('open'); onOpen() }}
+              className="absolute inset-0 z-10 cursor-pointer"
+            />
+          )}
         </div>
       </div>
     </Tile>

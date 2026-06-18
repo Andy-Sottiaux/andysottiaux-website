@@ -1,15 +1,36 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   CAMERA_2_MJPEG_URL,
   CAMERA_2_NATIVE_URL,
   CAMERA_2_SNAPSHOT_URL,
+  CAMERA_2_STATUS_URL,
   CAMERA_2_URL,
 } from '@/lib/fieldCameraConfig'
 import { useFieldTheme } from './fieldTheme'
 
 type VideoFit = 'contain' | 'cover' | 'fill'
+type Cam2Status = {
+  ok?: boolean
+  error?: string
+  upstream_status?: number
+}
+
+function cam2StatusCopy(status: Cam2Status | null) {
+  if (!status) return 'Checking relay and camera status...'
+  if (status.ok) return 'Relay auth works. Retrying the stream may restore the preview.'
+  if (status.error === 'camera_unreachable' || status.error === 'login_timeout') {
+    return 'Relay is online, but the camera is not answering on the LAN.'
+  }
+  if (status.error === 'login_status' && status.upstream_status === 502) {
+    return 'Relay reached the camera path, but the upstream returned an error.'
+  }
+  if (status.error === 'auth_unavailable') {
+    return 'Relay is online, but Thingino did not return a session cookie.'
+  }
+  return 'Cam 2 is not returning video right now.'
+}
 
 export default function ThinginoCameraFeed({
   fit = 'contain',
@@ -24,15 +45,34 @@ export default function ThinginoCameraFeed({
   const [snapshotReady, setSnapshotReady] = useState(false)
   const [streamReady, setStreamReady] = useState(false)
   const [streamFailed, setStreamFailed] = useState(false)
+  const [status, setStatus] = useState<Cam2Status | null>(null)
   const mjpegUrl = `${CAMERA_2_MJPEG_URL}?v=${streamVersion}`
   const snapshotUrl = `${CAMERA_2_SNAPSHOT_URL}?v=${streamVersion}`
+  const statusCopy = cam2StatusCopy(status)
 
   const reload = () => {
     setSnapshotReady(false)
     setStreamReady(false)
     setStreamFailed(false)
+    setStatus(null)
     setStreamVersion(Date.now())
   }
+
+  useEffect(() => {
+    if (!streamFailed) return
+    let cancelled = false
+    fetch(CAMERA_2_STATUS_URL, { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((next: Cam2Status) => {
+        if (!cancelled) setStatus(next)
+      })
+      .catch(() => {
+        if (!cancelled) setStatus({ ok: false })
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [streamFailed, streamVersion])
 
   return (
     <div className="relative h-full w-full overflow-hidden rounded-[16px] bg-black">
@@ -102,7 +142,10 @@ export default function ThinginoCameraFeed({
               style={{ filter: isLight ? 'none' : 'drop-shadow(0 0 10px rgba(255,255,255,0.16))' }}
             />
             <div className="text-[11px] font-semibold uppercase text-white/76">
-              Cam 2 tailnet unavailable
+              Cam 2 camera offline
+            </div>
+            <div className="text-[11px] leading-snug text-white/58">
+              {statusCopy}
             </div>
             <button
               type="button"
