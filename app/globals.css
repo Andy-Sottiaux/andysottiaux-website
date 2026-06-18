@@ -92,6 +92,10 @@ html {
   transition-duration: 0s !important;
 }
 
+[data-camera-performance="true"] .field-fan-rotor {
+  animation: fldFanSpin var(--fan-spin) linear infinite !important;
+}
+
 [data-camera-performance="true"] [data-peek-target="true"],
 [data-camera-performance="true"] [data-field-card="true"] {
   backdrop-filter: var(--field-card-backdrop-filter) !important;
