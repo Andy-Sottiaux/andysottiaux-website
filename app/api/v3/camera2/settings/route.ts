@@ -6,6 +6,9 @@ export const dynamic = 'force-dynamic'
 
 const THREAD_RTSP = 1
 const THREAD_VIDEO = 2
+const RELAY_SETTINGS_URL =
+  process.env.V3_CAMERA_2_SETTINGS_RELAY_URL ||
+  'https://cayley-relay.tailc7d6b6.ts.net/api/camera2/settings'
 
 type StreamSettings = {
   width?: number
@@ -103,7 +106,41 @@ async function readJson(response: Response) {
   return response.json().catch(() => null)
 }
 
+async function fetchRelaySettings(init?: RequestInit, timeoutMs = 8000) {
+  const ctrl = new AbortController()
+  const timeoutId = setTimeout(() => ctrl.abort(), timeoutMs)
+  try {
+    const res = await fetch(RELAY_SETTINGS_URL, {
+      ...init,
+      cache: 'no-store',
+      signal: ctrl.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'andysottiaux.com/camera2-settings-proxy',
+      },
+    })
+    const text = await res.text()
+    if (res.ok || res.status < 500) {
+      return new NextResponse(text, {
+        status: res.status,
+        headers: {
+          'Cache-Control': 'no-store',
+          'Content-Type': res.headers.get('content-type') || 'application/json; charset=utf-8',
+        },
+      })
+    }
+  } catch {
+    // Fall back to the older Thingino proxy path.
+  } finally {
+    clearTimeout(timeoutId)
+  }
+  return null
+}
+
 async function readCurrentSettings() {
+  const relay = await fetchRelaySettings()
+  if (relay) return relay
+
   const config = await postPrudynt(CONFIG_REQUEST, 10000)
   const motor = await requestThinginoPath('/x/json-motor-params.cgi', {}, 5000)
 
@@ -145,6 +182,16 @@ export async function POST(request: NextRequest) {
     stream0,
     action: { restart_thread: THREAD_RTSP | THREAD_VIDEO },
   }
+
+  const relay = await fetchRelaySettings({
+    method: 'POST',
+    body: JSON.stringify({
+      stream0,
+      persist: body?.persist,
+    }),
+  }, 14000)
+  if (relay) return relay
+
   const apply = await postPrudynt(payload, 12000)
   if (!apply.ok) {
     return NextResponse.json({ ok: false, error: apply.error }, {
