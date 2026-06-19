@@ -376,7 +376,7 @@ function Tile({
       tabIndex={onOpen ? 0 : undefined}
       aria-label={onOpen ? modalAriaLabel : undefined}
       aria-haspopup={onOpen ? 'dialog' : undefined}
-      className={`group relative z-[1] rounded-2xl overflow-hidden h-full flex flex-col ${onOpen || deepLink ? 'cursor-pointer' : ''} ${className}`}
+    className={`group relative z-[1] rounded-2xl overflow-hidden h-full flex flex-col ${onOpen || deepLink ? 'cursor-pointer' : ''} ${className}`}
       style={{
         background: palette.cardBackground,
         border: palette.cardBorder,
@@ -385,10 +385,19 @@ function Tile({
         boxShadow: palette.cardShadow,
         transition: 'transform 0.4s cubic-bezier(0.16,1,0.3,1), box-shadow 0.4s cubic-bezier(0.16,1,0.3,1)',
       }}
-    >
-      {/* Deep-link fallback when the tile is rendered outside modal mode.
-          Modal mode uses the tile container itself as the accessible target,
-          while nested links/buttons still win the click. */}
+      >
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 z-[1] opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+          style={{
+            background: isLight
+              ? 'linear-gradient(135deg, rgba(255,255,255,0.28), transparent 42%)'
+              : 'linear-gradient(135deg, rgba(255,255,255,0.045), transparent 45%)',
+          }}
+        />
+        {/* Deep-link fallback when the tile is rendered outside modal mode.
+            Modal mode uses the tile container itself as the accessible target,
+            while nested links/buttons still win the click. */}
       {!onOpen && deepLink ? (
         <a
           href={deepLink}
@@ -1706,40 +1715,40 @@ const EXPERIENCE: {
 function ExperienceTile({ onOpen }: { onOpen?: () => void }) {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
-  const logoSize = 'clamp(28px, 3.35dvh, 36px)'
 
   return (
     <Tile
       label="Experience"
       accent={{ light: '#0f9d4f', dark: 'rgb(74 222 128 / 0.9)' }}
-      deepLink="/#experience"
-      onOpen={onOpen}
-      modalLabel="Open Experience"
-      className="min-h-[200px] lg:min-h-0"
-    >
-      <div className="px-5 md:px-[clamp(1rem,1.7vw,1.5rem)] pt-2 md:pt-[clamp(0.25rem,0.9dvh,0.75rem)] pb-3 md:pb-[clamp(0.5rem,1.4dvh,1.25rem)] flex-1 min-h-0 flex flex-col overflow-hidden">
-        <div className="h-full min-h-0 flex flex-col justify-between gap-[clamp(0.125rem,0.55dvh,0.625rem)]">
-          {EXPERIENCE.map((e) => {
-            return (
-              <a
-                key={e.company}
-                href={e.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="relative z-10 group min-h-0 flex items-center justify-between gap-2 md:gap-3 py-[clamp(0.125rem,0.35dvh,0.375rem)] border-b last:border-b-0"
-                style={{ borderColor: palette.hairline }}
-              >
-                <div className="flex items-center gap-3 min-w-0 flex-1">
+        deepLink="/#experience"
+        onOpen={onOpen}
+        modalLabel="Open Experience"
+        className="min-h-[285px] sm:min-h-[250px] lg:min-h-0"
+      >
+        <div className="px-4 sm:px-5 md:px-[clamp(1rem,1.7vw,1.5rem)] pt-2 md:pt-[clamp(0.25rem,0.9dvh,0.75rem)] pb-3 md:pb-[clamp(0.5rem,1.4dvh,1.25rem)] flex-1 min-h-0 flex flex-col overflow-hidden">
+          <div className="h-full min-h-0 flex flex-col justify-between gap-2 lg:gap-[clamp(0.1rem,0.45dvh,0.4rem)]">
+            {EXPERIENCE.map((e) => {
+              return (
+                <a
+                  key={e.company}
+                  href={e.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="relative z-10 group min-h-0 flex items-center justify-between gap-2.5 md:gap-3 rounded-xl px-2.5 py-2 lg:px-[clamp(0.35rem,0.75dvh,0.55rem)] lg:py-[clamp(0.1rem,0.32dvh,0.3rem)] transition-all"
+                  style={{
+                    background: isLight ? 'rgba(0,0,0,0.025)' : 'rgba(255,255,255,0.035)',
+                    border: palette.hairline ? `1px solid ${palette.hairline}` : palette.cardBorder,
+                  }}
+                >
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
                   {/* Logo chip — uniform 36×36 square plate. Per-logo
                       `scale` compensates for differing native whitespace
                       so each mark reads at roughly the same visual weight
                       inside the same-sized plate. */}
-                  <div
-                    className="flex items-center justify-center rounded-md flex-shrink-0 overflow-hidden"
-                    style={{
-                      width: logoSize,
-                      height: logoSize,
-                      background: '#fff',
+                    <div
+                      className="flex h-12 w-12 items-center justify-center rounded-lg flex-shrink-0 overflow-hidden lg:h-[clamp(28px,3.35dvh,36px)] lg:w-[clamp(28px,3.35dvh,36px)] lg:rounded-md"
+                      style={{
+                        background: '#fff',
                       boxShadow: isLight
                         ? '0 1px 2px rgba(28,26,28,0.08), 0 0 0 1px rgba(0,0,0,0.04)'
                         : '0 1px 2px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,0,0,0.2)',
@@ -1760,26 +1769,34 @@ function ExperienceTile({ onOpen }: { onOpen?: () => void }) {
                     />
                   </div>
 
-                  <div className="flex items-baseline gap-2 min-w-0 flex-1">
-                    <span
-                      className="text-[13px] md:text-[clamp(11.5px,1.45dvh,14px)] font-semibold leading-none tracking-tight truncate"
-                      style={{ color: isLight ? '#1c1a1c' : '#fff' }}
-                    >
-                      {e.company}
-                    </span>
-                    <span
-                      className="hidden lg:inline text-[12px] md:text-[clamp(10.5px,1.35dvh,13px)] leading-none tracking-tight truncate"
-                      style={{ color: palette.bodyText }}
-                    >
-                      {e.title}
-                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-baseline gap-2 min-w-0">
+                        <span
+                          className="text-[13px] md:text-[clamp(11.5px,1.45dvh,14px)] font-semibold leading-tight tracking-tight truncate"
+                          style={{ color: isLight ? '#1c1a1c' : '#fff' }}
+                        >
+                          {e.company}
+                        </span>
+                        <span
+                          className="hidden sm:inline text-[11px] md:text-[clamp(10px,1.2dvh,11px)] leading-none tabular-nums tracking-tight flex-shrink-0 opacity-80"
+                          style={{ color: palette.mutedText }}
+                        >
+                          {e.period}
+                        </span>
+                      </div>
+                      <span
+                        className="mt-0.5 block text-[11.5px] md:text-[clamp(10px,1.25dvh,12px)] leading-tight tracking-tight truncate lg:hidden"
+                        style={{ color: palette.bodyText }}
+                      >
+                        {e.title}
+                      </span>
+                    </div>
                   </div>
-                </div>
-                <span
-                  className="text-[11px] md:text-[clamp(10px,1.25dvh,12px)] leading-none tabular-nums tracking-tight flex-shrink-0 group-hover:opacity-100 opacity-80 transition-opacity"
-                  style={{ color: palette.mutedText }}
-                >
-                  {e.period}
+                  <span
+                    className="sm:hidden text-[10.5px] leading-none tabular-nums tracking-tight flex-shrink-0 group-hover:opacity-100 opacity-75 transition-opacity"
+                    style={{ color: palette.mutedText }}
+                  >
+                    {e.period}
                 </span>
               </a>
             )
@@ -1801,33 +1818,34 @@ const PROJECTS = [
 function ProjectsTile({ onOpen }: { onOpen?: () => void }) {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
-  const iconSize = 'clamp(30px, 3.55dvh, 36px)'
 
   return (
     <Tile
       label="Projects"
       accent={{ light: '#b45309', dark: 'rgba(252, 211, 77, 0.9)' }}
-      deepLink="/#projects"
-      onOpen={onOpen}
-      modalLabel="Open Projects"
-      className="min-h-[180px] lg:min-h-0"
-    >
-      <div className="px-5 md:px-[clamp(1rem,1.7vw,1.5rem)] pt-2 md:pt-[clamp(0.25rem,0.9dvh,0.75rem)] pb-3 md:pb-[clamp(0.5rem,1.4dvh,1.25rem)] flex-1 min-h-0 flex flex-col overflow-hidden">
-        <div className="flex-1 min-h-0 flex flex-col justify-evenly gap-[clamp(0.125rem,0.55dvh,0.625rem)]">
-          {PROJECTS.map((p) => (
-            <a
-              key={p.name}
-              href={p.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="relative z-10 group min-h-0 flex items-center gap-2.5 md:gap-3 py-[clamp(0.125rem,0.35dvh,0.375rem)]"
-            >
-              <div
-                className="rounded-lg overflow-hidden flex-shrink-0"
+        deepLink="/#projects"
+        onOpen={onOpen}
+        modalLabel="Open Projects"
+        className="min-h-[270px] sm:min-h-[235px] lg:min-h-0"
+      >
+        <div className="px-4 sm:px-5 md:px-[clamp(1rem,1.7vw,1.5rem)] pt-2 md:pt-[clamp(0.25rem,0.9dvh,0.75rem)] pb-3 md:pb-[clamp(0.5rem,1.4dvh,1.25rem)] flex-1 min-h-0 flex flex-col overflow-hidden">
+          <div className="flex-1 min-h-0 flex flex-col justify-evenly gap-2 lg:gap-[clamp(0.1rem,0.45dvh,0.4rem)]">
+            {PROJECTS.map((p) => (
+              <a
+                key={p.name}
+                href={p.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="relative z-10 group min-h-0 flex items-center gap-2.5 md:gap-3 rounded-xl px-2.5 py-2 lg:px-[clamp(0.35rem,0.75dvh,0.55rem)] lg:py-[clamp(0.1rem,0.32dvh,0.3rem)] transition-all"
                 style={{
-                  width: iconSize,
-                  height: iconSize,
-                  border: palette.cardBorder,
+                  background: isLight ? 'rgba(0,0,0,0.025)' : 'rgba(255,255,255,0.035)',
+                  border: palette.hairline ? `1px solid ${palette.hairline}` : palette.cardBorder,
+                }}
+              >
+                <div
+                  className="h-12 w-12 rounded-lg overflow-hidden flex-shrink-0 lg:h-[clamp(30px,3.55dvh,36px)] lg:w-[clamp(30px,3.55dvh,36px)]"
+                  style={{
+                    border: palette.cardBorder,
                   background: isLight ? '#fff' : 'rgba(255,255,255,0.04)',
                 }}
               >
@@ -1846,10 +1864,10 @@ function ProjectsTile({ onOpen }: { onOpen?: () => void }) {
                 >
                   {p.name}
                 </div>
-                <div
-                  className="text-[11px] md:text-[clamp(10px,1.25dvh,12px)] leading-tight tracking-tight truncate"
-                  style={{ color: palette.bodyText }}
-                >
+                  <div
+                    className="line-clamp-2 text-[11px] md:text-[clamp(10px,1.25dvh,12px)] leading-tight tracking-tight"
+                    style={{ color: palette.bodyText }}
+                  >
                   {p.desc}
                 </div>
               </div>
@@ -1866,13 +1884,17 @@ function ProjectsTile({ onOpen }: { onOpen?: () => void }) {
             </a>
           ))}
         </div>
-        <a
+          <a
           href="https://www.hatchingpoint.com/"
           target="_blank"
           rel="noopener noreferrer"
-          className="relative z-10 mt-[clamp(0.25rem,0.7dvh,0.5rem)] pt-[clamp(0.25rem,0.7dvh,0.5rem)] inline-flex items-center gap-1 text-[10px] md:text-[clamp(9.5px,1.15dvh,11px)] leading-none tracking-tight border-t hover:opacity-100 opacity-70 transition-opacity"
-          style={{ color: palette.mutedText, borderColor: palette.hairline }}
-        >
+            className="relative z-10 mt-2 md:mt-[clamp(0.25rem,0.7dvh,0.5rem)] inline-flex items-center gap-1 self-start rounded-full px-2.5 py-1 text-[10px] md:text-[clamp(9.5px,1.15dvh,11px)] leading-none tracking-tight hover:opacity-100 opacity-80 transition-opacity"
+            style={{
+              color: palette.mutedText,
+              background: isLight ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.045)',
+              border: palette.hairline ? `1px solid ${palette.hairline}` : palette.cardBorder,
+            }}
+          >
           More on the App Store
           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -2186,25 +2208,25 @@ function ContactTile({ onOpen }: { onOpen?: () => void }) {
       modalLabel="Open Contact"
       className="min-h-[180px] lg:min-h-0"
     >
-      <div className="px-5 md:px-[clamp(0.9rem,1.45vw,1.25rem)] pt-3 md:pt-[clamp(0.35rem,1dvh,0.75rem)] pb-3 md:pb-[clamp(0.45rem,1.1dvh,0.75rem)] flex-1 flex flex-col min-h-0">
-        <div className="grid grid-cols-2 gap-2 md:gap-[clamp(0.35rem,0.95dvh,0.5rem)] flex-1 min-h-0">
-          {CONTACTS.map((c) => (
-            <a
+        <div className="px-4 sm:px-5 md:px-[clamp(0.9rem,1.45vw,1.25rem)] pt-3 md:pt-[clamp(0.35rem,1dvh,0.75rem)] pb-3 md:pb-[clamp(0.45rem,1.1dvh,0.75rem)] flex-1 flex flex-col min-h-0">
+          <div className="grid grid-cols-2 gap-2.5 md:gap-[clamp(0.35rem,0.95dvh,0.5rem)] flex-1 min-h-0">
+            {CONTACTS.map((c) => (
+              <a
               key={c.label}
               href={c.href}
               target={c.href.startsWith('mailto:') ? undefined : '_blank'}
               rel={c.href.startsWith('mailto:') ? undefined : 'noopener noreferrer'}
-              className="relative z-10 flex items-center justify-center gap-2 md:gap-[clamp(0.35rem,0.8dvh,0.5rem)] px-2 py-2 md:py-[clamp(0.35rem,1.0dvh,0.5rem)] rounded-xl transition-all hover:scale-[1.02] min-h-0"
-              style={{
-                background: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)',
-                border: palette.cardBorder,
-                color: isLight ? '#1c1a1c' : '#fff',
-              }}
-            >
-              <div className="w-[17px] h-[17px] md:w-[clamp(13px,1.8dvh,17px)] md:h-[clamp(13px,1.8dvh,17px)] opacity-90 flex-shrink-0">{c.icon}</div>
-              <div className="text-[11px] md:text-[clamp(9.5px,1.15dvh,11px)] font-semibold tracking-tight truncate">{c.label}</div>
-            </a>
-          ))}
+                className="relative z-10 flex flex-col items-center justify-center gap-1.5 sm:flex-row sm:gap-2 md:gap-[clamp(0.35rem,0.8dvh,0.5rem)] px-2 py-3 sm:py-2 md:py-[clamp(0.35rem,1.0dvh,0.5rem)] rounded-xl transition-all hover:scale-[1.02] min-h-0"
+                style={{
+                  background: isLight ? 'rgba(0,0,0,0.035)' : 'rgba(255,255,255,0.045)',
+                  border: palette.cardBorder,
+                  color: isLight ? '#1c1a1c' : '#fff',
+                }}
+              >
+                <div className="w-[20px] h-[20px] md:w-[clamp(13px,1.8dvh,17px)] md:h-[clamp(13px,1.8dvh,17px)] opacity-90 flex-shrink-0">{c.icon}</div>
+                <div className="max-w-full text-center text-[11.5px] md:text-[clamp(9.5px,1.15dvh,11px)] font-semibold tracking-tight truncate">{c.label}</div>
+              </a>
+            ))}
         </div>
         <div
           className="mt-2 md:mt-[clamp(0.3rem,0.9dvh,0.5rem)] text-[9px] md:text-[clamp(7.5px,0.9dvh,9px)] tracking-wide text-center"

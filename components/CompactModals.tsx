@@ -17,6 +17,7 @@
 import dynamic from 'next/dynamic'
 import Image from 'next/image'
 import { useEffect, useState } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import CameraIdleSurface from './CameraIdleSurface'
 import FieldHealthCard from './FieldHealthCard'
 import FieldSolarCard from './FieldSolarCard'
@@ -43,15 +44,67 @@ export type ModalKey =
   | 'contact'
   | 'airpodsmount'
 
+function polishedSurfaceStyle(
+  isLight: boolean,
+  border: string,
+  accentGlow?: string
+): CSSProperties {
+  return {
+    background: accentGlow
+      ? isLight
+        ? `linear-gradient(135deg, ${accentGlow}, rgba(0,0,0,0.012))`
+        : `linear-gradient(135deg, ${accentGlow}, rgba(255,255,255,0.032))`
+      : isLight
+        ? 'rgba(0,0,0,0.025)'
+        : 'rgba(255,255,255,0.03)',
+    border,
+    boxShadow: isLight
+      ? '0 10px 28px rgba(28,26,28,0.045)'
+      : '0 14px 34px rgba(0,0,0,0.18)',
+  }
+}
+
+function Chip({
+  children,
+  muted = false,
+}: {
+  children: ReactNode
+  muted?: boolean
+}) {
+  const palette = useFieldTheme()
+  const isLight = palette.mode === 'light'
+
+  return (
+    <span
+      className="rounded-md px-2 py-1 text-[10.5px] sm:text-[11px] font-medium"
+      style={{
+        background: isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.06)',
+        color: muted ? palette.mutedText : palette.bodyText,
+      }}
+    >
+      {children}
+    </span>
+  )
+}
+
 /* ─────────────────── About ─────────────────── */
 
 export function AboutModalContent() {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
+  const tags = ['UAV systems', 'Rotor hardware', 'Edge AI', 'Robotics', 'iOS products']
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col sm:flex-row gap-5 sm:gap-7 items-center sm:items-start">
+    <div className="flex flex-col gap-5">
+      <div
+        className="rounded-2xl p-4 sm:p-5"
+        style={polishedSurfaceStyle(
+          isLight,
+          palette.cardBorder,
+          isLight ? 'rgba(10,138,168,0.055)' : 'rgba(103,232,249,0.075)'
+        )}
+      >
+        <div className="flex flex-col sm:flex-row gap-5 sm:gap-7 items-center sm:items-start">
         <div
           className="relative w-[160px] h-[160px] sm:w-[200px] sm:h-[200px] rounded-2xl overflow-hidden flex-shrink-0"
           style={{
@@ -69,6 +122,12 @@ export function AboutModalContent() {
           />
         </div>
         <div className="flex-1 space-y-3 text-[14px] sm:text-[15px] leading-relaxed" style={{ color: palette.bodyText }}>
+          <div
+            className="text-[9.5px] font-semibold uppercase tracking-[0.2em]"
+            style={{ color: palette.mutedText }}
+          >
+            Profile
+          </div>
           <p>
             I&apos;m an{' '}
             <span className="font-semibold" style={{ color: isLight ? '#1c1a1c' : '#fff' }}>
@@ -94,11 +153,17 @@ export function AboutModalContent() {
             where I&apos;ve designed and developed 10+ production iPhone apps, built modern web applications,
             and architected robust back-end systems. I thrive at the intersection of hardware and software.
           </p>
+          <div className="flex flex-wrap gap-1.5 pt-1">
+            {tags.map((tag) => (
+              <Chip key={tag}>{tag}</Chip>
+            ))}
+          </div>
+        </div>
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2 pt-2" style={{ borderTop: palette.cardBorder }}>
-        <div className="w-full pt-3 flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2">
+        <div className="w-full flex flex-wrap gap-2">
           <ContactButton
             href="mailto:andrewsottiaux@gmail.com"
             label="Email"
@@ -149,16 +214,45 @@ export function LiveModalContent({
 
   return (
     <div className="flex flex-col gap-5" data-camera-performance="true">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <p className="text-[14px] sm:text-[15px] leading-relaxed" style={{ color: palette.bodyText }}>
-          {intro}
-        </p>
-        <div className="shrink-0">
-          <CameraSourceToggle
-            value={selectedCamera}
-            onChange={changeCamera}
-            isLight={isLight}
-          />
+      <div
+        className="rounded-2xl p-4 sm:p-5"
+        style={polishedSurfaceStyle(
+          isLight,
+          palette.cardBorder,
+          isLight ? 'rgba(10,138,168,0.055)' : 'rgba(103,232,249,0.075)'
+        )}
+      >
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0 flex-1">
+            <div
+              className="text-[9.5px] font-semibold uppercase tracking-[0.2em]"
+              style={{ color: palette.mutedText }}
+            >
+              Live System
+            </div>
+            <div
+              className="mt-1.5 text-[16px] sm:text-[18px] font-semibold leading-tight tracking-tight"
+              style={{ color: isLight ? '#1c1a1c' : '#fff' }}
+            >
+              Camera relay, telemetry, and edge-AI health in one surface.
+            </div>
+            <p className="mt-2 text-[13px] sm:text-[13.5px] leading-snug" style={{ color: palette.bodyText }}>
+              {intro}
+            </p>
+          </div>
+          <div className="shrink-0">
+            <CameraSourceToggle
+              value={selectedCamera}
+              onChange={changeCamera}
+              isLight={isLight}
+            />
+          </div>
+        </div>
+
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {roles.map((role) => (
+            <Chip key={role}>{role}</Chip>
+          ))}
         </div>
       </div>
 
@@ -166,11 +260,8 @@ export function LiveModalContent({
         {proof.map((item) => (
           <div
             key={item.label}
-            className="rounded-xl p-3"
-            style={{
-              background: isLight ? 'rgba(0,0,0,0.025)' : 'rgba(255,255,255,0.035)',
-              border: palette.cardBorder,
-            }}
+            className="rounded-2xl p-3.5"
+            style={polishedSurfaceStyle(isLight, palette.cardBorder)}
           >
             <div
               className="text-[9.5px] font-semibold uppercase tracking-[0.18em]"
@@ -185,21 +276,6 @@ export function LiveModalContent({
               {item.value}
             </div>
           </div>
-        ))}
-      </div>
-
-      <div className="flex flex-wrap gap-1.5 -mt-1">
-        {roles.map((role) => (
-          <span
-            key={role}
-            className="rounded-md px-2 py-1 text-[10.5px] font-medium"
-            style={{
-              background: isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.06)',
-              color: palette.bodyText,
-            }}
-          >
-            {role}
-          </span>
         ))}
       </div>
 
@@ -230,13 +306,26 @@ export function LiveModalContent({
       </div>
 
       <ul
-        className="text-[12px] leading-relaxed grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 pt-3"
-        style={{ color: palette.mutedText, borderTop: palette.cardBorder }}
+        className="grid grid-cols-1 gap-2 pt-1 text-[12px] leading-snug sm:grid-cols-2"
+        style={{ color: palette.mutedText }}
       >
-        <li>5 MP H.265 sensor, 0.5 fps web preview</li>
-        <li>Linux board with on-device inference</li>
-        <li>Solar + LiFePO4 buffer, off-grid capable</li>
-        <li>Public read-only stream — no control plane</li>
+        {[
+          '5 MP H.265 sensor, browser-safe preview path',
+          'Linux board with on-device inference',
+          'Solar + LiFePO4 buffer, off-grid capable',
+          'Public read-only stream surface',
+        ].map((item) => (
+          <li
+            key={item}
+            className="rounded-xl px-2.5 py-2"
+            style={{
+              background: isLight ? 'rgba(0,0,0,0.025)' : 'rgba(255,255,255,0.035)',
+              border: palette.hairline ? `1px solid ${palette.hairline}` : palette.cardBorder,
+            }}
+          >
+            {item}
+          </li>
+        ))}
       </ul>
     </div>
   )
@@ -527,100 +616,138 @@ const SECONDARY_PROJECTS = [
 export function ProjectsModalContent() {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
-  const proof = [
-    { label: 'Robotics', value: 'Perception, controls, operator UI' },
-    { label: 'Mobile', value: 'Production iOS apps and App Store releases' },
-    { label: 'Hardware', value: 'CAD, embedded telemetry, custom devices' },
-  ]
+  const summaryTags = ['Robotics', 'Production iOS', 'AI UX', 'Embedded telemetry', 'CAD artifacts']
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-        {proof.map((item) => (
-          <div
-            key={item.label}
-            className="rounded-2xl p-3.5"
-            style={{
-              background: isLight ? 'rgba(0,0,0,0.025)' : 'rgba(255,255,255,0.03)',
-              border: palette.cardBorder,
-            }}
-          >
-            <div
-              className="text-[9.5px] font-semibold uppercase tracking-[0.18em]"
-              style={{ color: palette.mutedText }}
-            >
-              {item.label}
-            </div>
-            <div
-              className="mt-1.5 text-[13px] leading-snug font-semibold tracking-tight"
-              style={{ color: isLight ? '#1c1a1c' : '#fff' }}
-            >
-              {item.value}
-            </div>
-          </div>
-        ))}
+      <div
+        className="rounded-2xl p-4 sm:p-5"
+        style={polishedSurfaceStyle(
+          isLight,
+          palette.cardBorder,
+          isLight ? 'rgba(180,83,9,0.055)' : 'rgba(252,211,77,0.075)'
+        )}
+      >
+        <div
+          className="text-[9.5px] font-semibold uppercase tracking-[0.2em]"
+          style={{ color: palette.mutedText }}
+        >
+          Project Range
+        </div>
+        <div
+          className="mt-1.5 text-[16px] sm:text-[18px] font-semibold leading-tight tracking-tight"
+          style={{ color: isLight ? '#1c1a1c' : '#fff' }}
+        >
+          Shipped apps, visible robotics, and hardware-adjacent tools.
+        </div>
+        <p
+          className="mt-2 text-[12.5px] sm:text-[13.5px] leading-snug"
+          style={{ color: palette.bodyText }}
+        >
+          The strongest work here shows the full loop: product judgment, implementation, release, and real-world integration.
+        </p>
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {summaryTags.map((tag) => (
+            <Chip key={tag}>{tag}</Chip>
+          ))}
+        </div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {PROJECTS_FULL.map((p) => (
-          <a
-            key={p.title}
-            href={p.link}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-2xl p-4 transition-all hover:scale-[1.01] flex flex-col"
-            style={{
-              background: isLight ? 'rgba(0,0,0,0.025)' : 'rgba(255,255,255,0.03)',
-              border: palette.cardBorder,
-            }}
-          >
-            <div className="flex items-center gap-3 mb-2.5">
-              <div
-                className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0"
-                style={{
-                  border: palette.cardBorder,
-                  background: isLight ? '#fff' : 'rgba(255,255,255,0.04)',
-                }}
-              >
-                <Image
-                  src={p.icon}
-                  alt=""
-                  width={48}
-                  height={48}
-                  className={`w-full h-full ${p.iconContain ? 'object-contain p-0.5' : 'object-cover'}`}
-                />
-              </div>
-              <div
-                className="text-[14px] font-semibold tracking-tight"
-                style={{ color: isLight ? '#1c1a1c' : '#fff' }}
-              >
-                {p.title}
-              </div>
-            </div>
-            <div
-              className="space-y-1.5 text-[12px] leading-snug mb-2.5 flex-1"
-              style={{ color: palette.bodyText }}
+        {PROJECTS_FULL.map((p) => {
+          const details = [
+            { label: 'Problem', value: p.problem },
+            { label: 'Built', value: p.built },
+            { label: 'Outcome', value: p.outcome },
+            { label: 'Proof', value: p.proof },
+          ]
+
+          return (
+            <a
+              key={p.title}
+              href={p.link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group rounded-2xl p-3.5 sm:p-4 transition-all hover:scale-[1.01] flex flex-col"
+              style={polishedSurfaceStyle(isLight, palette.cardBorder)}
             >
-              <div><span className="font-semibold">Problem:</span> {p.problem}</div>
-              <div><span className="font-semibold">Built:</span> {p.built}</div>
-              <div><span className="font-semibold">Outcome:</span> {p.outcome}</div>
-              <div><span className="font-semibold">Proof:</span> {p.proof}</div>
-            </div>
-            <div className="flex flex-wrap gap-1">
-              {p.tech.map((t) => (
-                <span
-                  key={t}
-                  className="px-1.5 py-0.5 text-[10px] font-medium rounded"
+              <div className="flex items-start gap-3">
+                <div
+                  className={`${p.iconContain ? 'h-14 w-20 sm:h-16 sm:w-24' : 'h-14 w-14 sm:h-16 sm:w-16'} rounded-2xl overflow-hidden flex-shrink-0 flex items-center justify-center`}
                   style={{
-                    background: isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.06)',
-                    color: palette.bodyText,
+                    border: palette.cardBorder,
+                    background: isLight ? '#fff' : 'rgba(255,255,255,0.92)',
+                    boxShadow: isLight
+                      ? '0 8px 20px rgba(28,26,28,0.08)'
+                      : '0 12px 26px rgba(0,0,0,0.24)',
                   }}
                 >
-                  {t}
-                </span>
-              ))}
-            </div>
-          </a>
-        ))}
+                  <Image
+                    src={p.icon}
+                    alt=""
+                    width={96}
+                    height={64}
+                    className={`w-full h-full ${p.iconContain ? 'object-contain p-2' : 'object-cover'}`}
+                  />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div
+                    className="text-[16px] sm:text-[17px] font-semibold leading-tight tracking-tight"
+                    style={{ color: isLight ? '#1c1a1c' : '#fff' }}
+                  >
+                    {p.title}
+                  </div>
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    {p.tech.slice(0, 3).map((t) => (
+                      <Chip key={t} muted>{t}</Chip>
+                    ))}
+                  </div>
+                </div>
+                <svg
+                  className="mt-1 h-4 w-4 flex-shrink-0 opacity-45 transition-all group-hover:translate-x-0.5 group-hover:opacity-90"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                  style={{ color: palette.mutedText }}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+
+              <div className="mt-3 grid grid-cols-1 gap-2">
+                {details.map((detail) => (
+                  <div
+                    key={detail.label}
+                    className="rounded-xl px-2.5 py-2"
+                    style={{
+                      background: isLight ? 'rgba(0,0,0,0.025)' : 'rgba(255,255,255,0.035)',
+                      border: palette.hairline ? `1px solid ${palette.hairline}` : palette.cardBorder,
+                    }}
+                  >
+                    <div
+                      className="text-[9px] font-semibold uppercase tracking-[0.16em]"
+                      style={{ color: palette.mutedText }}
+                    >
+                      {detail.label}
+                    </div>
+                    <p
+                      className="mt-1 text-[12px] sm:text-[12.5px] leading-snug"
+                      style={{ color: palette.bodyText }}
+                    >
+                      {detail.value}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {p.tech.slice(3).map((t) => (
+                  <Chip key={t}>{t}</Chip>
+                ))}
+              </div>
+            </a>
+          )
+        })}
       </div>
 
       <div className="pt-3" style={{ borderTop: palette.cardBorder }}>
@@ -630,39 +757,30 @@ export function ProjectsModalContent() {
         >
           More projects
         </div>
-        <div className="space-y-2">
+        <div className="grid grid-cols-1 gap-2">
           {SECONDARY_PROJECTS.map((p) => (
             <div
               key={p.name}
-              className="flex items-baseline justify-between gap-3 py-1.5 border-b last:border-b-0"
-              style={{ borderColor: palette.hairline }}
+              className="rounded-2xl px-3 py-2.5 sm:flex sm:items-start sm:justify-between sm:gap-3"
+              style={polishedSurfaceStyle(isLight, palette.cardBorder)}
             >
               <div className="flex-1 min-w-0">
-                <span
-                  className="text-[13px] font-semibold tracking-tight"
+                <div
+                  className="text-[13px] font-semibold leading-tight tracking-tight"
                   style={{ color: isLight ? '#1c1a1c' : '#fff' }}
                 >
                   {p.name}
-                </span>
-                <span
-                  className="text-[12px] tracking-tight ml-2"
+                </div>
+                <div
+                  className="mt-1 text-[12px] leading-snug tracking-tight"
                   style={{ color: palette.bodyText }}
                 >
                   {p.description}
-                </span>
+                </div>
               </div>
-              <div className="hidden sm:flex flex-shrink-0 gap-1">
+              <div className="mt-2 flex flex-wrap gap-1 sm:mt-0 sm:flex-shrink-0">
                 {p.tech.map((t) => (
-                  <span
-                    key={t}
-                    className="px-1.5 py-0.5 text-[10px] font-medium rounded"
-                    style={{
-                      background: isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.06)',
-                      color: palette.mutedText,
-                    }}
-                  >
-                    {t}
-                  </span>
+                  <Chip key={t} muted>{t}</Chip>
                 ))}
               </div>
             </div>
@@ -761,11 +879,8 @@ export function MarathonModalContent() {
         ].map((c) => (
           <div
             key={c.l}
-            className="text-center rounded-xl py-3"
-            style={{
-              background: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.04)',
-              border: palette.cardBorder,
-            }}
+            className="text-center rounded-2xl py-3"
+            style={polishedSurfaceStyle(isLight, palette.cardBorder)}
           >
             <div
               className="text-[24px] sm:text-[28px] font-semibold leading-none tabular-nums tracking-tight"
@@ -788,7 +903,10 @@ export function MarathonModalContent() {
         ))}
       </div>
 
-      <div>
+      <div
+        className="rounded-2xl p-3.5 sm:p-4"
+        style={polishedSurfaceStyle(isLight, palette.cardBorder)}
+      >
         <div className="h-2.5 w-full rounded-full overflow-hidden" style={{ background: palette.trackBackground }}>
           <div
             className="h-full rounded-full"
@@ -816,7 +934,10 @@ export function MarathonModalContent() {
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row items-center gap-4 pt-2" style={{ borderTop: palette.cardBorder }}>
+      <div
+        className="flex flex-col sm:flex-row items-center gap-4 rounded-2xl p-3.5 sm:p-4"
+        style={polishedSurfaceStyle(isLight, palette.cardBorder)}
+      >
         <a
           href="https://donations.nyrr.org/donations/new?fundraiser=624830c3c37aaaa441f8"
           target="_blank"
@@ -855,17 +976,37 @@ export function MarathonModalContent() {
 
 export function ContactModalContent() {
   const palette = useFieldTheme()
+  const isLight = palette.mode === 'light'
 
   return (
     <div className="flex flex-col gap-5">
-      <p
-        className="text-[14px] sm:text-[15px] leading-relaxed"
-        style={{ color: palette.bodyText }}
+      <div
+        className="rounded-2xl p-4 sm:p-5"
+        style={polishedSurfaceStyle(
+          isLight,
+          palette.cardBorder,
+          isLight ? 'rgba(10,138,168,0.055)' : 'rgba(103,232,249,0.075)'
+        )}
       >
-        Best fit: hardware/software integration, UAV systems, embedded dashboards,
-        rapid prototypes, and production apps that need both engineering depth and
-        practical execution.
-      </p>
+        <div
+          className="text-[9.5px] font-semibold uppercase tracking-[0.2em]"
+          style={{ color: palette.mutedText }}
+        >
+          Best Fit
+        </div>
+        <div
+          className="mt-1.5 text-[16px] sm:text-[18px] font-semibold leading-tight tracking-tight"
+          style={{ color: isLight ? '#1c1a1c' : '#fff' }}
+        >
+          Hardware/software integration with real product execution.
+        </div>
+        <p
+          className="mt-2 text-[13px] sm:text-[13.5px] leading-snug"
+          style={{ color: palette.bodyText }}
+        >
+          UAV systems, embedded dashboards, rapid prototypes, and production apps that need both engineering depth and practical delivery.
+        </p>
+      </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
         <ContactButton
@@ -935,16 +1076,23 @@ function ContactButton({
       href={href}
       target={external ? '_blank' : undefined}
       rel={external ? 'noopener noreferrer' : undefined}
-      className={`flex items-center gap-3 rounded-xl transition-all hover:scale-[1.01] ${large ? 'px-4 py-3' : 'px-3 py-2'}`}
+      className={`group flex items-center gap-3 rounded-2xl transition-all hover:scale-[1.01] ${large ? 'px-4 py-3.5' : 'px-3 py-2.5'}`}
       style={{
-        background: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)',
-        border: palette.cardBorder,
+        ...polishedSurfaceStyle(isLight, palette.cardBorder),
         color: isLight ? '#1c1a1c' : '#fff',
       }}
     >
-      <div className={large ? 'w-5 h-5 opacity-90' : 'w-4 h-4 opacity-90'}>{icon}</div>
+      <div
+        className={`flex flex-shrink-0 items-center justify-center rounded-xl transition-transform group-hover:-translate-y-0.5 ${large ? 'h-10 w-10' : 'h-8 w-8'}`}
+        style={{
+          background: isLight ? 'rgba(0,0,0,0.045)' : 'rgba(255,255,255,0.06)',
+          color: isLight ? '#1c1a1c' : '#fff',
+        }}
+      >
+        <div className={large ? 'h-5 w-5 opacity-90' : 'h-4 w-4 opacity-90'}>{icon}</div>
+      </div>
       <div className="flex-1 min-w-0">
-        <div className={`${large ? 'text-[13px]' : 'text-[12px]'} font-semibold tracking-tight`}>
+        <div className={`${large ? 'text-[13.5px]' : 'text-[12px]'} font-semibold tracking-tight`}>
           {label}
         </div>
         {sub && (
@@ -1024,9 +1172,28 @@ export function AirpodsMountModalContent() {
         <STLViewer urls={stlUrls} />
       </div>
 
-      <div>
+      <div
+        className="rounded-2xl p-4 sm:p-5"
+        style={polishedSurfaceStyle(
+          isLight,
+          palette.cardBorder,
+          isLight ? 'rgba(10,138,168,0.045)' : 'rgba(103,232,249,0.065)'
+        )}
+      >
+        <div
+          className="text-[9.5px] font-semibold uppercase tracking-[0.2em]"
+          style={{ color: palette.mutedText }}
+        >
+          CAD Artifact
+        </div>
+        <div
+          className="mt-1.5 text-[16px] sm:text-[18px] font-semibold leading-tight tracking-tight"
+          style={{ color: isLight ? '#1c1a1c' : '#fff' }}
+        >
+          AirPods Pro 3 Tesla wireless-charger mount.
+        </div>
         <p
-          className="text-[14px] md:text-[15px] leading-relaxed"
+          className="mt-2 text-[13px] sm:text-[13.5px] leading-snug"
           style={{ color: palette.bodyText }}
         >
           Custom mount that positions AirPods Pro 3 at the correct height
@@ -1035,17 +1202,7 @@ export function AirpodsMountModalContent() {
         </p>
         <div className="mt-3 flex flex-wrap gap-1.5">
           {['SOLIDWORKS', '3D Printing', 'CAD'].map((t) => (
-            <span
-              key={t}
-              className="px-2.5 py-1 text-[11px] font-medium rounded-md"
-              style={{
-                background: isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.06)',
-                color: palette.bodyText,
-                border: `1px solid ${isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.07)'}`,
-              }}
-            >
-              {t}
-            </span>
+            <Chip key={t}>{t}</Chip>
           ))}
         </div>
       </div>
