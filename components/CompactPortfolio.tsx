@@ -369,6 +369,7 @@ function Tile({
   return (
     <div
       data-peek-target="true"
+      data-card-hover={onOpen || deepLink ? 'true' : undefined}
       onClick={openFromTileChrome}
       onKeyDown={openFromTileKeyboard}
       role={onOpen ? 'button' : undefined}
@@ -644,7 +645,8 @@ function SolarTile({ onOpen }: { onOpen?: () => void }) {
         onClick={() => { haptic('open'); onOpen() }}
         aria-haspopup="dialog"
         aria-label="Open Field Live"
-        className="block w-full h-full min-h-[520px] sm:min-h-[430px] lg:min-h-0 [&>div]:h-full hover:scale-[1.005] transition-transform duration-300 text-left"
+        data-card-hover="true"
+        className="block w-full h-full min-h-[520px] sm:min-h-[430px] lg:min-h-0 [&>div]:h-full text-left"
       >
         <FieldSolarCard variant="compact" />
       </button>
@@ -654,7 +656,8 @@ function SolarTile({ onOpen }: { onOpen?: () => void }) {
     <a
       href="/#now"
       aria-label="Open Field Live on the full site"
-      className="block h-full min-h-[520px] sm:min-h-[430px] lg:min-h-0 [&>div]:h-full hover:scale-[1.005] transition-transform duration-300"
+      data-card-hover="true"
+      className="block h-full min-h-[520px] sm:min-h-[430px] lg:min-h-0 [&>div]:h-full"
     >
       <FieldSolarCard variant="compact" />
     </a>
@@ -667,7 +670,8 @@ function HealthTile({ onOpen }: { onOpen?: () => void }) {
   if (onOpen) {
     return (
       <div
-        className="block w-full h-full min-h-[260px] lg:min-h-0 [&>div]:h-full transition-transform duration-300 text-left"
+        data-card-hover="true"
+        className="block w-full h-full min-h-[260px] lg:min-h-0 [&>div]:h-full text-left"
       >
         <FieldHealthCard variant="compact" />
       </div>
@@ -677,7 +681,8 @@ function HealthTile({ onOpen }: { onOpen?: () => void }) {
     <a
       href="/#now"
       aria-label="Open Field Live on the full site"
-      className="block h-full min-h-[260px] lg:min-h-0 [&>div]:h-full hover:scale-[1.005] transition-transform duration-300"
+      data-card-hover="true"
+      className="block h-full min-h-[260px] lg:min-h-0 [&>div]:h-full"
     >
       <FieldHealthCard variant="compact" />
     </a>
@@ -710,6 +715,7 @@ function EducationTile() {
         boxShadow: palette.cardShadow,
       }}
       data-peek-target="true"
+      data-card-hover="true"
       role="region"
       aria-label="Education"
     >
@@ -815,6 +821,7 @@ function BuildingTile() {
         boxShadow: palette.cardShadow,
       }}
       data-peek-target="true"
+      data-card-hover="true"
       role="region"
       aria-label="Currently building"
     >
@@ -1110,6 +1117,7 @@ function MoreProjectsTile({ onOpen }: { onOpen?: (key: ModalKey) => void }) {
         boxShadow: palette.cardShadow,
       }}
       data-peek-target="true"
+      data-card-hover="true"
       role="region"
       aria-label="More projects"
     >
@@ -1551,6 +1559,7 @@ function MarathonTile({ onOpen }: { onOpen?: () => void }) {
     <div
       className="relative z-[1] rounded-2xl h-full min-h-[180px] lg:min-h-0 overflow-hidden group"
       data-peek-target="true"
+      data-card-hover="true"
       role="region"
       aria-label="2026 TCS NYC Marathon"
       style={{

@@ -203,7 +203,7 @@ export default function FieldSolarCard({
 
   return (
     <div
-      className={`relative rounded-2xl h-full min-h-0 flex flex-col overflow-hidden ${compact ? 'p-5 md:p-[clamp(1rem,1.75dvh,1.5rem)]' : 'p-7 md:p-8'}`}
+      className={`relative rounded-2xl h-full min-h-0 flex flex-col overflow-hidden ${compact ? 'p-4 md:p-[clamp(0.7rem,1.35dvh,1.1rem)] xl:p-[clamp(0.8rem,1.45dvh,1.25rem)]' : 'p-7 md:p-8'}`}
       data-field-card="true"
       style={{
         background: palette.cardBackground,
@@ -223,7 +223,7 @@ export default function FieldSolarCard({
         }}
       />
 
-      <div className={`flex items-center justify-between gap-3 ${compact ? 'mb-3 md:mb-[clamp(0.35rem,0.9dvh,0.75rem)]' : 'mb-5'}`}>
+      <div className={`flex items-center justify-between gap-3 ${compact ? 'mb-2 md:mb-[clamp(0.25rem,0.7dvh,0.55rem)]' : 'mb-5'}`}>
         <div
           className={`${compact ? 'text-[10px] md:text-[clamp(8.5px,1.1dvh,10px)]' : 'text-[10.5px]'} font-semibold uppercase tracking-[0.22em]`}
           style={{ color: isLight ? '#b45309' : 'rgba(252, 211, 77, 0.9)' /* amber-300/90 */ }}
@@ -255,7 +255,7 @@ export default function FieldSolarCard({
       {/* Hero number — battery voltage */}
       <div className="flex items-baseline gap-2 mb-1">
         <div
-          className={`${compact ? 'text-[48px] md:text-[clamp(38px,5.5dvh,50px)]' : 'text-[56px] sm:text-[68px]'} font-semibold leading-none tracking-tight tabular-nums`}
+          className={`${compact ? 'text-[44px] md:text-[clamp(32px,4.9dvh,48px)]' : 'text-[56px] sm:text-[68px]'} font-semibold leading-none tracking-tight tabular-nums`}
           style={{
             // backgroundImage longhand — `background:` shorthand resets
             // background-clip back to default and the gradient renders as
@@ -276,7 +276,7 @@ export default function FieldSolarCard({
         </div>
       </div>
       <div
-        className={`${compact ? 'text-[12px] md:text-[clamp(9.5px,1.15dvh,12px)] mb-3 md:mb-[clamp(0.35rem,0.9dvh,0.75rem)]' : 'text-[13px] mb-6'} tracking-tight flex items-center gap-2`}
+        className={`${compact ? 'text-[12px] md:text-[clamp(9px,1.05dvh,11.5px)] mb-2 md:mb-[clamp(0.25rem,0.7dvh,0.6rem)]' : 'text-[13px] mb-6'} tracking-tight flex items-center gap-2`}
         style={{ color: palette.bodyText, minHeight: '1.25rem' }}
       >
         {hasValues ? (
@@ -320,7 +320,7 @@ export default function FieldSolarCard({
       </div>
 
       {/* SOC bar — bigger, with depth */}
-      <div className={`relative ${compact ? 'mb-4 md:mb-[clamp(0.4rem,1dvh,0.9rem)]' : 'mb-7'}`}>
+      <div className={`relative ${compact ? 'mb-3 md:mb-[clamp(0.3rem,0.75dvh,0.65rem)]' : 'mb-7'}`}>
         <div
           className="h-2.5 md:h-[clamp(0.4rem,0.9dvh,0.625rem)] w-full rounded-full overflow-hidden"
           style={{ background: palette.trackBackground }}
@@ -338,7 +338,7 @@ export default function FieldSolarCard({
       </div>
 
       {/* Secondary stats */}
-      <div className={`grid grid-cols-3 ${compact ? 'gap-3 md:gap-[clamp(0.4rem,0.85dvh,0.7rem)] mb-3 md:mb-[clamp(0.35rem,0.9dvh,0.75rem)]' : 'gap-5 mb-5'}`}>
+      <div className={`grid grid-cols-3 ${compact ? 'gap-3 md:gap-[clamp(0.35rem,0.75dvh,0.6rem)] mb-2 md:mb-[clamp(0.25rem,0.65dvh,0.55rem)]' : 'gap-5 mb-5'}`}>
         <div>
           <div
             className={`${compact ? 'text-[9px] md:text-[clamp(7.5px,0.9dvh,9px)]' : 'text-[10px]'} uppercase tracking-[0.18em] font-medium`}
@@ -393,8 +393,7 @@ export default function FieldSolarCard({
 
       {compact ? (
         <div
-          className="mt-auto grid grid-rows-2 gap-2 flex-1 md:min-h-0"
-          style={{ minHeight: 'clamp(176px, 30dvh, 280px)' }}
+          className="mt-auto grid flex-1 min-h-0 grid-rows-[minmax(0,1fr)_minmax(0,1fr)] gap-2 md:gap-[clamp(0.3rem,0.7dvh,0.5rem)]"
         >
           {hasHistory ? (
             <>
@@ -544,21 +543,21 @@ function CompactTrendPanel({
 
   return (
     <div
-      className="rounded-xl border px-3 py-2 md:px-[clamp(0.6rem,1vw,0.85rem)] md:py-[clamp(0.45rem,0.95dvh,0.65rem)] flex flex-col min-h-0"
+      className="rounded-xl border px-2.5 py-1.5 md:px-[clamp(0.5rem,0.85vw,0.75rem)] md:py-[clamp(0.35rem,0.7dvh,0.55rem)] flex flex-col min-h-0"
       style={{
         borderColor: isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)',
         background: isLight ? 'rgba(255,255,255,0.34)' : 'rgba(255,255,255,0.025)',
       }}
     >
       <div className="flex items-center justify-between gap-3">
-        <div className="text-[8px] uppercase tracking-[0.16em] font-semibold truncate" style={{ color: accent }}>
+        <div className="text-[7.5px] uppercase tracking-[0.15em] font-semibold truncate" style={{ color: accent }}>
           {title}
         </div>
-        <div className="text-[9px] font-semibold tabular-nums whitespace-nowrap" style={{ color: isLight ? 'rgba(28,26,28,0.58)' : 'rgba(255,255,255,0.52)' }}>
+        <div className="text-[8.5px] font-semibold tabular-nums whitespace-nowrap" style={{ color: isLight ? 'rgba(28,26,28,0.58)' : 'rgba(255,255,255,0.52)' }}>
           {value}
         </div>
       </div>
-      <div className="mt-1 h-[clamp(58px,10dvh,112px)] min-h-0 md:h-full">
+      <div className="mt-1 min-h-0 flex-1">
         {children}
       </div>
     </div>

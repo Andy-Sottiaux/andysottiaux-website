@@ -102,6 +102,36 @@ html {
   -webkit-backdrop-filter: var(--field-card-backdrop-filter) !important;
 }
 
+@media (hover: hover) and (pointer: fine) {
+  [data-card-hover="true"] {
+    transform: translate3d(0, 0, 0) scale(1);
+    transform-origin: center;
+    transition:
+      transform 260ms cubic-bezier(0.16, 1, 0.3, 1),
+      filter 260ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+    will-change: transform;
+  }
+
+  [data-card-hover="true"]:hover,
+  [data-card-hover="true"]:focus-visible {
+    transform: translate3d(0, -3px, 0) scale(1.018);
+    filter: drop-shadow(0 18px 30px rgba(0, 0, 0, 0.18));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-card-hover="true"] {
+    transition: none !important;
+    will-change: auto;
+  }
+
+  [data-card-hover="true"]:hover,
+  [data-card-hover="true"]:focus-visible {
+    transform: none;
+    filter: none;
+  }
+}
+
 /* Tap-active feedback for the whole-tile click target. The Tile button
  * sits absolutely inside each tile (z-0), so we scale + dim its parent
  * via :active. Desktop hover continues to drive the existing transform. */
