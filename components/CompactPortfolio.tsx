@@ -536,28 +536,6 @@ const SPOTLIGHT_ROTATION_MS = 3500
 
 const SPOTLIGHT_ITEMS: SpotlightItem[] = [
   {
-    id: 'cam1',
-    kind: 'camera',
-    eyebrow: 'Clean live',
-    title: 'Cam 1',
-    subtitle: 'Edge-AI field camera',
-    description: 'Live board telemetry, on-device inference, solar power, and health monitoring.',
-    accent: { light: '#0a8aa8', dark: 'rgba(103, 232, 249, 0.9)' },
-    modal: 'live',
-    camera: 'field',
-  },
-  {
-    id: 'cam2',
-    kind: 'camera',
-    eyebrow: 'PTZ relay',
-    title: 'Cam 2',
-    subtitle: 'Thingino pan / tilt',
-    description: 'High-quality public relay with browser-safe controls and no Vercel video proxying.',
-    accent: { light: '#10a366', dark: 'rgba(134, 239, 172, 0.92)' },
-    modal: 'live',
-    camera: 'thingino',
-  },
-  {
     id: 'travel-agent-ai',
     kind: 'project',
     eyebrow: 'Featured app',
@@ -571,6 +549,17 @@ const SPOTLIGHT_ITEMS: SpotlightItem[] = [
     icon: '/images/travelagentai-icon.png',
     href: 'https://apps.apple.com/us/app/travel-agent-ai/id6758284691',
     cta: 'App Store',
+  },
+  {
+    id: 'cam1',
+    kind: 'camera',
+    eyebrow: 'Clean live',
+    title: 'Cam 1',
+    subtitle: 'Edge-AI field camera',
+    description: 'Live board telemetry, on-device inference, solar power, and health monitoring.',
+    accent: { light: '#0a8aa8', dark: 'rgba(103, 232, 249, 0.9)' },
+    modal: 'live',
+    camera: 'field',
   },
   {
     id: 'wyzecar',
@@ -587,6 +576,17 @@ const SPOTLIGHT_ITEMS: SpotlightItem[] = [
     iconContain: true,
     href: 'https://github.com/Andy-Sottiaux/WYZECAR',
     cta: 'GitHub',
+  },
+  {
+    id: 'cam2',
+    kind: 'camera',
+    eyebrow: 'PTZ relay',
+    title: 'Cam 2',
+    subtitle: 'Thingino pan / tilt',
+    description: 'High-quality public relay with browser-safe controls and no Vercel video proxying.',
+    accent: { light: '#10a366', dark: 'rgba(134, 239, 172, 0.92)' },
+    modal: 'live',
+    camera: 'thingino',
   },
 ]
 
