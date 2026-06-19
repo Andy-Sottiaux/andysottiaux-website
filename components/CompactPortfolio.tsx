@@ -813,11 +813,15 @@ function SpotlightProjectPanel({
   const isLight = palette.mode === 'light'
   const accent = isLight ? item.accent.light : item.accent.dark
   const halo = isLight ? item.halo?.light : item.halo?.dark
+  const isWideMedia = !!item.iconContain
+  const mediaClass = isWideMedia
+    ? 'h-[68px] w-[96px] sm:h-[clamp(3.2rem,8dvh,4.75rem)] sm:w-[clamp(4.6rem,10dvh,6.25rem)]'
+    : 'h-[64px] w-[64px] sm:h-[clamp(3.2rem,8dvh,4.75rem)] sm:w-[clamp(3.2rem,8dvh,4.75rem)]'
 
   return (
     <div className="h-full px-3 md:px-[clamp(0.75rem,1.15vw,1rem)] pt-2 md:pt-[clamp(0.35rem,1.0dvh,0.75rem)] pb-2">
       <div
-        className="relative h-full min-h-0 overflow-hidden rounded-[14px] p-4 md:p-[clamp(0.9rem,1.7dvh,1.25rem)] flex flex-col justify-between"
+        className="relative h-full min-h-0 overflow-hidden rounded-[14px] p-3.5 sm:p-4 md:p-[clamp(0.9rem,1.7dvh,1.25rem)] flex flex-col justify-between gap-3 sm:gap-4"
         style={{
           background: isLight
             ? 'linear-gradient(135deg, rgba(255,255,255,0.94), rgba(245,247,250,0.92))'
@@ -833,9 +837,9 @@ function SpotlightProjectPanel({
           className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full"
           style={{ background: `radial-gradient(circle, ${halo ?? 'rgba(255,255,255,0.12)'}, transparent 68%)` }}
         />
-        <div className="relative flex items-start justify-between gap-4">
+        <div className="relative flex items-start gap-3 sm:justify-between sm:gap-4">
           <div
-            className="relative h-16 w-16 md:h-[clamp(3.2rem,8dvh,4.75rem)] md:w-[clamp(3.2rem,8dvh,4.75rem)] flex-shrink-0 overflow-hidden rounded-2xl"
+            className={`relative ${mediaClass} flex-shrink-0 overflow-hidden rounded-[18px] sm:rounded-2xl`}
             style={{
               background: isLight ? '#fff' : 'rgba(255,255,255,0.94)',
               border: palette.cardBorder,
@@ -849,13 +853,37 @@ function SpotlightProjectPanel({
                 src={item.icon}
                 alt=""
                 fill
-                sizes="80px"
-                className={item.iconContain ? 'object-contain p-1.5' : 'object-cover'}
+                sizes={isWideMedia ? '(max-width: 640px) 96px, 112px' : '80px'}
+                className={isWideMedia ? 'object-contain p-1.5' : 'object-cover'}
               />
             ) : null}
           </div>
+          <div className="min-w-0 flex-1 sm:hidden">
+            <div
+              className="inline-flex rounded-full px-2 py-0.5 text-[8px] font-semibold uppercase tracking-[0.14em]"
+              style={{
+                color: accent,
+                background: isLight ? 'rgba(0,0,0,0.035)' : 'rgba(255,255,255,0.05)',
+                border: palette.cardBorder,
+              }}
+            >
+              {item.eyebrow}
+            </div>
+            <div
+              className="mt-2 text-[24px] font-semibold leading-[0.95] tracking-tight"
+              style={{ color: isLight ? '#1c1a1c' : '#fff' }}
+            >
+              {item.title}
+            </div>
+            <div
+              className="mt-1.5 text-[12px] font-semibold leading-tight tracking-tight"
+              style={{ color: accent }}
+            >
+              {item.subtitle}
+            </div>
+          </div>
           <div
-            className="rounded-full px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.16em]"
+            className="hidden rounded-full px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] sm:block"
             style={{
               color: accent,
               background: isLight ? 'rgba(0,0,0,0.035)' : 'rgba(255,255,255,0.05)',
@@ -868,19 +896,19 @@ function SpotlightProjectPanel({
 
         <div className="relative max-w-[30rem]">
           <div
-            className="text-[30px] md:text-[clamp(24px,4.2dvh,40px)] font-semibold leading-[0.95] tracking-tight"
+            className="hidden text-[30px] font-semibold leading-[0.95] tracking-tight sm:block md:text-[clamp(24px,4.2dvh,40px)]"
             style={{ color: isLight ? '#1c1a1c' : '#fff' }}
           >
             {item.title}
           </div>
           <div
-            className="mt-2 text-[13px] md:text-[clamp(11px,1.55dvh,14px)] font-semibold tracking-tight"
+            className="mt-2 hidden text-[13px] font-semibold tracking-tight sm:block md:text-[clamp(11px,1.55dvh,14px)]"
             style={{ color: accent }}
           >
             {item.subtitle}
           </div>
           <p
-            className="mt-2 max-w-[42ch] text-[12px] md:text-[clamp(10px,1.35dvh,13px)] leading-snug"
+            className="max-w-[42ch] text-[13px] leading-snug sm:mt-2 sm:text-[12px] md:text-[clamp(10px,1.35dvh,13px)]"
             style={{ color: palette.bodyText }}
           >
             {item.description}
