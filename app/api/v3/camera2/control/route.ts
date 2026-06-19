@@ -104,6 +104,7 @@ export async function POST(request: NextRequest) {
     direction?: string
     command?: string
     step?: 'fine' | 'normal' | 'coarse'
+    hold?: boolean
   } | null
   const command = body?.command || body?.direction
 
@@ -112,6 +113,7 @@ export async function POST(request: NextRequest) {
   const relayResponse = await runRelayControl({
     command,
     step: body?.step || 'normal',
+    hold: body?.hold === true,
   })
   if (relayResponse) return relayResponse
 

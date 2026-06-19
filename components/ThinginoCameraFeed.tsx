@@ -99,6 +99,7 @@ export default function ThinginoCameraFeed({
     command: Cam2Command,
     step: 'fine' | 'normal' | 'coarse' = 'normal',
     trackPending = true,
+    hold = false,
   ) => {
     if (trackPending) {
       if (controlBusyRef.current) return
@@ -108,8 +109,9 @@ export default function ThinginoCameraFeed({
     try {
       await fetch(CAMERA_2_CONTROL_URL, {
         method: 'POST',
+        keepalive: command === 'stop',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ command, step }),
+        body: JSON.stringify({ command, step, ...(hold ? { hold: true } : {}) }),
       })
     } finally {
       if (trackPending) {
@@ -132,10 +134,10 @@ export default function ThinginoCameraFeed({
   const startHold = useCallback((command: Cam2Command) => {
     stopHold()
     heldCommandRef.current = command
-    void sendControl(command, 'fine', false)
+    void sendControl(command, 'fine', false, true)
     holdTimerRef.current = setInterval(() => {
-      if (heldCommandRef.current === command) void sendControl(command, 'fine', false)
-    }, 90)
+      if (heldCommandRef.current === command) void sendControl(command, 'fine', false, true)
+    }, 250)
   }, [sendControl, stopHold])
 
   const applyPreset = async (preset: 'hq30' | 'balanced24') => {
