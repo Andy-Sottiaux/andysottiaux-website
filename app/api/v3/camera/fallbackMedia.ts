@@ -1,7 +1,7 @@
 export function fallbackMediaResponse(kind: string) {
   if (
-    process.env.V3_CAMERA_FALLBACK_MEDIA_ENABLED === '1' ||
-    process.env.NEXT_PUBLIC_V3_CAMERA_FALLBACK_MEDIA_ENABLED === '1'
+    process.env.V3_CAMERA_FALLBACK_MEDIA_ENABLED !== '0' &&
+    process.env.NEXT_PUBLIC_V3_CAMERA_FALLBACK_MEDIA_ENABLED !== '0'
   ) {
     return null
   }
