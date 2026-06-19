@@ -4,30 +4,41 @@ export const CAMERA_HOST =
 
 export type FieldCameraSource = 'field' | 'thingino'
 
+export const CAMERA_2_GATEWAY_HOST =
+  process.env.NEXT_PUBLIC_V3_CAMERA_2_GATEWAY_HOST ||
+  CAMERA_HOST
+const CAMERA_2_GATEWAY_WS_HOST = CAMERA_2_GATEWAY_HOST.replace(/^http/i, 'ws')
+
 export const CAMERA_2_URL =
   process.env.NEXT_PUBLIC_V3_CAMERA_2_URL ||
-  '/api/v3/camera2/mjpeg'
+  `${CAMERA_2_GATEWAY_HOST}/api/camera2/mjpeg`
 export const CAMERA_2_NATIVE_URL =
   process.env.NEXT_PUBLIC_V3_CAMERA_2_NATIVE_URL ||
   CAMERA_2_URL
 export const CAMERA_2_MJPEG_URL =
   process.env.NEXT_PUBLIC_V3_CAMERA_2_MJPEG_URL ||
-  '/api/v3/camera2/mjpeg'
+  `${CAMERA_2_GATEWAY_HOST}/api/camera2/mjpeg`
 export const CAMERA_2_SNAPSHOT_URL =
   process.env.NEXT_PUBLIC_V3_CAMERA_2_SNAPSHOT_URL ||
-  '/api/v3/camera2/snapshot'
+  `${CAMERA_2_GATEWAY_HOST}/api/camera2/snapshot`
 export const CAMERA_2_STATUS_URL =
   process.env.NEXT_PUBLIC_V3_CAMERA_2_STATUS_URL ||
-  '/api/v3/camera2/status'
+  `${CAMERA_2_GATEWAY_HOST}/api/camera2/status`
 export const CAMERA_2_CONTROL_URL =
   process.env.NEXT_PUBLIC_V3_CAMERA_2_CONTROL_URL ||
-  '/api/v3/camera2/control'
+  `${CAMERA_2_GATEWAY_HOST}/api/camera2/control`
+export const CAMERA_2_CONTROL_WS_URL =
+  process.env.NEXT_PUBLIC_V3_CAMERA_2_CONTROL_WS_URL ||
+  `${CAMERA_2_GATEWAY_WS_HOST}/api/camera2/control/ws`
 export const CAMERA_2_SETTINGS_URL =
   process.env.NEXT_PUBLIC_V3_CAMERA_2_SETTINGS_URL ||
-  '/api/v3/camera2/settings'
+  `${CAMERA_2_GATEWAY_HOST}/api/camera2/settings`
 export const CAMERA_2_WEBRTC_OFFER_URL =
   process.env.NEXT_PUBLIC_V3_CAMERA_2_WEBRTC_OFFER_URL ||
-  '/api/v3/camera2/webrtc/offer'
+  `${CAMERA_2_GATEWAY_HOST}/api/webrtc`
+export const CAMERA_2_WEBRTC_SOURCE_PARAM =
+  process.env.NEXT_PUBLIC_V3_CAMERA_2_WEBRTC_SOURCE_PARAM ||
+  (CAMERA_2_WEBRTC_OFFER_URL.includes('/api/webrtc') ? 'src' : 'stream')
 export const CAMERA_2_STREAM = process.env.NEXT_PUBLIC_V3_CAMERA_2_STREAM || 'cam2'
 
 export const PRIMARY_FEED_STREAM = process.env.NEXT_PUBLIC_V3_FEED_STREAM || 'cayley-sub'

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   CAMERA_FALLBACK_MEDIA_ENABLED,
   CAMERA_2_CONTROL_URL,
+  CAMERA_2_CONTROL_WS_URL,
   CAMERA_2_MJPEG_URL,
   CAMERA_2_NATIVE_URL,
   CAMERA_2_SNAPSHOT_URL,
@@ -12,6 +13,7 @@ import {
   CAMERA_2_STATUS_URL,
   CAMERA_2_URL,
   CAMERA_2_WEBRTC_OFFER_URL,
+  CAMERA_2_WEBRTC_SOURCE_PARAM,
   CAMERA_HOST,
   PLAYER_MODE,
 } from '@/lib/fieldCameraConfig'
@@ -69,13 +71,15 @@ export default function ThinginoCameraFeed({
   const [controlPending, setControlPending] = useState<Cam2Command | null>(null)
   const [qualityPending, setQualityPending] = useState<string | null>(null)
   const rtcVideoRef = useRef<HTMLVideoElement>(null)
+  const controlWsRef = useRef<WebSocket | null>(null)
+  const controlWsRetryRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const holdTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const heldCommandRef = useRef<Cam2Command | null>(null)
   const controlBusyRef = useRef(false)
   const mjpegUrl = `${CAMERA_2_MJPEG_URL}?v=${streamVersion}`
   const snapshotUrl = `${CAMERA_2_SNAPSHOT_URL}?v=${streamVersion}`
   const playerUrl = nativePlayerUrl(CAMERA_2_STREAM)
-  const webrtcOfferUrl = `${CAMERA_2_WEBRTC_OFFER_URL}?stream=${encodeURIComponent(CAMERA_2_STREAM)}`
+  const webrtcOfferUrl = withQueryParam(CAMERA_2_WEBRTC_OFFER_URL, CAMERA_2_WEBRTC_SOURCE_PARAM, CAMERA_2_STREAM)
   const openUrl = CAMERA_2_NATIVE_URL === CAMERA_2_URL ? playerUrl : CAMERA_2_NATIVE_URL
   const statusCopy = cam2StatusCopy(status)
   const fallbackExhausted = playerFailed && (!CAMERA_FALLBACK_MEDIA_ENABLED || streamFailed) && !streamReady
@@ -97,6 +101,17 @@ export default function ThinginoCameraFeed({
       .catch(() => setSettings({ ok: false }))
   }, [])
 
+  const sendControlWs = useCallback((
+    command: Cam2Command,
+    step: 'fine' | 'normal' | 'coarse' = 'normal',
+    hold = false,
+  ) => {
+    const ws = controlWsRef.current
+    if (!ws || ws.readyState !== WebSocket.OPEN) return false
+    ws.send(JSON.stringify({ command, step, ...(hold ? { hold: true } : {}) }))
+    return true
+  }, [])
+
   const sendControl = useCallback(async (
     command: Cam2Command,
     step: 'fine' | 'normal' | 'coarse' = 'normal',
@@ -109,6 +124,9 @@ export default function ThinginoCameraFeed({
       setControlPending(command)
     }
     try {
+      if ((hold || command === 'stop') && sendControlWs(command, step, hold)) {
+        return
+      }
       await fetch(CAMERA_2_CONTROL_URL, {
         method: 'POST',
         keepalive: command === 'stop',
@@ -121,7 +139,7 @@ export default function ThinginoCameraFeed({
         setControlPending(null)
       }
     }
-  }, [])
+  }, [sendControlWs])
 
   const stopHold = useCallback(() => {
     const wasHolding = heldCommandRef.current != null
@@ -139,7 +157,7 @@ export default function ThinginoCameraFeed({
     void sendControl(command, 'fine', false, true)
     holdTimerRef.current = setInterval(() => {
       if (heldCommandRef.current === command) void sendControl(command, 'fine', false, true)
-    }, 250)
+    }, 450)
   }, [sendControl, stopHold])
 
   const applyPreset = async (preset: 'hq30' | 'balanced24') => {
@@ -162,6 +180,47 @@ export default function ThinginoCameraFeed({
     loadSettings()
     return stopHold
   }, [loadSettings, stopHold])
+
+  useEffect(() => {
+    let disposed = false
+
+    const connect = () => {
+      if (disposed || typeof WebSocket === 'undefined') return
+      try {
+        const ws = new WebSocket(CAMERA_2_CONTROL_WS_URL)
+        controlWsRef.current = ws
+        ws.onclose = () => {
+          if (controlWsRef.current === ws) controlWsRef.current = null
+          if (!disposed) {
+            controlWsRetryRef.current = setTimeout(connect, 1200)
+          }
+        }
+        ws.onerror = () => {
+          try {
+            ws.close()
+          } catch {
+            // Best effort only; HTTP control remains as fallback.
+          }
+        }
+      } catch {
+        if (!disposed) {
+          controlWsRetryRef.current = setTimeout(connect, 1800)
+        }
+      }
+    }
+
+    connect()
+    return () => {
+      disposed = true
+      if (controlWsRetryRef.current) clearTimeout(controlWsRetryRef.current)
+      try {
+        controlWsRef.current?.close()
+      } catch {
+        // Best effort cleanup only.
+      }
+      controlWsRef.current = null
+    }
+  }, [])
 
   useEffect(() => {
     const video = rtcVideoRef.current
@@ -544,6 +603,11 @@ function nativePlayerUrl(stream: string): string {
     width: '100%',
   })
   return `${CAMERA_HOST}/stream.html?${params.toString()}`
+}
+
+function withQueryParam(url: string, key: string, value: string): string {
+  const separator = url.includes('?') ? '&' : '?'
+  return `${url}${separator}${encodeURIComponent(key)}=${encodeURIComponent(value)}`
 }
 
 function waitForIceGatheringComplete(pc: RTCPeerConnection, timeoutMs: number): Promise<void> {
