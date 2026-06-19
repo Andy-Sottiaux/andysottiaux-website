@@ -99,13 +99,69 @@ function relativeMove(direction: string, params: MotorParams, granularity: numbe
   return { x, y }
 }
 
+function clamp(value: unknown, min: number, max: number, fallback = 0) {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) return fallback
+  return Math.max(min, Math.min(max, parsed))
+}
+
+function vectorMove(body: { x?: number; y?: number; speed?: number }, params: MotorParams) {
+  const panMax = Math.max(1, numeric(params.steps_pan, 1000))
+  const tiltMax = Math.max(1, numeric(params.steps_tilt, 1000))
+  const x = clamp(body.x, -1, 1)
+  const y = clamp(body.y, -1, 1)
+  const speed = clamp(body.speed, 0, 1)
+
+  if (speed <= 0 || (Math.abs(x) < 0.04 && Math.abs(y) < 0.04)) {
+    return { x: 0, y: 0 }
+  }
+
+  const shapedSpeed = 0.25 + speed * 0.75
+  const panStep = Math.max(18, panMax / 95)
+  const tiltStep = Math.max(16, tiltMax / 55)
+
+  return {
+    x: x * panStep * shapedSpeed,
+    y: y * tiltStep * shapedSpeed,
+  }
+}
+
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null) as {
     direction?: string
     command?: string
+    action?: 'move' | 'stop' | 'hold'
+    x?: number
+    y?: number
+    speed?: number
     step?: 'fine' | 'normal' | 'coarse'
     hold?: boolean
   } | null
+
+  if (body?.action === 'move' || body?.action === 'hold' || body?.action === 'stop') {
+    const relayResponse = await runRelayControl({
+      ...body,
+      step: body.step || 'fine',
+    })
+    if (relayResponse) return relayResponse
+
+    if (body.action === 'stop' || body.speed === 0) {
+      return runMotorQuery(new URLSearchParams({ d: 's' }))
+    }
+
+    const params = await readMotorParams()
+    const move = vectorMove(body, params)
+    if (move.x === 0 && move.y === 0) {
+      return runMotorQuery(new URLSearchParams({ d: 's' }))
+    }
+
+    return runMotorQuery(new URLSearchParams({
+      d: 'g',
+      x: move.x.toFixed(3),
+      y: move.y.toFixed(3),
+    }))
+  }
+
   const command = body?.command || body?.direction
 
   if (!command) return jsonError('missing_command')

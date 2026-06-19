@@ -1,17 +1,22 @@
 'use client'
 
-import { type PointerEvent, useCallback, useEffect, useRef, useState } from 'react'
+import { type PointerEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   CAMERA_FALLBACK_MEDIA_ENABLED,
+  CAMERA_2_CONTROL_FALLBACK_URL,
   CAMERA_2_CONTROL_URL,
+  CAMERA_2_CONTROL_WS_FALLBACK_URL,
   CAMERA_2_CONTROL_WS_URL,
   CAMERA_2_MJPEG_URL,
   CAMERA_2_NATIVE_URL,
   CAMERA_2_SNAPSHOT_URL,
+  CAMERA_2_SETTINGS_FALLBACK_URL,
   CAMERA_2_SETTINGS_URL,
   CAMERA_2_STREAM,
   CAMERA_2_STATUS_URL,
   CAMERA_2_URL,
+  CAMERA_2_WEBRTC_FALLBACK_OFFER_URL,
+  CAMERA_2_WEBRTC_FALLBACK_SOURCE_PARAM,
   CAMERA_2_WEBRTC_OFFER_URL,
   CAMERA_2_WEBRTC_SOURCE_PARAM,
   CAMERA_HOST,
@@ -132,7 +137,25 @@ export default function ThinginoCameraFeed({
   const mjpegUrl = `${CAMERA_2_MJPEG_URL}?v=${streamVersion}`
   const snapshotUrl = `${CAMERA_2_SNAPSHOT_URL}?v=${streamVersion}`
   const playerUrl = nativePlayerUrl(CAMERA_2_STREAM)
-  const webrtcOfferUrl = withQueryParam(CAMERA_2_WEBRTC_OFFER_URL, CAMERA_2_WEBRTC_SOURCE_PARAM, CAMERA_2_STREAM)
+  const webrtcOfferUrls = useMemo(() => uniqueUrls([
+    withQueryParam(CAMERA_2_WEBRTC_OFFER_URL, CAMERA_2_WEBRTC_SOURCE_PARAM, CAMERA_2_STREAM),
+    withQueryParam(CAMERA_2_WEBRTC_FALLBACK_OFFER_URL, CAMERA_2_WEBRTC_FALLBACK_SOURCE_PARAM, CAMERA_2_STREAM),
+    withQueryParam('/api/v3/camera2/webrtc/offer', 'stream', CAMERA_2_STREAM),
+  ]), [])
+  const controlUrls = useMemo(() => uniqueUrls([
+    CAMERA_2_CONTROL_URL,
+    CAMERA_2_CONTROL_FALLBACK_URL,
+    '/api/v3/camera2/control',
+  ]), [])
+  const controlWsUrls = useMemo(() => uniqueUrls([
+    CAMERA_2_CONTROL_WS_URL,
+    CAMERA_2_CONTROL_WS_FALLBACK_URL,
+  ]), [])
+  const settingsUrls = useMemo(() => uniqueUrls([
+    CAMERA_2_SETTINGS_URL,
+    CAMERA_2_SETTINGS_FALLBACK_URL,
+    '/api/v3/camera2/settings',
+  ]), [])
   const openUrl = CAMERA_2_NATIVE_URL === CAMERA_2_URL ? playerUrl : CAMERA_2_NATIVE_URL
   const statusCopy = cam2StatusCopy(status)
   const fallbackExhausted = playerFailed && (!CAMERA_FALLBACK_MEDIA_ENABLED || streamFailed) && !streamReady
@@ -148,11 +171,10 @@ export default function ThinginoCameraFeed({
   }
 
   const loadSettings = useCallback(() => {
-    fetch(CAMERA_2_SETTINGS_URL, { cache: 'no-store' })
-      .then((r) => r.json())
-      .then((next: Cam2Settings) => setSettings(next))
+    fetchJsonCandidate<Cam2Settings>(settingsUrls)
+      .then((next) => setSettings(next))
       .catch(() => setSettings({ ok: false }))
-  }, [])
+  }, [settingsUrls])
 
   const sendControlWs = useCallback((payload: ControlPayload) => {
     const ws = controlWsRef.current
@@ -163,13 +185,25 @@ export default function ThinginoCameraFeed({
 
   const sendControlPayload = useCallback(async (payload: ControlPayload, keepalive = false) => {
     if (sendControlWs(payload)) return
-    await fetch(CAMERA_2_CONTROL_URL, {
-      method: 'POST',
-      keepalive,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
-  }, [sendControlWs])
+    const body = JSON.stringify(payload)
+    let lastError: unknown = null
+    for (const url of controlUrls) {
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          keepalive,
+          cache: 'no-store',
+          headers: { 'Content-Type': 'application/json' },
+          body,
+        })
+        if (res.ok) return
+        lastError = new Error(`control_${res.status}`)
+      } catch (error) {
+        lastError = error
+      }
+    }
+    if (lastError) throw lastError
+  }, [controlUrls, sendControlWs])
 
   const sendControl = useCallback(async (
     command: Cam2Command,
@@ -210,13 +244,11 @@ export default function ThinginoCameraFeed({
   const applyPreset = async (preset: 'hq30' | 'balanced24') => {
     setQualityPending(preset)
     try {
-      const res = await fetch(CAMERA_2_SETTINGS_URL, {
+      const next = await postJsonCandidate<{ ok?: boolean; stream0?: Cam2Settings['stream0'] }>(settingsUrls, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ preset }),
       })
-      const next = await res.json().catch(() => null)
-      if (next) setSettings({ ok: res.ok, stream0: next.stream0 ?? settings?.stream0 ?? null })
+      setSettings({ ok: next.ok !== false, stream0: next.stream0 ?? settings?.stream0 ?? null })
       reload()
     } finally {
       setQualityPending(null)
@@ -231,10 +263,11 @@ export default function ThinginoCameraFeed({
   useEffect(() => {
     let disposed = false
 
-    const connect = () => {
-      if (disposed || !CAMERA_2_CONTROL_WS_URL || typeof WebSocket === 'undefined') return
+    const connect = (index = 0) => {
+      if (disposed || controlWsUrls.length === 0 || typeof WebSocket === 'undefined') return
+      const url = controlWsUrls[index % controlWsUrls.length]
       try {
-        const ws = new WebSocket(CAMERA_2_CONTROL_WS_URL)
+        const ws = new WebSocket(url)
         controlWsRef.current = ws
         ws.onopen = () => {
           if (controlWsRef.current === ws) setControlConnected(true)
@@ -268,7 +301,8 @@ export default function ThinginoCameraFeed({
           setControlConnected(false)
           setMotionState((prev) => prev ? { ...prev, active: false } : prev)
           if (!disposed) {
-            controlWsRetryRef.current = setTimeout(connect, 1200)
+            const nextIndex = (index + 1) % controlWsUrls.length
+            controlWsRetryRef.current = setTimeout(() => connect(nextIndex), index === 0 ? 350 : 1200)
           }
         }
         ws.onerror = () => {
@@ -280,7 +314,8 @@ export default function ThinginoCameraFeed({
         }
       } catch {
         if (!disposed) {
-          controlWsRetryRef.current = setTimeout(connect, 1800)
+          const nextIndex = (index + 1) % controlWsUrls.length
+          controlWsRetryRef.current = setTimeout(() => connect(nextIndex), index === 0 ? 350 : 1800)
         }
       }
     }
@@ -297,7 +332,7 @@ export default function ThinginoCameraFeed({
       controlWsRef.current = null
       setControlConnected(false)
     }
-  }, [])
+  }, [controlWsUrls])
 
   useEffect(() => {
     const video = rtcVideoRef.current
@@ -446,14 +481,7 @@ export default function ThinginoCameraFeed({
 
         const sdp = pc.localDescription?.sdp
         if (!sdp) throw new Error('missing local SDP')
-        const res = await fetch(webrtcOfferUrl, {
-          method: 'POST',
-          cache: 'no-store',
-          headers: { 'Content-Type': 'application/sdp' },
-          body: sdp,
-        })
-        if (!res.ok) throw new Error(`webrtc offer failed: ${res.status}`)
-        const answer = await res.text()
+        const answer = await postSdpOfferCandidate(webrtcOfferUrls, sdp)
         if (cancelled) return
         await pc.setRemoteDescription({ type: 'answer', sdp: answer })
         publishMetrics()
@@ -479,13 +507,12 @@ export default function ThinginoCameraFeed({
       setPlaybackMetrics(null)
       closePeer()
     }
-  }, [streamVersion, webrtcOfferUrl])
+  }, [streamVersion, webrtcOfferUrls])
 
   useEffect(() => {
     if (!fallbackExhausted) return
     let cancelled = false
-    fetch(CAMERA_2_STATUS_URL, { cache: 'no-store' })
-      .then((r) => r.json())
+    fetchJsonCandidate<Cam2Status>([CAMERA_2_STATUS_URL, '/api/v3/camera2/status'])
       .then((next: Cam2Status) => {
         if (!cancelled) setStatus(next)
       })
@@ -786,7 +813,7 @@ function Cam2Joystick({
           heartbeatRef.current = setInterval(() => {
             const next = lastVectorRef.current
             if (next.speed > 0) onMove(next.x, next.y, next.speed)
-          }, 95)
+          }, 70)
         }}
         onPointerMove={(event) => {
           if (activePointerRef.current !== event.pointerId) return
@@ -873,9 +900,6 @@ function formatPlaybackTelemetry(metrics: Cam2PlaybackMetrics | null, settings: 
     : stream?.fps
       ? `${stream.fps}fps target`
       : 'fps'
-  const drops = typeof metrics?.droppedVideoFrames === 'number' && metrics.droppedVideoFrames > 0
-    ? `${metrics.droppedVideoFrames} dropped`
-    : null
   const jitter = typeof metrics?.rtcJitterSec === 'number'
     ? `${Math.round(metrics.rtcJitterSec * 1000)}ms jitter`
     : null
@@ -885,7 +909,7 @@ function formatPlaybackTelemetry(metrics: Cam2PlaybackMetrics | null, settings: 
   const path = metrics?.selectedRemoteType
     ? `${metrics.selectedRemoteType}${metrics.selectedRemoteProtocol ? `/${metrics.selectedRemoteProtocol}` : ''}`
     : null
-  return [resolution, fps, drops, jitter, rtt, path].filter(Boolean).join(' · ')
+  return [resolution, fps, jitter, rtt, path].filter(Boolean).join(' · ')
 }
 
 function joystickVectorFromPointer(event: PointerEvent<HTMLDivElement>, pad: HTMLDivElement) {
@@ -927,9 +951,79 @@ function nativePlayerUrl(stream: string): string {
   return `${CAMERA_HOST}/stream.html?${params.toString()}`
 }
 
+function uniqueUrls(urls: Array<string | null | undefined>): string[] {
+  const seen = new Set<string>()
+  const next: string[] = []
+  for (const url of urls) {
+    if (!url || seen.has(url)) continue
+    seen.add(url)
+    next.push(url)
+  }
+  return next
+}
+
 function withQueryParam(url: string, key: string, value: string): string {
   const separator = url.includes('?') ? '&' : '?'
   return `${url}${separator}${encodeURIComponent(key)}=${encodeURIComponent(value)}`
+}
+
+async function fetchJsonCandidate<T>(urls: string[]): Promise<T> {
+  let lastError: unknown = null
+  for (const url of urls) {
+    try {
+      const res = await fetch(url, { cache: 'no-store' })
+      if (!res.ok) {
+        lastError = new Error(`${url}_${res.status}`)
+        continue
+      }
+      return await res.json() as T
+    } catch (error) {
+      lastError = error
+    }
+  }
+  throw lastError || new Error('all_candidates_failed')
+}
+
+async function postJsonCandidate<T>(urls: string[], init: RequestInit): Promise<T> {
+  let lastError: unknown = null
+  for (const url of urls) {
+    try {
+      const res = await fetch(url, {
+        ...init,
+        cache: 'no-store',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(init.headers || {}),
+        },
+      })
+      const data = await res.json().catch(() => null) as T | null
+      if (res.ok && data) return data
+      lastError = new Error(`${url}_${res.status}`)
+    } catch (error) {
+      lastError = error
+    }
+  }
+  throw lastError || new Error('all_candidates_failed')
+}
+
+async function postSdpOfferCandidate(urls: string[], sdp: string): Promise<string> {
+  let lastError: unknown = null
+  for (const url of urls) {
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        cache: 'no-store',
+        headers: { 'Content-Type': 'application/sdp' },
+        body: sdp,
+      })
+      const answer = await res.text()
+      if (res.ok && answer.includes('v=0') && answer.includes('m=')) return answer
+      lastError = new Error(`${url}_${res.status}`)
+    } catch (error) {
+      lastError = error
+    }
+  }
+  throw lastError || new Error('all_candidates_failed')
 }
 
 function waitForIceGatheringComplete(pc: RTCPeerConnection, timeoutMs: number): Promise<void> {

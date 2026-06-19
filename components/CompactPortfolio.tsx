@@ -755,17 +755,21 @@ function SpotlightCameraPanel({
           selectedCamera={camera}
           onStart={active ? onStart : undefined}
         />
-        <div className="pointer-events-none absolute left-3 top-3 z-20 flex items-center gap-2 rounded-full bg-black/58 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-white/82">
-          <span
-            aria-hidden="true"
-            className="h-1.5 w-1.5 rounded-full"
-            style={{ background: item.accent.dark, boxShadow: `0 0 8px ${item.accent.dark}` }}
-          />
-          {item.eyebrow}
-        </div>
-        <div className="pointer-events-none absolute right-3 top-3 z-20 rounded-full bg-black/54 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-white/72">
-          {item.title}
-        </div>
+        {!streamEnabled && (
+          <>
+            <div className="pointer-events-none absolute left-3 top-3 z-20 flex items-center gap-2 rounded-full bg-black/58 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-white/82">
+              <span
+                aria-hidden="true"
+                className="h-1.5 w-1.5 rounded-full"
+                style={{ background: item.accent.dark, boxShadow: `0 0 8px ${item.accent.dark}` }}
+              />
+              {item.eyebrow}
+            </div>
+            <div className="pointer-events-none absolute right-3 top-3 z-20 rounded-full bg-black/54 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-white/72">
+              {item.title}
+            </div>
+          </>
+        )}
         {active && streamEnabled && (
           <button
             type="button"
