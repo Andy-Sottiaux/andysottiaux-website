@@ -185,7 +185,7 @@ export default function ThinginoCameraFeed({
     let disposed = false
 
     const connect = () => {
-      if (disposed || typeof WebSocket === 'undefined') return
+      if (disposed || !CAMERA_2_CONTROL_WS_URL || typeof WebSocket === 'undefined') return
       try {
         const ws = new WebSocket(CAMERA_2_CONTROL_WS_URL)
         controlWsRef.current = ws
