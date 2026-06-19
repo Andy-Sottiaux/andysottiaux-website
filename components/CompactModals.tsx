@@ -253,11 +253,11 @@ const EXPERIENCE_FULL = [
     logo: '/images/avx.png',
     scope: 'Owns cross-discipline UAV execution across rotor hardware, flight-control integration, autonomy scaffolding, and test telemetry.',
     achievements: [
-      'Designed, manufactured, and tested complete rotor systems — blades, hubs, grips, and fixtures for subscale and coaxial UAV platforms',
-      'Built and managed the CubePilot/CubeNode flight-control architecture, integrating sensors, actuators, ESCs, and communication networks',
-      'Developed full-stack test stand software for data acquisition, controls, and real-time telemetry to validate rotor and subsystem performance',
-      'Implemented ROS2-based autonomy scaffolding for navigation, perception, and health-monitoring prototypes',
-      'Drove cross-functional execution — design, fabrication, integration, and test — maintaining program schedule and risk',
+      'Designed and tested rotor hardware for subscale and coaxial UAV platforms',
+      'Integrated CubePilot/CubeNode flight-control hardware, sensors, ESCs, and comms',
+      'Built test-stand software for acquisition, controls, and real-time telemetry',
+      'Prototyped ROS2 autonomy, perception, navigation, and health-monitoring flows',
+      'Managed design, fabrication, integration, and test across program risks',
     ],
     skills: ['UAV Systems', 'ROS2', 'CubePilot', 'Rotor Design', 'Autonomy', 'Real-time Telemetry'],
   },
@@ -269,9 +269,9 @@ const EXPERIENCE_FULL = [
     logo: '/images/hatchingpoint-logo.jpeg',
     scope: 'Ships production mobile/web products end-to-end, from product shape and UI to backend data models and release operations.',
     achievements: [
-      'Designed and developed 10+ production iPhone apps in Swift, owning UI/UX and App Store deployment',
-      'Built modern web applications using React, JavaScript/TypeScript, focusing on component-driven architectures',
-      'Architected back-end systems with MongoDB and Supabase, ensuring robust data modeling and real-time data flows',
+      'Designed and shipped 10+ production iPhone apps in Swift and SwiftUI',
+      'Built React and TypeScript web apps with component-driven architecture',
+      'Architected MongoDB and Supabase back ends for data modeling and real-time flows',
     ],
     skills: ['Swift', 'SwiftUI', 'iOS', 'NFC', 'StoreKit', 'React', 'TypeScript', 'MongoDB', 'Supabase'],
   },
@@ -283,10 +283,10 @@ const EXPERIENCE_FULL = [
     logo: '/images/bell.svg',
     scope: 'Worked in the rotorcraft engineering loop between CAD, PLM, manufacturing, suppliers, testing, and fleet issue resolution.',
     achievements: [
-      'Investigated issues from supply chain, manufacturing, and fleet operations and drove resolutions',
-      'Developed detailed 2D/3D CAD and PLM documentation for assembly and installation',
-      'Supported upstream and downstream engineering activities including manufacturing and testing',
-      'Pioneered advancements in helicopter systems using CAD, GD&T, and 3D printing techniques',
+      'Resolved issues across suppliers, manufacturing, testing, and fleet operations',
+      'Produced 2D/3D CAD and PLM documentation for assembly and installation',
+      'Supported upstream and downstream engineering through manufacturing and test',
+      'Applied CAD, GD&T, FEA, and additive techniques to rotorcraft hardware',
     ],
     skills: ['SOLIDWORKS', 'CAD', 'GD&T', 'FEA', '3D Printing', 'Rotorcraft Engineering'],
   },
@@ -298,9 +298,9 @@ const EXPERIENCE_FULL = [
     logo: '/images/texasairsystems-logo.jpeg',
     scope: 'Managed technical HVAC projects where requirements, constraints, vendors, and customer expectations had to converge.',
     achievements: [
-      'Built and grew relationships with customers, contractors, project engineers, and manufacturers',
-      'Determined project requirements and constraints to meet customer expectations',
-      'Investigated concerns and implemented corrective action to maximize satisfaction',
+      'Coordinated customers, contractors, engineers, and manufacturers',
+      'Translated requirements and constraints into executable project plans',
+      'Investigated field concerns and drove corrective action',
     ],
     skills: ['Project Management', 'HVAC Systems', 'Cross-functional Teams'],
   },
@@ -309,51 +309,65 @@ const EXPERIENCE_FULL = [
 export function ExperienceModalContent() {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
-  const proof = [
-    { label: 'Current focus', value: 'UAV systems, autonomy, rotor hardware' },
-    { label: 'Product range', value: 'Aircraft programs to App Store releases' },
-    { label: 'Operating style', value: 'Design, build, integrate, test' },
-  ]
+  const summaryTags = ['Rotor systems', 'UAV autonomy', 'Embedded telemetry', 'iOS/web products']
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-        {proof.map((item) => (
-          <div
-            key={item.label}
-            className="rounded-2xl p-3.5"
-            style={{
-              background: isLight ? 'rgba(0,0,0,0.025)' : 'rgba(255,255,255,0.03)',
-              border: palette.cardBorder,
-            }}
-          >
-            <div
-              className="text-[9.5px] font-semibold uppercase tracking-[0.18em]"
-              style={{ color: palette.mutedText }}
+      <div
+        className="rounded-2xl p-4 sm:p-5"
+        style={{
+          background: isLight
+            ? 'linear-gradient(135deg, rgba(0,0,0,0.035), rgba(0,0,0,0.015))'
+            : 'linear-gradient(135deg, rgba(103,232,249,0.08), rgba(255,255,255,0.035))',
+          border: palette.cardBorder,
+        }}
+      >
+        <div
+          className="text-[9.5px] font-semibold uppercase tracking-[0.2em]"
+          style={{ color: palette.mutedText }}
+        >
+          Operating Range
+        </div>
+        <div
+          className="mt-1.5 text-[16px] sm:text-[18px] font-semibold leading-tight tracking-tight"
+          style={{ color: isLight ? '#1c1a1c' : '#fff' }}
+        >
+          Aircraft hardware, embedded autonomy, and shipped software.
+        </div>
+        <p
+          className="mt-2 text-[12.5px] sm:text-[13.5px] leading-snug"
+          style={{ color: palette.bodyText }}
+        >
+          I work across the full path from design and integration to field test, telemetry, and product release.
+        </p>
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {summaryTags.map((tag) => (
+            <span
+              key={tag}
+              className="rounded-md px-2 py-1 text-[10.5px] sm:text-[11px] font-medium"
+              style={{
+                background: isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.06)',
+                color: palette.bodyText,
+              }}
             >
-              {item.label}
-            </div>
-            <div
-              className="mt-1.5 text-[13px] leading-snug font-semibold tracking-tight"
-              style={{ color: isLight ? '#1c1a1c' : '#fff' }}
-            >
-              {item.value}
-            </div>
-          </div>
-        ))}
+              {tag}
+            </span>
+          ))}
+        </div>
       </div>
+
       {EXPERIENCE_FULL.map((exp) => (
         <div
           key={exp.company}
-          className="rounded-2xl p-4 sm:p-5"
+          className="rounded-2xl p-3.5 sm:p-5"
           style={{
             background: isLight ? 'rgba(0,0,0,0.025)' : 'rgba(255,255,255,0.03)',
             border: palette.cardBorder,
           }}
         >
-          <div className="flex items-start gap-3 sm:gap-4 mb-3">
+          <div className="flex items-start gap-3 sm:gap-4">
             <div
-              className="flex items-center justify-center rounded-xl flex-shrink-0 p-2 h-12 w-16 sm:h-14 sm:w-20"
+              className="flex items-center justify-center rounded-xl flex-shrink-0 p-2 h-11 w-14 sm:h-14 sm:w-20"
               style={{
                 background: '#fff',
                 border: palette.cardBorder,
@@ -367,53 +381,66 @@ export function ExperienceModalContent() {
                 className="max-h-full max-w-full object-contain"
               />
             </div>
-            <div className="flex-1 min-w-0">
+            <div className="min-w-0 flex-1">
               <div
-                className="text-[14px] sm:text-[15px] font-semibold tracking-tight"
+                className="text-[15px] sm:text-[15.5px] font-semibold leading-tight tracking-tight"
                 style={{ color: isLight ? '#1c1a1c' : '#fff' }}
               >
                 {exp.title}
               </div>
-              <a
-                href={exp.companyUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[12.5px] sm:text-[13px] tracking-tight hover:underline"
-                style={{ color: palette.bodyText }}
-              >
-                {exp.company}
-              </a>
-              <div
-                className="text-[11px] tabular-nums tracking-tight mt-0.5"
-                style={{ color: palette.mutedText }}
-              >
-                {exp.period}
-              </div>
-              <div
-                className="text-[12px] leading-snug tracking-tight mt-2"
-                style={{ color: palette.bodyText }}
-              >
-                {exp.scope}
+              <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                <a
+                  href={exp.companyUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[12px] sm:text-[13px] leading-tight tracking-tight hover:underline"
+                  style={{ color: palette.bodyText }}
+                >
+                  {exp.company}
+                </a>
+                <span
+                  className="text-[11px] sm:text-[11.5px] tabular-nums leading-tight tracking-tight"
+                  style={{ color: palette.mutedText }}
+                >
+                  {exp.period}
+                </span>
               </div>
             </div>
           </div>
-          <ul className="space-y-1.5 mb-3">
+
+          <p
+            className="mt-3 text-[12.5px] sm:text-[13px] leading-snug tracking-tight"
+            style={{
+              color: palette.bodyText,
+              borderTop: palette.cardBorder,
+              paddingTop: '0.75rem',
+            }}
+          >
+            {exp.scope}
+          </p>
+
+          <ul className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
             {exp.achievements.map((a, i) => (
               <li
                 key={i}
-                className="text-[12.5px] sm:text-[13px] leading-snug flex gap-2"
-                style={{ color: palette.bodyText }}
+                className="flex gap-2 rounded-xl px-2.5 py-2 text-[12px] sm:text-[12.5px] leading-snug"
+                style={{
+                  color: palette.bodyText,
+                  background: isLight ? 'rgba(0,0,0,0.025)' : 'rgba(255,255,255,0.035)',
+                  border: palette.hairline ? `1px solid ${palette.hairline}` : palette.cardBorder,
+                }}
               >
-                <span style={{ color: palette.mutedText }}>·</span>
+                <span className="mt-[0.35em] h-1.5 w-1.5 flex-shrink-0 rounded-full" style={{ background: palette.mutedText }} />
                 <span>{a}</span>
               </li>
             ))}
           </ul>
-          <div className="flex flex-wrap gap-1.5">
+
+          <div className="mt-3 flex flex-wrap gap-1.5">
             {exp.skills.map((s) => (
               <span
                 key={s}
-                className="px-2 py-0.5 text-[10.5px] font-medium rounded-md"
+                className="px-2 py-0.5 text-[10px] sm:text-[10.5px] font-medium rounded-md"
                 style={{
                   background: isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.06)',
                   color: palette.bodyText,

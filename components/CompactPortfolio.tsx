@@ -813,8 +813,8 @@ function SpotlightProjectPanel({
   const halo = isLight ? item.halo?.light : item.halo?.dark
   const isWideMedia = !!item.iconContain
   const mediaClass = isWideMedia
-    ? 'h-[68px] w-[96px] sm:h-[clamp(3.2rem,8dvh,4.75rem)] sm:w-[clamp(4.6rem,10dvh,6.25rem)]'
-    : 'h-[64px] w-[64px] sm:h-[clamp(3.2rem,8dvh,4.75rem)] sm:w-[clamp(3.2rem,8dvh,4.75rem)]'
+    ? 'h-[76px] w-[118px] sm:h-[clamp(5rem,11dvh,7rem)] sm:w-[clamp(7.25rem,16dvh,10.5rem)]'
+    : 'h-[76px] w-[76px] sm:h-[clamp(5rem,11dvh,7rem)] sm:w-[clamp(5rem,11dvh,7rem)]'
 
   return (
     <div className="h-full px-3 md:px-[clamp(0.75rem,1.15vw,1rem)] pt-2 md:pt-[clamp(0.35rem,1.0dvh,0.75rem)] pb-2">
@@ -851,8 +851,8 @@ function SpotlightProjectPanel({
                 src={item.icon}
                 alt=""
                 fill
-                sizes={isWideMedia ? '(max-width: 640px) 96px, 112px' : '80px'}
-                className={isWideMedia ? 'object-contain p-1.5' : 'object-cover'}
+                sizes={isWideMedia ? '(max-width: 640px) 118px, 168px' : '(max-width: 640px) 76px, 112px'}
+                className={isWideMedia ? 'object-contain p-2' : 'object-cover'}
               />
             ) : null}
           </div>
