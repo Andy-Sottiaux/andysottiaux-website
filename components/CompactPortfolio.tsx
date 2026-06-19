@@ -782,31 +782,19 @@ function SpotlightCameraPanel({
           </button>
         )}
       </div>
-      <div className="grid grid-cols-[1fr_auto] items-end gap-3">
-        <div className="min-w-0">
-          <div
-            className="truncate text-[18px] md:text-[clamp(14px,1.8dvh,18px)] font-semibold leading-tight tracking-tight"
-            style={{ color: isLight ? '#1c1a1c' : '#fff' }}
-          >
-            {item.subtitle}
-          </div>
-          <p
-            className="mt-0.5 line-clamp-1 text-[11px] md:text-[clamp(9px,1.1dvh,11px)] leading-tight"
-            style={{ color: palette.bodyText }}
-          >
-            {item.description}
-          </p>
-        </div>
-        <span
-          className="rounded-full px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.16em]"
-          style={{
-            color: streamEnabled ? (isLight ? '#0f9d4f' : '#86efac') : palette.mutedText,
-            background: isLight ? 'rgba(0,0,0,0.035)' : 'rgba(255,255,255,0.045)',
-            border: palette.cardBorder,
-          }}
+      <div className="min-w-0">
+        <div
+          className="truncate text-[18px] md:text-[clamp(14px,1.8dvh,18px)] font-semibold leading-tight tracking-tight"
+          style={{ color: isLight ? '#1c1a1c' : '#fff' }}
         >
-          {streamEnabled ? 'Live' : 'Paused'}
-        </span>
+          {item.subtitle}
+        </div>
+        <p
+          className="mt-0.5 line-clamp-1 text-[11px] md:text-[clamp(9px,1.1dvh,11px)] leading-tight"
+          style={{ color: palette.bodyText }}
+        >
+          {item.description}
+        </p>
       </div>
       <CameraSignalStrip selectedCamera={camera} streamEnabled={streamEnabled} />
     </div>
