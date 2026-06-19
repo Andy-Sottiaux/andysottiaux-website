@@ -835,7 +835,7 @@ function SpotlightProjectPanel({
           className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full"
           style={{ background: `radial-gradient(circle, ${halo ?? 'rgba(255,255,255,0.12)'}, transparent 68%)` }}
         />
-        <div className="relative flex items-start gap-3 sm:justify-between sm:gap-4">
+        <div className="relative flex items-center gap-3 sm:items-start sm:justify-between sm:gap-4">
           <div
             className={`relative ${mediaClass} flex-shrink-0 overflow-hidden rounded-[18px] sm:rounded-2xl`}
             style={{
