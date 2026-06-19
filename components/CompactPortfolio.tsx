@@ -532,7 +532,7 @@ type SpotlightItem = {
   cta?: string
 }
 
-const SPOTLIGHT_ROTATION_MS = 7000
+const SPOTLIGHT_ROTATION_MS = 3500
 
 const SPOTLIGHT_ITEMS: SpotlightItem[] = [
   {
