@@ -33,33 +33,6 @@ export default function CameraIdleSurface({
           backgroundSize: '22px 22px',
         }}
       />
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute left-1/2 top-1/2 h-[min(52%,15rem)] w-[min(52%,15rem)] -translate-x-1/2 -translate-y-1/2"
-        style={{
-          background:
-            'linear-gradient(135deg, rgba(103,232,249,0.24), rgba(255,255,255,0.13) 48%, rgba(52,211,153,0.16))',
-          WebkitMaskImage: 'url(/images/hatchingpoint-mark.png?v=3)',
-          maskImage: 'url(/images/hatchingpoint-mark.png?v=3)',
-          WebkitMaskSize: 'contain',
-          maskSize: 'contain',
-          WebkitMaskRepeat: 'no-repeat',
-          maskRepeat: 'no-repeat',
-          WebkitMaskPosition: 'center',
-          maskPosition: 'center',
-          opacity: 0.72,
-          filter: 'drop-shadow(0 18px 42px rgba(0,0,0,0.46))',
-        }}
-      />
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute left-1/2 top-1/2 h-28 w-28 -translate-x-1/2 -translate-y-1/2 rounded-full"
-        style={{
-          background:
-            'radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(103,232,249,0.12) 38%, rgba(0,0,0,0) 72%)',
-        }}
-      />
-
       {isPlayable ? (
         <button
           type="button"
@@ -101,7 +74,19 @@ export default function CameraIdleSurface({
         </div>
       )}
 
-      <div className="pointer-events-none absolute bottom-3 left-3 rounded-full bg-black/54 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-white/62">
+      <div className="pointer-events-none absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-full bg-black/54 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-white/62">
+        {selectedCamera === 'thingino' && (
+          <span
+            aria-hidden="true"
+            className="block h-4 w-4 rounded-[5px] bg-white"
+            style={{
+              backgroundImage: 'url(/images/hatchingpoint-logo.jpeg)',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+              backgroundSize: 'cover',
+            }}
+          />
+        )}
         {mode === 'loading' ? 'Camera loading' : `${cameraLabel} paused`}
       </div>
 
