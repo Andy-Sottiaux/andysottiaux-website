@@ -50,7 +50,7 @@ const PRESETS: Record<string, StreamSettings> = {
     max_gop: 60,
     format: 'H264',
     mode: 'CBR',
-    profile: 2,
+    profile: 0,
   },
   balanced24: {
     width: 2304,
@@ -61,7 +61,7 @@ const PRESETS: Record<string, StreamSettings> = {
     max_gop: 48,
     format: 'H264',
     mode: 'CBR',
-    profile: 2,
+    profile: 0,
   },
 }
 

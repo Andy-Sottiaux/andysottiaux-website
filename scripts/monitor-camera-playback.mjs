@@ -55,8 +55,9 @@ async function readSample(page, startedAt) {
   return page.evaluate((startedAt) => {
     const rtcVideo = document.querySelector('video[aria-label="Cayley field camera WebRTC live preview"]')
     const hlsVideo = document.querySelector('video[aria-label="Cayley field camera clean live preview"]')
+    const cam2Video = document.querySelector('video[aria-label="HatchingPoint Cam 2 high-quality live preview"]')
     const cameraMetrics = window.__cayleyCameraMetrics || null
-    const active = rtcVideo || hlsVideo
+    const active = cam2Video || rtcVideo || hlsVideo
     const playbackQuality = active && typeof active.getVideoPlaybackQuality === 'function'
       ? active.getVideoPlaybackQuality()
       : null

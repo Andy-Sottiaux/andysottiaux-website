@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { type PointerEvent, useCallback, useEffect, useRef, useState } from 'react'
 import {
   CAMERA_FALLBACK_MEDIA_ENABLED,
   CAMERA_2_CONTROL_URL,
@@ -24,6 +24,7 @@ type Cam2Status = {
   ok?: boolean
   error?: string
   upstream_status?: number
+  motion?: Cam2MotionState
 }
 type Cam2Settings = {
   ok?: boolean
@@ -32,9 +33,60 @@ type Cam2Settings = {
     height?: number
     fps?: number
     bitrate?: number
+    gop?: number
+    max_gop?: number
+    format?: string
+    mode?: string
+    profile?: number
+  } | null
+  motor?: {
+    steps_pan?: number
+    steps_tilt?: number
+    accel_pan?: number
+    accel_tilt?: number
+    motion_driver?: string
+    preview_control_mode?: string
   } | null
 }
 type Cam2Command = 'ul' | 'uc' | 'ur' | 'cl' | 'center' | 'cr' | 'dl' | 'dc' | 'dr' | 'home' | 'stop'
+type Cam2MotionState = {
+  active?: boolean
+  command?: string | null
+  vector?: { x?: number; y?: number; speed?: number }
+  interval_ms?: number
+  ttl_ms?: number
+}
+type Cam2PlaybackMetrics = {
+  readyState: number
+  videoWidth: number
+  videoHeight: number
+  currentTime: number
+  totalVideoFrames?: number | null
+  droppedVideoFrames?: number | null
+  corruptedVideoFrames?: number | null
+  rtcConnectionState?: RTCPeerConnectionState
+  rtcIceConnectionState?: RTCIceConnectionState
+  rtcFramesPerSecond?: number | null
+  rtcFramesDecoded?: number | null
+  rtcFramesDropped?: number | null
+  rtcBytesReceived?: number | null
+  rtcJitterSec?: number | null
+  rtcPacketsLost?: number | null
+  rtcPacketsReceived?: number | null
+  rtcCurrentRoundTripTimeSec?: number | null
+  selectedRemoteType?: string | null
+  selectedRemoteProtocol?: string | null
+}
+type ControlPayload = {
+  command?: Cam2Command
+  direction?: Cam2Command
+  action?: 'move' | 'stop' | 'hold'
+  x?: number
+  y?: number
+  speed?: number
+  step?: 'fine' | 'normal' | 'coarse'
+  hold?: boolean
+}
 
 function cam2StatusCopy(status: Cam2Status | null) {
   if (!status) return 'Checking relay and camera status...'
@@ -69,12 +121,13 @@ export default function ThinginoCameraFeed({
   const [status, setStatus] = useState<Cam2Status | null>(null)
   const [settings, setSettings] = useState<Cam2Settings | null>(null)
   const [controlPending, setControlPending] = useState<Cam2Command | null>(null)
+  const [controlConnected, setControlConnected] = useState(false)
+  const [motionState, setMotionState] = useState<Cam2MotionState | null>(null)
+  const [playbackMetrics, setPlaybackMetrics] = useState<Cam2PlaybackMetrics | null>(null)
   const [qualityPending, setQualityPending] = useState<string | null>(null)
   const rtcVideoRef = useRef<HTMLVideoElement>(null)
   const controlWsRef = useRef<WebSocket | null>(null)
   const controlWsRetryRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const holdTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const heldCommandRef = useRef<Cam2Command | null>(null)
   const controlBusyRef = useRef(false)
   const mjpegUrl = `${CAMERA_2_MJPEG_URL}?v=${streamVersion}`
   const snapshotUrl = `${CAMERA_2_SNAPSHOT_URL}?v=${streamVersion}`
@@ -101,16 +154,22 @@ export default function ThinginoCameraFeed({
       .catch(() => setSettings({ ok: false }))
   }, [])
 
-  const sendControlWs = useCallback((
-    command: Cam2Command,
-    step: 'fine' | 'normal' | 'coarse' = 'normal',
-    hold = false,
-  ) => {
+  const sendControlWs = useCallback((payload: ControlPayload) => {
     const ws = controlWsRef.current
     if (!ws || ws.readyState !== WebSocket.OPEN) return false
-    ws.send(JSON.stringify({ command, step, ...(hold ? { hold: true } : {}) }))
+    ws.send(JSON.stringify(payload))
     return true
   }, [])
+
+  const sendControlPayload = useCallback(async (payload: ControlPayload, keepalive = false) => {
+    if (sendControlWs(payload)) return
+    await fetch(CAMERA_2_CONTROL_URL, {
+      method: 'POST',
+      keepalive,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+  }, [sendControlWs])
 
   const sendControl = useCallback(async (
     command: Cam2Command,
@@ -124,41 +183,29 @@ export default function ThinginoCameraFeed({
       setControlPending(command)
     }
     try {
-      if ((hold || command === 'stop') && sendControlWs(command, step, hold)) {
-        return
-      }
-      await fetch(CAMERA_2_CONTROL_URL, {
-        method: 'POST',
-        keepalive: command === 'stop',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ command, step, ...(hold ? { hold: true } : {}) }),
-      })
+      await sendControlPayload({ command, step, ...(hold ? { hold: true } : {}) }, command === 'stop')
     } finally {
       if (trackPending) {
         controlBusyRef.current = false
         setControlPending(null)
       }
     }
-  }, [sendControlWs])
+  }, [sendControlPayload])
 
-  const stopHold = useCallback(() => {
-    const wasHolding = heldCommandRef.current != null
-    heldCommandRef.current = null
-    if (holdTimerRef.current) {
-      clearInterval(holdTimerRef.current)
-      holdTimerRef.current = null
+  const sendVectorControl = useCallback((x: number, y: number, speed: number) => {
+    const payload: ControlPayload = {
+      action: 'move',
+      x: clampUnit(x),
+      y: clampUnit(y),
+      speed: clamp01(speed),
+      step: 'fine',
     }
-    if (wasHolding) void sendControl('stop', 'fine', false)
-  }, [sendControl])
+    void sendControlPayload(payload)
+  }, [sendControlPayload])
 
-  const startHold = useCallback((command: Cam2Command) => {
-    stopHold()
-    heldCommandRef.current = command
-    void sendControl(command, 'fine', false, true)
-    holdTimerRef.current = setInterval(() => {
-      if (heldCommandRef.current === command) void sendControl(command, 'fine', false, true)
-    }, 450)
-  }, [sendControl, stopHold])
+  const stopVectorControl = useCallback(() => {
+    void sendControlPayload({ command: 'stop', action: 'stop', step: 'fine' }, true)
+  }, [sendControlPayload])
 
   const applyPreset = async (preset: 'hq30' | 'balanced24') => {
     setQualityPending(preset)
@@ -178,8 +225,8 @@ export default function ThinginoCameraFeed({
 
   useEffect(() => {
     loadSettings()
-    return stopHold
-  }, [loadSettings, stopHold])
+    return stopVectorControl
+  }, [loadSettings, stopVectorControl])
 
   useEffect(() => {
     let disposed = false
@@ -189,8 +236,37 @@ export default function ThinginoCameraFeed({
       try {
         const ws = new WebSocket(CAMERA_2_CONTROL_WS_URL)
         controlWsRef.current = ws
+        ws.onopen = () => {
+          if (controlWsRef.current === ws) setControlConnected(true)
+        }
+        ws.onmessage = (event) => {
+          try {
+            const payload = JSON.parse(String(event.data)) as {
+              motion?: Cam2MotionState
+              interval_ms?: number
+              ttl_ms?: number
+              mode?: string
+              command?: string
+            }
+            if (payload.motion) {
+              setMotionState(payload.motion)
+            } else if (payload.interval_ms || payload.ttl_ms || payload.mode) {
+              setMotionState((prev) => ({
+                ...prev,
+                command: payload.command ?? prev?.command ?? null,
+                interval_ms: payload.interval_ms ?? prev?.interval_ms,
+                ttl_ms: payload.ttl_ms ?? prev?.ttl_ms,
+                active: payload.mode === 'vector' || payload.mode === 'hold' ? true : payload.mode === 'stopped' ? false : prev?.active,
+              }))
+            }
+          } catch {
+            // Control ACKs are advisory; the stop fail-safe stays in the relay.
+          }
+        }
         ws.onclose = () => {
           if (controlWsRef.current === ws) controlWsRef.current = null
+          setControlConnected(false)
+          setMotionState((prev) => prev ? { ...prev, active: false } : prev)
           if (!disposed) {
             controlWsRetryRef.current = setTimeout(connect, 1200)
           }
@@ -219,6 +295,7 @@ export default function ThinginoCameraFeed({
         // Best effort cleanup only.
       }
       controlWsRef.current = null
+      setControlConnected(false)
     }
   }, [])
 
@@ -232,10 +309,79 @@ export default function ThinginoCameraFeed({
 
     let cancelled = false
     let painted = false
+    let rtcStats: Partial<Cam2PlaybackMetrics> = {}
     const pc = new RTCPeerConnection({
       bundlePolicy: 'max-bundle',
       iceServers: [{ urls: ['stun:stun.cloudflare.com:3478', 'stun:stun.l.google.com:19302'] }],
     })
+    const finiteNumber = (value: unknown): number | null =>
+      typeof value === 'number' && Number.isFinite(value) ? value : null
+    const rounded = (value: unknown, places = 3): number | null => {
+      const n = finiteNumber(value)
+      return n == null ? null : Number(n.toFixed(places))
+    }
+    const playbackQuality = () => {
+      const getQuality = video.getVideoPlaybackQuality
+      if (typeof getQuality !== 'function') return {}
+      const quality = getQuality.call(video)
+      return {
+        totalVideoFrames: rounded(quality.totalVideoFrames, 0),
+        droppedVideoFrames: rounded(quality.droppedVideoFrames, 0),
+        corruptedVideoFrames: rounded(quality.corruptedVideoFrames, 0),
+      }
+    }
+    const publishMetrics = () => {
+      if (cancelled) return
+      setPlaybackMetrics({
+        readyState: video.readyState,
+        videoWidth: video.videoWidth,
+        videoHeight: video.videoHeight,
+        currentTime: Number(video.currentTime.toFixed(3)),
+        rtcConnectionState: pc.connectionState,
+        rtcIceConnectionState: pc.iceConnectionState,
+        ...playbackQuality(),
+        ...rtcStats,
+      })
+    }
+    const sampleRtcStats = async () => {
+      try {
+        const report = await pc.getStats()
+        if (cancelled) return
+        const nextStats: Partial<Cam2PlaybackMetrics> = {}
+        let selectedPairId: string | null = null
+        report.forEach((raw) => {
+          const stat = raw as RTCStats & Record<string, unknown>
+          if (stat.type === 'transport' && typeof stat.selectedCandidatePairId === 'string') {
+            selectedPairId = stat.selectedCandidatePairId
+          }
+        })
+        report.forEach((raw) => {
+          const stat = raw as RTCStats & Record<string, unknown>
+          if (stat.type === 'inbound-rtp' && (stat.kind === 'video' || stat.mediaType === 'video')) {
+            nextStats.rtcBytesReceived = rounded(stat.bytesReceived, 0)
+            nextStats.rtcPacketsLost = rounded(stat.packetsLost, 0)
+            nextStats.rtcPacketsReceived = rounded(stat.packetsReceived, 0)
+            nextStats.rtcJitterSec = rounded(stat.jitter, 4)
+            nextStats.rtcFramesDecoded = rounded(stat.framesDecoded, 0)
+            nextStats.rtcFramesDropped = rounded(stat.framesDropped, 0)
+            nextStats.rtcFramesPerSecond = rounded(stat.framesPerSecond, 2)
+          }
+          if (
+            stat.type === 'candidate-pair' &&
+            (stat.id === selectedPairId || stat.selected === true || (stat.nominated === true && stat.state === 'succeeded'))
+          ) {
+            nextStats.rtcCurrentRoundTripTimeSec = rounded(stat.currentRoundTripTime, 4)
+            const remote = typeof stat.remoteCandidateId === 'string' ? report.get(stat.remoteCandidateId) as RTCStats & Record<string, unknown> | undefined : undefined
+            nextStats.selectedRemoteType = typeof remote?.candidateType === 'string' ? remote.candidateType : null
+            nextStats.selectedRemoteProtocol = typeof remote?.protocol === 'string' ? remote.protocol : null
+          }
+        })
+        rtcStats = nextStats
+        publishMetrics()
+      } catch {
+        publishMetrics()
+      }
+    }
 
     const markLive = () => {
       if (cancelled) return
@@ -244,11 +390,13 @@ export default function ThinginoCameraFeed({
       setPlayerReady(true)
       setPlayerFailed(false)
       setStreamReady(false)
+      publishMetrics()
     }
     const fail = () => {
       if (cancelled || painted) return
       setPlayerReady(false)
       setPlayerFailed(true)
+      publishMetrics()
     }
     const closePeer = () => {
       try {
@@ -273,15 +421,21 @@ export default function ThinginoCameraFeed({
       video.play().catch(() => undefined)
     })
     pc.addEventListener('connectionstatechange', () => {
+      publishMetrics()
       if (pc.connectionState === 'failed' || pc.connectionState === 'closed') fail()
     })
     pc.addEventListener('iceconnectionstatechange', () => {
+      publishMetrics()
       if (pc.iceConnectionState === 'failed') fail()
     })
 
     const startTimeout = window.setTimeout(() => {
       if (!painted) fail()
     }, 8_000)
+    const metricsTimer = window.setInterval(() => {
+      publishMetrics()
+      void sampleRtcStats()
+    }, 1_000)
 
     const start = async () => {
       try {
@@ -302,6 +456,8 @@ export default function ThinginoCameraFeed({
         const answer = await res.text()
         if (cancelled) return
         await pc.setRemoteDescription({ type: 'answer', sdp: answer })
+        publishMetrics()
+        void sampleRtcStats()
       } catch {
         fail()
       }
@@ -309,15 +465,18 @@ export default function ThinginoCameraFeed({
 
     setPlayerReady(false)
     setPlayerFailed(false)
+    setPlaybackMetrics(null)
     start()
 
     return () => {
       cancelled = true
       window.clearTimeout(startTimeout)
+      window.clearInterval(metricsTimer)
       video.removeEventListener('loadeddata', markLive)
       video.removeEventListener('playing', markLive)
       video.removeEventListener('error', fail)
       video.srcObject = null
+      setPlaybackMetrics(null)
       closePeer()
     }
   }, [streamVersion, webrtcOfferUrl])
@@ -463,67 +622,22 @@ export default function ThinginoCameraFeed({
           WebkitBackdropFilter: 'blur(8px)',
         }}
       >
-        H.264 · 30fps · WebRTC
+        {formatPlaybackTelemetry(playbackMetrics, settings)}
       </div>
 
       <div
-        className="pointer-events-auto absolute bottom-3 left-3 z-30 flex items-end gap-2"
+        className="pointer-events-auto absolute bottom-3 left-3 z-30 flex max-w-[calc(100%-5.25rem)] items-end gap-2"
         onClick={(event) => event.stopPropagation()}
         onPointerDown={(event) => event.stopPropagation()}
       >
-        <div
-          className="grid grid-cols-3 gap-1 rounded-[14px] p-1"
-          aria-label="Cam 2 pan and tilt controls"
-          style={{
-            background: 'rgba(0,0,0,0.58)',
-            border: '1px solid rgba(255,255,255,0.12)',
-            backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)',
-          }}
-        >
-          {[
-            ['ul', '↖', 'Pan up left'],
-            ['uc', '↑', 'Tilt up'],
-            ['ur', '↗', 'Pan up right'],
-            ['cl', '←', 'Pan left'],
-            ['home', '⌂', 'Home camera'],
-            ['cr', '→', 'Pan right'],
-            ['dl', '↙', 'Pan down left'],
-            ['dc', '↓', 'Tilt down'],
-            ['dr', '↘', 'Pan down right'],
-          ].map(([command, label, aria]) => (
-            <button
-              key={command}
-              type="button"
-              aria-label={aria}
-              disabled={command === 'home' && controlPending != null}
-              onPointerDown={(event) => {
-                event.preventDefault()
-                event.currentTarget.setPointerCapture(event.pointerId)
-                const cmd = command as Cam2Command
-                if (cmd === 'home') {
-                  void sendControl(cmd)
-                } else {
-                  startHold(cmd)
-                }
-              }}
-              onPointerUp={(event) => {
-                if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-                  event.currentTarget.releasePointerCapture(event.pointerId)
-                }
-                stopHold()
-              }}
-              onPointerLeave={stopHold}
-              onPointerCancel={stopHold}
-              onLostPointerCapture={stopHold}
-              onContextMenu={(event) => event.preventDefault()}
-              className="flex h-7 w-7 items-center justify-center rounded-[8px] text-[13px] font-bold text-white/85 transition hover:bg-white/18 hover:text-white disabled:opacity-45"
-              style={{ background: command === 'home' ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.08)' }}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        <Cam2Joystick
+          connected={controlConnected}
+          motion={motionState}
+          onMove={sendVectorControl}
+          onStop={stopVectorControl}
+          onHome={() => void sendControl('home')}
+          homeDisabled={controlPending != null}
+        />
 
         <div
           className="hidden min-w-[132px] flex-col gap-1 rounded-[14px] p-1.5 sm:flex"
@@ -586,6 +700,158 @@ export default function ThinginoCameraFeed({
   )
 }
 
+function Cam2Joystick({
+  connected,
+  motion,
+  homeDisabled,
+  onMove,
+  onStop,
+  onHome,
+}: {
+  connected: boolean
+  motion: Cam2MotionState | null
+  homeDisabled: boolean
+  onMove: (x: number, y: number, speed: number) => void
+  onStop: () => void
+  onHome: () => void
+}) {
+  const padRef = useRef<HTMLDivElement>(null)
+  const activePointerRef = useRef<number | null>(null)
+  const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const lastVectorRef = useRef({ x: 0, y: 0, speed: 0 })
+  const [knob, setKnob] = useState({ x: 0, y: 0, active: false })
+  const motionActive = knob.active || motion?.active === true
+
+  const clearHeartbeat = useCallback(() => {
+    if (heartbeatRef.current) {
+      clearInterval(heartbeatRef.current)
+      heartbeatRef.current = null
+    }
+  }, [])
+
+  const sendVector = useCallback((next: { x: number; y: number; speed: number }) => {
+    lastVectorRef.current = next
+    onMove(next.x, next.y, next.speed)
+  }, [onMove])
+
+  const updateFromPointer = useCallback((event: PointerEvent<HTMLDivElement>, immediate = false) => {
+    const pad = padRef.current
+    if (!pad) return
+    const next = joystickVectorFromPointer(event, pad)
+    setKnob({ x: next.x, y: next.y, active: next.speed > 0 })
+    lastVectorRef.current = next
+    if (immediate) onMove(next.x, next.y, next.speed)
+  }, [onMove])
+
+  const stop = useCallback(() => {
+    activePointerRef.current = null
+    clearHeartbeat()
+    lastVectorRef.current = { x: 0, y: 0, speed: 0 }
+    setKnob({ x: 0, y: 0, active: false })
+    onStop()
+  }, [clearHeartbeat, onStop])
+
+  useEffect(() => {
+    const stopOnPageExit = () => stop()
+    window.addEventListener('pagehide', stopOnPageExit)
+    document.addEventListener('visibilitychange', stopOnPageExit)
+    return () => {
+      window.removeEventListener('pagehide', stopOnPageExit)
+      document.removeEventListener('visibilitychange', stopOnPageExit)
+      stop()
+    }
+  }, [stop])
+
+  return (
+    <div
+      className="flex items-center gap-1.5 rounded-[14px] p-1.5"
+      aria-label="Cam 2 pan and tilt controls"
+      style={{
+        background: 'rgba(0,0,0,0.58)',
+        border: '1px solid rgba(255,255,255,0.12)',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
+      }}
+    >
+      <div
+        ref={padRef}
+        role="application"
+        aria-label="Cam 2 joystick"
+        onPointerDown={(event) => {
+          event.preventDefault()
+          activePointerRef.current = event.pointerId
+          event.currentTarget.setPointerCapture(event.pointerId)
+          updateFromPointer(event, true)
+          clearHeartbeat()
+          heartbeatRef.current = setInterval(() => {
+            const next = lastVectorRef.current
+            if (next.speed > 0) onMove(next.x, next.y, next.speed)
+          }, 95)
+        }}
+        onPointerMove={(event) => {
+          if (activePointerRef.current !== event.pointerId) return
+          event.preventDefault()
+          updateFromPointer(event, false)
+        }}
+        onPointerUp={(event) => {
+          if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+            event.currentTarget.releasePointerCapture(event.pointerId)
+          }
+          stop()
+        }}
+        onPointerCancel={stop}
+        onLostPointerCapture={stop}
+        onContextMenu={(event) => event.preventDefault()}
+        className="relative h-[72px] w-[72px] touch-none rounded-full"
+        style={{
+          background: motionActive
+            ? 'radial-gradient(circle at 50% 50%, rgba(103,232,249,0.24), rgba(255,255,255,0.08) 58%, rgba(255,255,255,0.04))'
+            : 'radial-gradient(circle at 50% 50%, rgba(255,255,255,0.14), rgba(255,255,255,0.07) 58%, rgba(255,255,255,0.035))',
+          boxShadow: motionActive ? '0 0 18px rgba(103,232,249,0.22)' : undefined,
+        }}
+      >
+        <div
+          className="absolute left-1/2 top-1/2 h-px w-[54px] -translate-x-1/2 bg-white/18"
+          aria-hidden="true"
+        />
+        <div
+          className="absolute left-1/2 top-1/2 h-[54px] w-px -translate-y-1/2 bg-white/18"
+          aria-hidden="true"
+        />
+        <div
+          className="absolute left-1/2 top-1/2 h-6 w-6 rounded-full border border-white/35 bg-white/22"
+          aria-hidden="true"
+          style={{
+            transform: `translate(calc(-50% + ${knob.x * 24}px), calc(-50% + ${-knob.y * 24}px))`,
+            boxShadow: '0 6px 18px rgba(0,0,0,0.28)',
+          }}
+        />
+      </div>
+      <div className="flex h-[72px] flex-col justify-between">
+        <button
+          type="button"
+          aria-label="Home camera"
+          disabled={homeDisabled}
+          onClick={onHome}
+          className="flex h-8 w-8 items-center justify-center rounded-[8px] text-[13px] font-bold text-white/86 transition hover:bg-white/18 hover:text-white disabled:opacity-45"
+          style={{ background: 'rgba(255,255,255,0.12)' }}
+        >
+          ⌂
+        </button>
+        <div
+          className="rounded-full px-1.5 py-0.5 text-center text-[8px] font-bold uppercase tracking-[0.12em]"
+          style={{
+            background: connected ? 'rgba(16,185,129,0.20)' : 'rgba(245,158,11,0.18)',
+            color: connected ? '#a7f3d0' : '#fed7aa',
+          }}
+        >
+          {connected ? 'WS' : 'HTTP'}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function formatStreamSettings(settings: Cam2Settings | null) {
   const stream = settings?.stream0
   if (!stream) return 'loading'
@@ -593,6 +859,62 @@ function formatStreamSettings(settings: Cam2Settings | null) {
   const fps = stream.fps ? `${stream.fps} fps` : 'fps'
   const bitrate = stream.bitrate ? `${Math.round(stream.bitrate / 100) / 10} Mbps` : ''
   return [resolution, fps, bitrate].filter(Boolean).join(' · ')
+}
+
+function formatPlaybackTelemetry(metrics: Cam2PlaybackMetrics | null, settings: Cam2Settings | null) {
+  const stream = settings?.stream0
+  const resolution = metrics?.videoWidth && metrics.videoHeight
+    ? `${metrics.videoWidth}×${metrics.videoHeight}`
+    : stream?.width && stream.height
+      ? `${stream.width}×${stream.height}`
+      : 'video'
+  const fps = typeof metrics?.rtcFramesPerSecond === 'number'
+    ? `${formatMetricNumber(metrics.rtcFramesPerSecond)}fps actual`
+    : stream?.fps
+      ? `${stream.fps}fps target`
+      : 'fps'
+  const drops = typeof metrics?.droppedVideoFrames === 'number' && metrics.droppedVideoFrames > 0
+    ? `${metrics.droppedVideoFrames} dropped`
+    : null
+  const jitter = typeof metrics?.rtcJitterSec === 'number'
+    ? `${Math.round(metrics.rtcJitterSec * 1000)}ms jitter`
+    : null
+  const rtt = typeof metrics?.rtcCurrentRoundTripTimeSec === 'number'
+    ? `${Math.round(metrics.rtcCurrentRoundTripTimeSec * 1000)}ms rtt`
+    : null
+  const path = metrics?.selectedRemoteType
+    ? `${metrics.selectedRemoteType}${metrics.selectedRemoteProtocol ? `/${metrics.selectedRemoteProtocol}` : ''}`
+    : null
+  return [resolution, fps, drops, jitter, rtt, path].filter(Boolean).join(' · ')
+}
+
+function joystickVectorFromPointer(event: PointerEvent<HTMLDivElement>, pad: HTMLDivElement) {
+  const rect = pad.getBoundingClientRect()
+  const rawX = ((event.clientX - rect.left) / rect.width) * 2 - 1
+  const rawY = -(((event.clientY - rect.top) / rect.height) * 2 - 1)
+  const magnitude = Math.hypot(rawX, rawY)
+  const deadZone = 0.08
+  if (!Number.isFinite(magnitude) || magnitude < deadZone) return { x: 0, y: 0, speed: 0 }
+  const scale = magnitude > 1 ? 1 / magnitude : 1
+  const x = clampUnit(rawX * scale)
+  const y = clampUnit(rawY * scale)
+  const speed = clamp01((Math.min(1, magnitude) - deadZone) / (1 - deadZone))
+  return { x, y, speed }
+}
+
+function clampUnit(value: number) {
+  if (!Number.isFinite(value)) return 0
+  return Math.max(-1, Math.min(1, value))
+}
+
+function clamp01(value: number) {
+  if (!Number.isFinite(value)) return 0
+  return Math.max(0, Math.min(1, value))
+}
+
+function formatMetricNumber(value: number) {
+  if (!Number.isFinite(value)) return '0'
+  return Math.abs(value - Math.round(value)) < 0.05 ? String(Math.round(value)) : value.toFixed(1)
 }
 
 function nativePlayerUrl(stream: string): string {

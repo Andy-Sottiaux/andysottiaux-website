@@ -4,6 +4,8 @@ import { chromium } from 'playwright'
 
 const baseUrl = process.env.CAMERA_TRANSPORT_AUDIT_URL || 'https://andysottiaux.com'
 const stream = process.env.CAMERA_TRANSPORT_STREAM || 'cayley-sub'
+const offerUrl = process.env.CAMERA_TRANSPORT_OFFER_URL || '/api/v3/camera/webrtc/offer'
+const sourceParam = process.env.CAMERA_TRANSPORT_SOURCE_PARAM || 'stream'
 const timeoutMs = Number.parseInt(process.env.CAMERA_TRANSPORT_TIMEOUT_MS || '45000', 10)
 const iceGatherTimeoutMs = Number.parseInt(process.env.CAMERA_TRANSPORT_ICE_GATHER_TIMEOUT_MS || '2500', 10)
 const connectTimeoutMs = Number.parseInt(process.env.CAMERA_TRANSPORT_CONNECT_TIMEOUT_MS || '9000', 10)
@@ -69,7 +71,7 @@ try {
   const page = await browser.newPage()
   await page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: timeoutMs })
   const result = await page.evaluate(
-    async ({ stream, timeoutMs, iceGatherTimeoutMs, connectTimeoutMs }) => {
+    async ({ stream, offerUrl, sourceParam, timeoutMs, iceGatherTimeoutMs, connectTimeoutMs }) => {
       const startedAt = performance.now()
       const pc = new RTCPeerConnection({
         bundlePolicy: 'max-bundle',
@@ -110,7 +112,9 @@ try {
       const ctrl = new AbortController()
       const timer = setTimeout(() => ctrl.abort(), timeoutMs)
       try {
-        const res = await fetch(`/api/v3/camera/webrtc/offer?stream=${encodeURIComponent(stream)}`, {
+        const url = new URL(offerUrl, window.location.href)
+        url.searchParams.set(sourceParam, stream)
+        const res = await fetch(url.toString(), {
           method: 'POST',
           cache: 'no-store',
           signal: ctrl.signal,
@@ -209,7 +213,7 @@ try {
         pc.close()
       }
     },
-    { stream, timeoutMs, iceGatherTimeoutMs, connectTimeoutMs }
+    { stream, offerUrl, sourceParam, timeoutMs, iceGatherTimeoutMs, connectTimeoutMs }
   )
 
   const candidates = parseCandidates(result.answerSdp || '')
@@ -234,6 +238,8 @@ try {
     offerOk: result.ok,
     url: baseUrl,
     stream,
+    offerUrl,
+    sourceParam,
     browserChannel: browserChannel || 'chromium',
     status: result.status,
     elapsedMs: result.elapsedMs,

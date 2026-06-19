@@ -140,6 +140,8 @@ type QualityRateSample = {
 type CameraPlaybackMetrics = {
   mode: 'hls' | 'rtc'
   readyState: number
+  videoWidth?: number | null
+  videoHeight?: number | null
   videoTimeSec: number
   bufferedAheadSec: number | null
   hlsLatencySec: number | null
@@ -300,6 +302,7 @@ export default function FieldCameraFeed({
   const [hlsReady, setHlsReady] = useState(false)
   const [hlsFailed, setHlsFailed] = useState(false)
   const [hlsRetryCount, setHlsRetryCount] = useState(0)
+  const [playbackMetrics, setPlaybackMetrics] = useState<CameraPlaybackMetrics | null>(null)
   const debugMode = useDebugFlag()
   const overlay = useCameraHealthOverlay(active)
   const detections = useDetectionOverlay(active)
@@ -363,6 +366,7 @@ export default function FieldCameraFeed({
       setHlsReady(false)
       setHlsFailed(false)
       setHlsRetryCount(0)
+      setPlaybackMetrics(null)
       return
     }
 
@@ -376,6 +380,7 @@ export default function FieldCameraFeed({
     setHlsReady(false)
     setHlsFailed(false)
     setHlsRetryCount(0)
+    setPlaybackMetrics(null)
     setStreamNonce((n) => n + 1)
     setSnapshotNonce(Date.now())
     const timeout = window.setTimeout(() => {
@@ -586,6 +591,8 @@ export default function FieldCameraFeed({
       const nextMetrics: CameraPlaybackMetrics = {
         mode: 'rtc',
         readyState: video.readyState,
+        videoWidth: video.videoWidth || null,
+        videoHeight: video.videoHeight || null,
         videoTimeSec: Number(video.currentTime.toFixed(3)),
         bufferedAheadSec: null,
         hlsLatencySec: null,
@@ -602,6 +609,7 @@ export default function FieldCameraFeed({
         ...rtcStats,
       }
       metricsWindow.__cayleyCameraMetrics = nextMetrics
+      setPlaybackMetrics(nextMetrics)
       evaluateRtcHealth(nextMetrics)
     }
     const markLive = () => {
@@ -712,6 +720,7 @@ export default function FieldCameraFeed({
       if (metricsWindow.__cayleyCameraMetrics?.mode === 'rtc') {
         delete metricsWindow.__cayleyCameraMetrics
       }
+      setPlaybackMetrics(null)
     }
   }, [showHttpRtc, webrtcOfferUrl])
 
@@ -774,6 +783,8 @@ export default function FieldCameraFeed({
       metricsWindow.__cayleyCameraMetrics = {
         mode: 'hls',
         readyState: video.readyState,
+        videoWidth: video.videoWidth || null,
+        videoHeight: video.videoHeight || null,
         videoTimeSec: Number(video.currentTime.toFixed(3)),
         bufferedAheadSec: finiteNumber(bufferedAhead()),
         hlsLatencySec: hlsLatency && hlsLatency > 0 ? hlsLatency : finiteNumber(estimatedLatency),
@@ -792,6 +803,7 @@ export default function FieldCameraFeed({
         metricsWindow.__cayleyCameraMetrics.videoDroppedFrames = rounded(quality.droppedVideoFrames, 0)
         metricsWindow.__cayleyCameraMetrics.videoTotalFrames = rounded(quality.totalVideoFrames, 0)
       }
+      setPlaybackMetrics(metricsWindow.__cayleyCameraMetrics)
     }
 
     const markLive = () => {
@@ -932,6 +944,7 @@ export default function FieldCameraFeed({
       if (metricsWindow.__cayleyCameraMetrics?.mode === 'hls') {
         delete metricsWindow.__cayleyCameraMetrics
       }
+      setPlaybackMetrics(null)
       hls?.destroy()
       video.removeAttribute('src')
       video.load()
@@ -1103,7 +1116,7 @@ export default function FieldCameraFeed({
       {phase === 'offline' && <FeedOffline isLight={isLight} onRetry={reload} />}
 
       {(phase === 'preview' || phase === 'live') && <LiveBadge phase={phase} quality={quality} />}
-      {(phase === 'preview' || phase === 'live') && <CameraSpecsOverlay data={overlay} quality={quality} />}
+      {(phase === 'preview' || phase === 'live') && <CameraSpecsOverlay data={overlay} quality={quality} metrics={playbackMetrics} />}
       {phase === 'live' && <DetectionOverlay data={detections} layout={videoLayout} />}
       {(phase === 'preview' || phase === 'live') && <TrainingStatusPill data={training} />}
       {debugMode && <DevHUD phase={phase} quality={quality} />}
@@ -1412,7 +1425,15 @@ function LiveBadge({ phase, quality }: { phase: Extract<Phase, 'preview' | 'live
   )
 }
 
-function CameraSpecsOverlay({ data, quality }: { data: CameraHealthOverlay; quality: CameraQuality }) {
+function CameraSpecsOverlay({
+  data,
+  quality,
+  metrics,
+}: {
+  data: CameraHealthOverlay
+  quality: CameraQuality
+  metrics: CameraPlaybackMetrics | null
+}) {
   const profile = data.profile
   const output = profile?.output_size ||
     (profile?.width && profile?.height ? `${profile.width}x${profile.height}` : data.outputSize)
@@ -1426,6 +1447,24 @@ function CameraSpecsOverlay({ data, quality }: { data: CameraHealthOverlay; qual
   const cleanOutput = quality.sanitizer?.width && quality.sanitizer?.height
     ? `${quality.sanitizer.width}x${quality.sanitizer.height}`
     : null
+  const measuredOutput = metrics?.videoWidth && metrics.videoHeight
+    ? `${metrics.videoWidth}x${metrics.videoHeight}`
+    : null
+  const measuredFps = typeof metrics?.rtcFramesPerSecond === 'number'
+    ? `${formatFps(metrics.rtcFramesPerSecond)}fps actual`
+    : typeof quality.sanitizer?.observed_hls_fps === 'number'
+      ? `${formatFps(quality.sanitizer.observed_hls_fps)}fps hls`
+      : null
+  const dropText = typeof metrics?.videoDroppedFrames === 'number' && metrics.videoDroppedFrames > 0
+    ? `${metrics.videoDroppedFrames} dropped`
+    : typeof metrics?.rtcFramesDropped === 'number' && metrics.rtcFramesDropped > 0
+      ? `${metrics.rtcFramesDropped} rtc drops`
+      : null
+  const networkText = metrics?.mode === 'rtc' && typeof metrics.rtcCurrentRoundTripTimeSec === 'number'
+    ? `${Math.round(metrics.rtcCurrentRoundTripTimeSec * 1000)}ms rtt`
+    : metrics?.mode === 'hls' && typeof metrics.hlsLatencySec === 'number'
+      ? `${metrics.hlsLatencySec.toFixed(1)}s latency`
+      : null
   const targetFps = typeof quality.sanitizer?.fps_target === 'number' && quality.sanitizer.fps_target > 0
     ? `${formatFps(quality.sanitizer.fps_target)}fps target`
     : null
@@ -1445,8 +1484,13 @@ function CameraSpecsOverlay({ data, quality }: { data: CameraHealthOverlay; qual
     ? `${quality.sanitizer.ffmpeg_restarts} restarts`
     : null
   const cleanParts = [
-    cleanOutput,
-    targetFps,
+    measuredOutput,
+    measuredFps,
+    cleanOutput && cleanOutput !== measuredOutput ? cleanOutput : null,
+    measuredFps ? null : targetFps,
+    metrics?.mode,
+    dropText,
+    networkText,
     transport,
     fecRecovered,
     quality.mode === 'sanitized-preview' || quality.snapshot?.source === 'sanitized' ? 'sanitized' : null,
@@ -1619,9 +1663,11 @@ function TrainingStatusPill({ data }: { data: TrainingStatus }) {
   const ready = data.training_ready || data.dataset_ready || data.state === 'ready_to_train'
   const unavailable = data.ok === false || Boolean(data.error)
   const label = trainingStateLabel(data)
+  const qualityLabel = trainingQualityLabel(data)
   const progress = trainingProgressChips(data)
   const detail = progress.length > 0 ? null : trainingDetail(data)
   const waitLine = trainingWaitLine(data)
+  const focusLine = trainingFocusLine(data)
   const dot = ready ? '#34d399' : unavailable ? '#f87171' : '#f59e0b'
   const background = ready
     ? 'rgba(6,78,59,0.76)'
@@ -1649,10 +1695,10 @@ function TrainingStatusPill({ data }: { data: TrainingStatus }) {
             boxShadow: `0 0 8px ${dot}`,
           }}
         />
-        <span className="shrink-0 whitespace-nowrap">Training · {label}</span>
+        <span className="shrink-0 whitespace-nowrap">AI · {qualityLabel || label}</span>
         {detail && <span className="min-w-0 truncate opacity-80">{detail}</span>}
       </div>
-      {(progress.length > 0 || waitLine) && (
+      {(progress.length > 0 || waitLine || focusLine) && (
         <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 opacity-80">
           {progress.map((item) => (
             <span key={item.label} className="whitespace-nowrap">
@@ -1660,6 +1706,7 @@ function TrainingStatusPill({ data }: { data: TrainingStatus }) {
             </span>
           ))}
           {waitLine && <span className="min-w-0 truncate opacity-75">{waitLine}</span>}
+          {focusLine && <span className="min-w-0 truncate opacity-75">{focusLine}</span>}
         </div>
       )}
     </div>
@@ -1868,6 +1915,24 @@ function trainingStateLabel(data: TrainingStatus): string {
   }
 }
 
+function trainingQualityLabel(data: TrainingStatus): string | null {
+  if (data.error) return 'offline'
+  if (data.training_ready || data.dataset_ready || data.production_readiness?.ok) return 'training ready'
+
+  const readiness = data.production_readiness
+  const diversity = readiness?.image_diversity
+  const classCount = Object.keys(readiness?.nonzero_classes ?? {}).length
+  const unique = numericValue(diversity?.unique_images)
+  const total = numericValue(readiness?.total_images)
+  const duplicateRatio = numericValue(data.collection_wait?.guided_progress?.duplicate_ratio)
+
+  if (classCount > 0 && classCount < 2) return `${classCount} class only`
+  if (unique != null && total != null && total > 0 && unique / total < 0.35) return `${unique}/${total} unique`
+  if (duplicateRatio != null && duplicateRatio >= 0.8) return `${Math.round(duplicateRatio * 100)}% duplicates`
+  if (data.state === 'waiting_for_labels') return 'needs review'
+  return null
+}
+
 function trainingProgressChips(data: TrainingStatus): { label: string; value: string }[] {
   const readiness = data.production_readiness
   const plan = readiness?.collection_plan
@@ -1940,6 +2005,15 @@ function collectionProgressLine(progress: CollectionProgress, defaultStatus: str
       : null,
   ].filter(Boolean)
   return pieces.join(' · ')
+}
+
+function trainingFocusLine(data: TrainingStatus): string | null {
+  const focus = data.production_readiness?.collection_plan?.focus
+  if (Array.isArray(focus) && focus.length > 0) return focus[0]
+  const nextAction = data.model_wait?.latest_pipeline_status === 'not_training_ready'
+    ? data.short_action || data.production_readiness?.short_action
+    : null
+  return nextAction || null
 }
 
 function numericValue(value: number | null | undefined): number | null {
