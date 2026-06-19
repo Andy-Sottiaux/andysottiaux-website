@@ -14,7 +14,9 @@ import { type CSSProperties, type RefObject, useEffect, useRef, useState } from 
 import {
   CAMERA_FALLBACK_MEDIA_ENABLED,
   CAMERA_HOST,
+  DETECTIONS_URL as DETECTIONS_BASE_URL,
   FAST_PLAYER_ENABLED,
+  HEALTH_URL,
   HLS_URL,
   HTTP_RTC_ENABLED,
   MJPEG_URL,
@@ -24,11 +26,12 @@ import {
   SNAPSHOT_URL,
   TRAINING_STATUS_URL,
   WEBRTC_OFFER_URL,
+  WEBRTC_SOURCE_PARAM,
 } from '@/lib/fieldCameraConfig'
 import { useFieldTheme } from './fieldTheme'
 
 const DETECTION_WINDOW_SEC = 60
-const DETECTIONS_URL = `/api/v3/detections?window_sec=${DETECTION_WINDOW_SEC}`
+const DETECTIONS_POLL_URL = withQueryParams(DETECTIONS_BASE_URL, { window_sec: DETECTION_WINDOW_SEC })
 const SNAPSHOT_REFRESH_MS = 15_000
 const STREAM_START_TIMEOUT_MS = 20_000
 const FAST_PLAYER_START_TIMEOUT_MS = 8_000
@@ -305,10 +308,13 @@ export default function FieldCameraFeed({
   const mediaWidth = overlay.profile?.width || 1280
   const mediaHeight = overlay.profile?.height || 960
   const videoLayout = useOverlayLayout(containerRef, fit, position, mediaWidth, mediaHeight)
-  const snapshotUrl = `${SNAPSHOT_URL}?v=${snapshotNonce}`
-  const mjpegUrl = `${MJPEG_URL}?v=${streamNonce}`
-  const hlsUrl = `${HLS_URL}?v=${streamNonce}`
-  const webrtcOfferUrl = `${WEBRTC_OFFER_URL}?stream=${encodeURIComponent(PRIMARY_FEED_STREAM)}&v=${streamNonce}`
+  const snapshotUrl = withQueryParams(SNAPSHOT_URL, { v: snapshotNonce })
+  const mjpegUrl = withQueryParams(MJPEG_URL, { v: streamNonce })
+  const hlsUrl = withQueryParams(HLS_URL, { v: streamNonce })
+  const webrtcOfferUrl = withQueryParams(WEBRTC_OFFER_URL, {
+    [WEBRTC_SOURCE_PARAM]: PRIMARY_FEED_STREAM,
+    v: streamNonce,
+  })
   const fastPlayerUrl = nativePlayerUrl(PRIMARY_FEED_STREAM)
   const mediaHealthBad = isConfirmedCameraBad(quality)
   const showStream = active && !mediaHealthBad
@@ -1144,6 +1150,20 @@ export function prewarmFieldCameraFeed() {
   return
 }
 
+function withQueryParams(url: string, params: Record<string, string | number>): string {
+  const queryIndex = url.indexOf('?')
+  const base = queryIndex === -1 ? url : url.slice(0, queryIndex)
+  const existingQuery = queryIndex === -1 ? '' : url.slice(queryIndex + 1)
+  const nextQuery = new URLSearchParams(existingQuery)
+
+  Object.entries(params).forEach(([key, value]) => {
+    nextQuery.set(key, String(value))
+  })
+
+  const query = nextQuery.toString()
+  return query ? `${base}?${query}` : base
+}
+
 function isConfirmedCameraBad(quality: CameraQuality): boolean {
   if (quality.snapshot?.stale === true) return true
   if (typeof quality.sanitizer?.latest_clean_age_s === 'number' && quality.sanitizer.latest_clean_age_s > STALE_CLEAN_FRAME_SEC) {
@@ -1230,7 +1250,7 @@ function useCameraHealthOverlay(enabled: boolean): CameraHealthOverlay {
     const tick = async () => {
       const next: CameraHealthOverlay = {}
       try {
-        const healthRes = await fetch('/api/v3/health', { cache: 'no-store' })
+        const healthRes = await fetch(HEALTH_URL, { cache: 'no-store' })
         if (healthRes.ok) {
           const health = (await healthRes.json()) as HealthPayload
           const media = health.system?.media_graph
@@ -1270,7 +1290,7 @@ function useDetectionOverlay(enabled: boolean): DetectionPayload {
 
     const tick = async () => {
       try {
-        const res = await fetch(DETECTIONS_URL, { cache: 'no-store' })
+        const res = await fetch(DETECTIONS_POLL_URL, { cache: 'no-store' })
         if (res.ok) {
           const next = (await res.json()) as DetectionPayload
           if (!cancelled) setData(next)

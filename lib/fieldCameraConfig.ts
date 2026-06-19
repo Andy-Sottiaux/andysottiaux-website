@@ -4,6 +4,8 @@ export const CAMERA_HOST =
 
 export type FieldCameraSource = 'field' | 'thingino'
 
+export const CAMERA_GATEWAY_HOST = process.env.NEXT_PUBLIC_V3_CAMERA_GATEWAY_HOST || ''
+
 // Only set this to a true public tunnel host. Browsers can block direct .ts.net
 // tailnet targets from the production site with Local/Private Network Access.
 export const CAMERA_2_GATEWAY_HOST = process.env.NEXT_PUBLIC_V3_CAMERA_2_GATEWAY_HOST || ''
@@ -49,22 +51,31 @@ export const CAMERA_FALLBACK_MEDIA_ENABLED = process.env.NEXT_PUBLIC_V3_CAMERA_F
 
 export const SNAPSHOT_URL =
   process.env.NEXT_PUBLIC_V3_CAMERA_SNAPSHOT_URL ||
-  '/api/v3/camera/snapshot'
+  (CAMERA_GATEWAY_HOST ? `${CAMERA_GATEWAY_HOST}/api/camera/snapshot.jpeg` : '/api/v3/camera/snapshot')
 export const SANITIZED_SNAPSHOT_URL =
   process.env.NEXT_PUBLIC_V3_CAMERA_SANITIZED_SNAPSHOT_URL ||
-  '/api/v3/camera/sanitized'
+  (CAMERA_GATEWAY_HOST ? `${CAMERA_GATEWAY_HOST}/api/camera/sanitized.jpeg` : '/api/v3/camera/sanitized')
 export const MJPEG_URL =
   process.env.NEXT_PUBLIC_V3_CAMERA_MJPEG_URL ||
-  '/api/v3/camera/mjpeg'
+  (CAMERA_GATEWAY_HOST ? `${CAMERA_GATEWAY_HOST}/api/camera/mjpeg` : '/api/v3/camera/mjpeg')
 export const HLS_URL =
   process.env.NEXT_PUBLIC_V3_CAMERA_HLS_URL ||
-  '/api/v3/camera/hls/clean.m3u8'
+  (CAMERA_GATEWAY_HOST ? `${CAMERA_GATEWAY_HOST}/api/camera/hls/clean.m3u8` : '/api/v3/camera/hls/clean.m3u8')
 export const WEBRTC_OFFER_URL =
   process.env.NEXT_PUBLIC_V3_CAMERA_WEBRTC_OFFER_URL ||
-  '/api/v3/camera/webrtc/offer'
+  (CAMERA_GATEWAY_HOST ? `${CAMERA_GATEWAY_HOST}/api/webrtc` : '/api/v3/camera/webrtc/offer')
+export const WEBRTC_SOURCE_PARAM =
+  process.env.NEXT_PUBLIC_V3_CAMERA_WEBRTC_SOURCE_PARAM ||
+  (WEBRTC_OFFER_URL.includes('/api/webrtc') ? 'src' : 'stream')
 export const QUALITY_URL =
   process.env.NEXT_PUBLIC_V3_CAMERA_QUALITY_URL ||
-  '/api/v3/camera/quality'
+  (CAMERA_GATEWAY_HOST ? `${CAMERA_GATEWAY_HOST}/api/camera/quality` : '/api/v3/camera/quality')
 export const TRAINING_STATUS_URL =
   process.env.NEXT_PUBLIC_V3_TRAINING_STATUS_URL ||
-  '/api/v3/training/status'
+  (CAMERA_GATEWAY_HOST ? `${CAMERA_GATEWAY_HOST}/api/training/status` : '/api/v3/training/status')
+export const HEALTH_URL =
+  process.env.NEXT_PUBLIC_V3_HEALTH_URL ||
+  (CAMERA_GATEWAY_HOST ? `${CAMERA_GATEWAY_HOST}/api/health` : '/api/v3/health')
+export const DETECTIONS_URL =
+  process.env.NEXT_PUBLIC_V3_DETECTIONS_URL ||
+  (CAMERA_GATEWAY_HOST ? `${CAMERA_GATEWAY_HOST}/api/detections` : '/api/v3/detections')
