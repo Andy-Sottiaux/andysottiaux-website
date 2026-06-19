@@ -1,27 +1,32 @@
-const PUBLIC_CAMERA_GATEWAY_HOST = 'https://cam1.andysottiaux.com'
-
 export const CAMERA_HOST =
   process.env.NEXT_PUBLIC_V3_CAMERA_HOST ||
-  PUBLIC_CAMERA_GATEWAY_HOST
+  'https://cayley-relay.tailc7d6b6.ts.net'
 
 export type FieldCameraSource = 'field' | 'thingino'
 
+// Keep camera media same-origin by default. The public Cloudflare camera
+// hostnames must be explicitly enabled after DNS/routes are proven healthy;
+// otherwise a bad camera subdomain can break the whole live section.
+const DIRECT_GATEWAY_ENABLED = process.env.NEXT_PUBLIC_V3_DIRECT_CAMERA_GATEWAY_ENABLED === '1'
+
 export const CAMERA_GATEWAY_HOST =
-  process.env.NEXT_PUBLIC_V3_CAMERA_GATEWAY_HOST ||
-  PUBLIC_CAMERA_GATEWAY_HOST
+  DIRECT_GATEWAY_ENABLED
+    ? (process.env.NEXT_PUBLIC_V3_CAMERA_GATEWAY_HOST || '')
+    : ''
 
 // Only set this to a true public tunnel host. Browsers can block direct .ts.net
 // tailnet targets from the production site with Local/Private Network Access.
 // The shared Cloudflare gateway routes both Cam 1 and Cam 2 APIs. A dedicated
 // Cam 2 host can be supplied once that hostname is healthy.
 export const CAMERA_2_GATEWAY_HOST =
-  process.env.NEXT_PUBLIC_V3_CAMERA_2_GATEWAY_HOST ||
-  CAMERA_GATEWAY_HOST
+  DIRECT_GATEWAY_ENABLED
+    ? (process.env.NEXT_PUBLIC_V3_CAMERA_2_GATEWAY_HOST || CAMERA_GATEWAY_HOST)
+    : ''
 const CAMERA_2_GATEWAY_WS_HOST = CAMERA_2_GATEWAY_HOST.replace(/^http/i, 'ws')
 const CAMERA_2_FALLBACK_GATEWAY_HOST =
-  process.env.NEXT_PUBLIC_V3_CAMERA_2_FALLBACK_GATEWAY_HOST ||
-  CAMERA_GATEWAY_HOST ||
-  PUBLIC_CAMERA_GATEWAY_HOST
+  DIRECT_GATEWAY_ENABLED
+    ? (process.env.NEXT_PUBLIC_V3_CAMERA_2_FALLBACK_GATEWAY_HOST || CAMERA_GATEWAY_HOST)
+    : ''
 const CAMERA_2_FALLBACK_GATEWAY_WS_HOST = CAMERA_2_FALLBACK_GATEWAY_HOST.replace(/^http/i, 'ws')
 
 export const CAMERA_2_URL =

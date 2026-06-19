@@ -92,6 +92,10 @@ type ControlPayload = {
   step?: 'fine' | 'normal' | 'coarse'
   hold?: boolean
 }
+type QueuedControlPayload = {
+  payload: ControlPayload
+  keepalive?: boolean
+}
 
 function cam2StatusCopy(status: Cam2Status | null) {
   if (!status) return 'Checking relay and camera status...'
@@ -134,6 +138,9 @@ export default function ThinginoCameraFeed({
   const controlWsRef = useRef<WebSocket | null>(null)
   const controlWsRetryRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const controlBusyRef = useRef(false)
+  const vectorHttpQueuedRef = useRef<QueuedControlPayload | null>(null)
+  const vectorHttpProcessingRef = useRef(false)
+  const vectorHttpLastSentAtRef = useRef(0)
   const mjpegUrl = `${CAMERA_2_MJPEG_URL}?v=${streamVersion}`
   const snapshotUrl = `${CAMERA_2_SNAPSHOT_URL}?v=${streamVersion}`
   const playerUrl = nativePlayerUrl(CAMERA_2_STREAM)
@@ -183,8 +190,7 @@ export default function ThinginoCameraFeed({
     return true
   }, [])
 
-  const sendControlPayload = useCallback(async (payload: ControlPayload, keepalive = false) => {
-    if (sendControlWs(payload)) return
+  const postControlPayload = useCallback(async (payload: ControlPayload, keepalive = false) => {
     const body = JSON.stringify(payload)
     let lastError: unknown = null
     for (const url of controlUrls) {
@@ -203,7 +209,47 @@ export default function ThinginoCameraFeed({
       }
     }
     if (lastError) throw lastError
-  }, [controlUrls, sendControlWs])
+  }, [controlUrls])
+
+  const sendControlPayload = useCallback(async (payload: ControlPayload, keepalive = false) => {
+    if (sendControlWs(payload)) return
+    await postControlPayload(payload, keepalive)
+  }, [postControlPayload, sendControlWs])
+
+  const sendQueuedVectorHttp = useCallback((payload: ControlPayload, keepalive = false) => {
+    if (sendControlWs(payload)) return
+
+    vectorHttpQueuedRef.current = { payload, keepalive }
+    if (vectorHttpProcessingRef.current) return
+
+    vectorHttpProcessingRef.current = true
+    const processQueue = async () => {
+      try {
+        while (vectorHttpQueuedRef.current) {
+          const next = vectorHttpQueuedRef.current
+          vectorHttpQueuedRef.current = null
+
+          const isStop = next.payload.action === 'stop' || next.payload.command === 'stop'
+          const minSpacingMs = isStop ? 0 : 170
+          const elapsed = Date.now() - vectorHttpLastSentAtRef.current
+          if (elapsed < minSpacingMs) {
+            await new Promise((resolve) => window.setTimeout(resolve, minSpacingMs - elapsed))
+          }
+
+          vectorHttpLastSentAtRef.current = Date.now()
+          try {
+            await postControlPayload(next.payload, next.keepalive)
+          } catch {
+            // The relay TTL stops stale motion; keep the latest vector flowing.
+          }
+        }
+      } finally {
+        vectorHttpProcessingRef.current = false
+      }
+    }
+
+    void processQueue()
+  }, [postControlPayload, sendControlWs])
 
   const sendControl = useCallback(async (
     command: Cam2Command,
@@ -234,12 +280,12 @@ export default function ThinginoCameraFeed({
       speed: clamp01(speed),
       step: 'fine',
     }
-    void sendControlPayload(payload)
-  }, [sendControlPayload])
+    sendQueuedVectorHttp(payload)
+  }, [sendQueuedVectorHttp])
 
   const stopVectorControl = useCallback(() => {
-    void sendControlPayload({ command: 'stop', action: 'stop', step: 'fine' }, true)
-  }, [sendControlPayload])
+    sendQueuedVectorHttp({ command: 'stop', action: 'stop', step: 'fine' }, true)
+  }, [sendQueuedVectorHttp])
 
   const applyPreset = async (preset: 'hq30' | 'balanced24') => {
     setQualityPending(preset)
@@ -813,7 +859,7 @@ function Cam2Joystick({
           heartbeatRef.current = setInterval(() => {
             const next = lastVectorRef.current
             if (next.speed > 0) onMove(next.x, next.y, next.speed)
-          }, 70)
+          }, connected ? 70 : 180)
         }}
         onPointerMove={(event) => {
           if (activePointerRef.current !== event.pointerId) return
