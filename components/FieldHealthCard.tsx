@@ -486,6 +486,12 @@ export default function FieldHealthCard({
     rknn?.state === 'starting' ||
     rknn?.status === 'starting'
   ) && typeof rknn?.message === 'string' && rknn.message.toLowerCase().includes('relay stream')
+  const rknnWaiting = rknnWaitingForRelay || (
+    (rknn?.state === 'starting' || rknn?.status === 'starting') &&
+    rknn?.ok !== true &&
+    typeof rknn?.actual_fps === 'number' &&
+    rknn.actual_fps <= 0
+  )
   const rknnFps = typeof rknn?.actual_fps === 'number' && Number.isFinite(rknn.actual_fps)
     ? rknn.actual_fps
     : typeof rknn?.target_fps === 'number' && Number.isFinite(rknn.target_fps)
@@ -493,7 +499,7 @@ export default function FieldHealthCard({
       : null
   const rknnText = rknn?.available === false
     ? 'off'
-    : rknnWaitingForRelay
+    : rknnWaiting
       ? 'waiting'
       : rknn?.stale === true
         ? 'stale'
@@ -509,7 +515,7 @@ export default function FieldHealthCard({
         : `${rknn?.detections ?? 0} objects`
   const rknnColor = rknnOk
     ? valueColor
-    : rknnWaitingForRelay
+    : rknnWaiting
       ? (isLight ? '#b45309' : '#fcd34d')
       : palette.mutedText
   const thermalPct = typeof sys?.cpu_temp_c === 'number'
