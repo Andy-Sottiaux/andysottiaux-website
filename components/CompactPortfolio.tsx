@@ -796,7 +796,6 @@ function SpotlightCameraPanel({
           {item.description}
         </p>
       </div>
-      <CameraSignalStrip selectedCamera={camera} streamEnabled={streamEnabled} />
     </div>
   )
 }
@@ -986,46 +985,6 @@ function SpotlightRail({
           </button>
         )
       })}
-    </div>
-  )
-}
-
-function CameraSignalStrip({
-  selectedCamera,
-  streamEnabled,
-}: {
-  selectedCamera: FieldCameraSource
-  streamEnabled: boolean
-}) {
-  const palette = useFieldTheme()
-  const isLight = palette.mode === 'light'
-  const cameraLabel = selectedCamera === 'field' ? 'Cam 1 · Edge AI' : 'Cam 2 · Thingino'
-  const stateLabel = streamEnabled ? 'Live relay' : 'Paused'
-  const stateColor = streamEnabled
-    ? (isLight ? '#0f9d4f' : '#86efac')
-    : palette.mutedText
-
-  return (
-    <div
-      className="flex items-center justify-between gap-3 rounded-full px-3 py-1.5 text-[9px] md:text-[clamp(7.5px,0.9dvh,9px)] font-semibold uppercase tracking-[0.16em]"
-      style={{
-        background: isLight ? 'rgba(0,0,0,0.035)' : 'rgba(255,255,255,0.045)',
-        border: palette.cardBorder,
-        color: palette.mutedText,
-      }}
-    >
-      <span className="truncate">{cameraLabel}</span>
-      <span className="flex items-center gap-1.5 whitespace-nowrap" style={{ color: stateColor }}>
-        <span
-          aria-hidden="true"
-          className="h-1.5 w-1.5 rounded-full"
-          style={{
-            background: stateColor,
-            boxShadow: streamEnabled ? `0 0 8px ${stateColor}` : undefined,
-          }}
-        />
-        {stateLabel}
-      </span>
     </div>
   )
 }
