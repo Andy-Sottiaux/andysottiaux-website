@@ -140,57 +140,6 @@ function fmtAge(ms: number): string {
   return `${h}h ago`
 }
 
-function CompactStatus({
-  label,
-  value,
-  color,
-  muted,
-  border,
-}: {
-  label: string
-  value: string
-  color: string
-  muted: string
-  border: string
-}) {
-  return (
-    <div
-      className="min-w-0 rounded-xl border px-3 py-2"
-      style={{ borderColor: border, background: 'rgba(255,255,255,0.025)' }}
-    >
-      <div className="text-[7.5px] uppercase tracking-[0.18em] font-semibold" style={{ color: muted }}>
-        {label}
-      </div>
-      <div className="mt-1 text-[14px] md:text-[clamp(11.5px,1.55dvh,14px)] font-semibold tracking-tight truncate" style={{ color }}>
-        {value}
-      </div>
-    </div>
-  )
-}
-
-function CompactStat({
-  label,
-  value,
-  color,
-  muted,
-}: {
-  label: string
-  value: string
-  color: string
-  muted: string
-}) {
-  return (
-    <div className="min-w-0 shrink">
-      <span style={{ color: muted }}>
-        {label}
-      </span>{' '}
-      <span className="normal-case tracking-normal" style={{ color }}>
-        {value}
-      </span>
-    </div>
-  )
-}
-
 function FanControl({
   value,
   disabled,
@@ -521,6 +470,76 @@ export default function FieldHealthCard({
   const thermalPct = typeof sys?.cpu_temp_c === 'number'
     ? Math.max(0, Math.min(100, ((sys.cpu_temp_c - 35) / 45) * 100))
     : 0
+  const systemHeadline = connecting
+    ? 'Checking board'
+    : online
+      ? 'Hardware online'
+      : lastOk
+        ? 'Last seen'
+        : 'Board offline'
+  const systemSubline = connecting
+    ? 'Polling live system health'
+    : online
+      ? `Uptime ${uptimeText} · checked ${checkedText}`
+      : lastOk
+        ? `Last healthy ${checkedText}`
+        : 'Health relay unavailable'
+  const fanModeText = fanPending
+    ? 'Setting'
+    : fan?.override_active
+      ? 'Override'
+      : 'Auto'
+  const fanSummary = fanRpm != null
+    ? `${fanModeText} · ${fanRpm.toLocaleString()} RPM`
+    : fanModeText
+  const aiState = rknn?.available === false
+    ? 'Unavailable'
+    : rknnOk && !rknnWaiting && rknn?.stale !== true
+      ? 'Active'
+      : online || connecting
+        ? 'Standby'
+        : 'Offline'
+  const aiDetail = aiState === 'Active'
+    ? `${rknnFps != null ? rknnFps.toFixed(rknnFps >= 10 ? 0 : 1) : '1.0'} fps`
+    : rknnWaitingForRelay
+      ? 'wakes on stream'
+      : aiState === 'Standby'
+        ? 'ready on play'
+        : 'not reporting'
+  const cameraSummary = mediaWorking
+    ? mediaQuality === 'calibrated'
+      ? 'Calibrated'
+      : 'Ready'
+    : online || connecting
+      ? 'Checking'
+      : 'Offline'
+  const cameraDetail = sys?.media_graph?.output_size || sys?.media_graph?.input_size || '1280x960'
+  const thermalDetail = typeof sys?.cpu_temp_c === 'number'
+    ? sys.cpu_temp_c >= 70
+      ? 'warm'
+      : 'nominal'
+    : connecting
+      ? 'checking'
+      : 'awaiting'
+  const powerOk = online && sys?.victron_hearing !== false
+  const relayOk = online && (
+    sys?.tailnet?.ok === true ||
+    sys?.tailnet?.tailnet_route_ok === true ||
+    tailnetText === 'ok' ||
+    tailnetText === '—'
+  )
+  const compactSignals = [
+    { label: 'Camera', ok: cameraSummary === 'Calibrated' || cameraSummary === 'Ready' },
+    { label: 'AI', ok: aiState === 'Active', standby: aiState === 'Standby' },
+    { label: 'Power', ok: powerOk, standby: online && !powerOk },
+    { label: 'Relay', ok: relayOk, standby: online && !relayOk },
+  ]
+  const compactMetrics = [
+    { label: 'Thermal', value: thermalLabel, detail: thermalDetail, color: thermalColor },
+    { label: 'Fan', value: fanModeText, detail: fanRpm != null ? `${fanRpm.toLocaleString()} RPM` : fanSummary, color: fanColor },
+    { label: 'Camera', value: cameraSummary, detail: cameraDetail, color: valueColor },
+    { label: 'Edge AI', value: aiState, detail: aiDetail, color: aiState === 'Standby' ? (isLight ? '#b45309' : '#fcd34d') : aiState === 'Active' ? valueColor : palette.mutedText },
+  ]
 
   useEffect(() => {
     if (!fanPending && fanPct != null) {
@@ -567,7 +586,7 @@ export default function FieldHealthCard({
   if (compact) {
     return (
       <div
-        className="relative rounded-2xl h-full min-h-0 flex flex-col overflow-hidden px-4 py-3 md:px-[clamp(0.75rem,1.25vw,1rem)] md:py-[clamp(0.55rem,1.05dvh,0.75rem)]"
+        className="relative rounded-2xl h-full min-h-0 flex flex-col overflow-hidden px-4 py-3.5 md:px-[clamp(0.75rem,1.25vw,1rem)] md:py-[clamp(0.55rem,1.05dvh,0.75rem)]"
         data-field-card="true"
         style={{
           background: palette.cardBackground,
@@ -580,7 +599,7 @@ export default function FieldHealthCard({
         aria-label="System health"
       >
         <div
-          className="pointer-events-none absolute -top-20 -right-20 w-56 h-56 rounded-full"
+          className="pointer-events-none absolute -top-20 -right-20 h-56 w-56 rounded-full"
           style={{
             background: connecting
               ? `radial-gradient(circle, rgba(142,142,147,${isLight ? 0.08 : 0.12}), transparent 70%)`
@@ -595,7 +614,7 @@ export default function FieldHealthCard({
             className="text-[10px] md:text-[clamp(8.5px,1.1dvh,10px)] font-semibold uppercase tracking-[0.22em]"
             style={{ color: isLight ? '#0f9d4f' : 'rgba(74, 222, 128, 0.9)' }}
           >
-            Health
+            Edge System
           </div>
           <div
             className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[9px] md:text-[clamp(7.5px,0.9dvh,9px)] font-bold uppercase tracking-[0.18em]"
@@ -612,168 +631,98 @@ export default function FieldHealthCard({
           </div>
         </div>
 
-        {degraded && digest && (
+        <div className="relative mt-3 md:mt-[clamp(0.25rem,0.7dvh,0.5rem)]">
           <div
-            className="relative mt-2 text-[10px] md:text-[clamp(8.5px,1dvh,10px)] truncate"
-            style={{ color: isLight ? '#b45309' : '#fcd34d' }}
+            className="text-[22px] md:text-[clamp(13px,1.6dvh,15px)] font-semibold leading-tight tracking-tight"
+            style={{ color: valueColor }}
           >
-            {digest.servicesDown.join(', ')}
+            {systemHeadline}
           </div>
-        )}
+          <div
+            className="mt-1 truncate text-[12px] md:mt-0.5 md:text-[clamp(7.5px,0.85dvh,9px)] leading-tight tracking-tight"
+            style={{ color: palette.bodyText }}
+          >
+            {systemSubline}
+          </div>
+        </div>
 
-        <div className="relative mt-1.5 grid grid-cols-2 gap-1.5 md:gap-[clamp(0.3rem,0.75dvh,0.45rem)] min-h-0">
-          <div
-            className="min-w-0 rounded-xl border px-2.5 py-1.5 md:px-[clamp(0.5rem,0.9vw,0.7rem)] md:py-[clamp(0.3rem,0.65dvh,0.45rem)]"
-            style={{ borderColor: palette.hairline, background: 'rgba(255,255,255,0.025)' }}
-          >
-            <div className="text-[7.5px] uppercase tracking-[0.18em] font-semibold" style={{ color: palette.mutedText }}>
-              Thermal
-            </div>
-            <div className="mt-1 text-[20px] md:text-[clamp(15px,2dvh,20px)] font-semibold tracking-tight tabular-nums leading-none" style={{ color: thermalColor }}>
-              {thermalLabel}
-            </div>
-            <div className="mt-1 h-1 rounded-full overflow-hidden" style={{ background: palette.trackBackground }}>
-              <div
-                className="h-full rounded-full"
-                style={{
-                  width: `${thermalPct}%`,
-                  background: typeof sys?.cpu_temp_c === 'number' && sys.cpu_temp_c >= 70
-                    ? 'linear-gradient(90deg, #ff9f0a, #ff453a)'
-                    : 'linear-gradient(90deg, #30d158, #67e8f9)',
-                }}
-              />
-            </div>
-          </div>
-          <div
-            className="min-w-0 rounded-xl border px-2.5 py-1.5 md:px-[clamp(0.5rem,0.9vw,0.7rem)] md:py-[clamp(0.3rem,0.65dvh,0.45rem)]"
-            style={{ borderColor: palette.hairline, background: 'rgba(255,255,255,0.025)' }}
-          >
-            <div className="flex items-center justify-between gap-2">
+        <div className="relative mt-3 grid min-h-0 grid-cols-2 gap-2 md:mt-[clamp(0.25rem,0.65dvh,0.45rem)] md:gap-[clamp(0.22rem,0.55dvh,0.35rem)]">
+          {compactMetrics.map((metric) => (
+            <div
+              key={metric.label}
+              className="min-w-0 rounded-xl border px-2.5 py-2 md:px-[clamp(0.5rem,0.9vw,0.7rem)] md:py-[clamp(0.2rem,0.45dvh,0.35rem)]"
+              style={{ borderColor: palette.hairline, background: 'rgba(255,255,255,0.025)' }}
+            >
               <div className="text-[7.5px] uppercase tracking-[0.18em] font-semibold" style={{ color: palette.mutedText }}>
-                Fan
+                {metric.label}
               </div>
-              <div className="text-[7.5px] font-semibold tabular-nums truncate" style={{ color: palette.fadedText }}>
-                {fanControlStatus}
+              <div className="mt-1 truncate text-[16px] md:mt-0.5 md:text-[clamp(10.5px,1.35dvh,13px)] font-semibold tracking-tight tabular-nums leading-none" style={{ color: metric.color }}>
+                {metric.value}
               </div>
+              <div className="mt-1 truncate text-[8px] md:hidden font-semibold tracking-tight" style={{ color: palette.fadedText }}>
+                {metric.detail}
+              </div>
+              {metric.label === 'Thermal' && (
+                <div className="mt-1.5 h-1 rounded-full overflow-hidden md:hidden" style={{ background: palette.trackBackground }}>
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${thermalPct}%`,
+                      background: typeof sys?.cpu_temp_c === 'number' && sys.cpu_temp_c >= 70
+                        ? 'linear-gradient(90deg, #ff9f0a, #ff453a)'
+                        : 'linear-gradient(90deg, #30d158, #67e8f9)',
+                    }}
+                  />
+                </div>
+              )}
             </div>
-            <div className="mt-1 text-[15px] md:text-[clamp(11.5px,1.55dvh,15px)] font-semibold tracking-tight tabular-nums leading-none truncate" style={{ color: fanColor }}>
-              {fanRpm != null ? `${fanRpm.toLocaleString()} RPM` : fanText}
-            </div>
-            <FanControl
-              compact
-              value={fanSliderValue}
-              disabled={fanControlDisabled}
-              pending={fanPending}
-              status={fanControlStatus}
-              muted={palette.mutedText}
-              valueColor={valueColor}
-              track={palette.trackBackground}
-              onChange={setFanDraft}
-              onCommit={commitFanSpeed}
-            />
-          </div>
-          <div
-            className="min-w-0 rounded-xl border px-2.5 py-1.5 md:px-[clamp(0.5rem,0.9vw,0.7rem)] md:py-[clamp(0.3rem,0.65dvh,0.45rem)]"
-            style={{ borderColor: palette.hairline, background: 'rgba(255,255,255,0.02)' }}
-          >
-            <div className="text-[7px] uppercase tracking-[0.16em] font-semibold" style={{ color: palette.mutedText }}>
-              Camera
-            </div>
-            <div className="mt-0.5 text-[12px] md:text-[clamp(9.5px,1.18dvh,12px)] font-semibold tracking-tight truncate" style={{ color: valueColor }}>
-              {cameraLabel}
-            </div>
-            <div className="mt-0.5 text-[7.5px] font-semibold tabular-nums truncate" style={{ color: palette.fadedText }}>
-              {sys?.media_graph?.output_size || '1280x720'}
-            </div>
-          </div>
-          <div
-            className="min-w-0 rounded-xl border px-2.5 py-1.5 md:px-[clamp(0.5rem,0.9vw,0.7rem)] md:py-[clamp(0.3rem,0.65dvh,0.45rem)]"
-            style={{ borderColor: palette.hairline, background: 'rgba(255,255,255,0.02)' }}
-          >
-            <div className="text-[7px] uppercase tracking-[0.16em] font-semibold" style={{ color: palette.mutedText }}>
-              RKNN
-            </div>
-            <div className="mt-0.5 text-[12px] md:text-[clamp(9.5px,1.18dvh,12px)] font-semibold tracking-tight truncate" style={{ color: rknnColor }}>
-              {rknnText}
-            </div>
-            <div className="mt-0.5 text-[7.5px] font-semibold tabular-nums truncate" style={{ color: palette.fadedText }}>
-              {rknnDetail}
-            </div>
-          </div>
+          ))}
         </div>
 
         <div
-          className="relative mt-auto pt-1.5 border-t flex items-center justify-between gap-1.5 text-[7px] md:text-[clamp(5.8px,0.66dvh,7px)] font-semibold uppercase tracking-[0.05em] tabular-nums min-w-0 whitespace-nowrap"
-          style={{
-            borderColor: palette.hairline,
-          }}
+          className="relative mt-auto pt-2 md:pt-[clamp(0.2rem,0.5dvh,0.35rem)]"
+          style={{ borderTop: palette.hairline ? `1px solid ${palette.hairline}` : palette.cardBorder }}
         >
-          <CompactStat label="Svc" value={digest ? `${digest.servicesUp}/${digest.servicesTotal}` : (lastOk ? `${lastOk.servicesUp}/${lastOk.servicesTotal}` : '—')} color={valueColor} muted={palette.fadedText} />
-          <CompactStat label="Up" value={uptimeText} color={valueColor} muted={palette.fadedText} />
-          <CompactStat label="RAM" value={ramAvailMB != null ? `${ramAvailMB}M` : '—'} color={ramColor} muted={palette.fadedText} />
-          <CompactStat label="CMA" value={cmaPct != null ? `${cmaPct}%` : '—'} color={cmaColor} muted={palette.fadedText} />
-          <CompactStat label="Net" value={tailnetText} color={tailnetColor} muted={palette.fadedText} />
+          <div className="grid grid-cols-4 gap-1.5 md:gap-1">
+            {compactSignals.map((signal) => {
+              const signalColor = signal.ok
+                ? (isLight ? '#0f9d4f' : '#86efac')
+                : signal.standby
+                  ? (isLight ? '#b45309' : '#fcd34d')
+                  : palette.mutedText
+              return (
+                <div
+                  key={signal.label}
+                  className="min-w-0 rounded-full px-1.5 py-1 text-center text-[7px] md:px-1 md:py-0.5 md:text-[clamp(5.5px,0.62dvh,6.5px)] font-semibold uppercase tracking-[0.08em]"
+                  style={{
+                    color: signalColor,
+                    background: isLight ? 'rgba(0,0,0,0.025)' : 'rgba(255,255,255,0.035)',
+                    border: palette.hairline ? `1px solid ${palette.hairline}` : palette.cardBorder,
+                  }}
+                >
+                  <span className="inline-flex min-w-0 items-center justify-center gap-1">
+                    <span
+                      aria-hidden="true"
+                      className="h-1.5 w-1.5 flex-shrink-0 rounded-full"
+                      style={{ background: signalColor }}
+                    />
+                    <span className="truncate">{signal.label}</span>
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+          {degraded && digest && (
+            <div
+              className="mt-1.5 truncate text-[9.5px] md:text-[clamp(7.8px,0.9dvh,9.5px)]"
+              style={{ color: isLight ? '#b45309' : '#fcd34d' }}
+            >
+              Expanded diagnostics: {digest.servicesDown.join(', ')}
+            </div>
+          )}
         </div>
 
         <style jsx global>{`
-          .field-fan-rotor {
-            --fan-spin: 1s;
-            width: 14px;
-            height: 14px;
-            flex: 0 0 auto;
-            border-radius: 999px;
-            background:
-              radial-gradient(circle at center, rgba(255,255,255,0.95) 0 16%, transparent 17%),
-              conic-gradient(from 25deg, #67e8f9 0 18%, transparent 18% 33%, #30d158 33% 51%, transparent 51% 66%, #67e8f9 66% 84%, transparent 84% 100%);
-            filter: drop-shadow(0 0 5px rgba(103,232,249,0.42));
-            animation: fldFanSpin var(--fan-spin) linear infinite;
-          }
-          .field-fan-range {
-            --fan-pct: 0%;
-            --fan-track: rgba(255,255,255,0.12);
-            appearance: none;
-            -webkit-appearance: none;
-            width: 100%;
-            min-width: 0;
-            height: 14px;
-            background: transparent;
-            cursor: pointer;
-          }
-          .field-fan-range:disabled {
-            cursor: not-allowed;
-            opacity: 0.48;
-          }
-          .field-fan-range::-webkit-slider-runnable-track {
-            height: 5px;
-            border-radius: 999px;
-            background: linear-gradient(90deg, #67e8f9 0 var(--fan-pct), var(--fan-track) var(--fan-pct) 100%);
-          }
-          .field-fan-range::-moz-range-track {
-            height: 5px;
-            border-radius: 999px;
-            background: linear-gradient(90deg, #67e8f9 0 var(--fan-pct), var(--fan-track) var(--fan-pct) 100%);
-          }
-          .field-fan-range::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 13px;
-            height: 13px;
-            margin-top: -4px;
-            border-radius: 999px;
-            border: 1px solid rgba(255,255,255,0.86);
-            background: #30d158;
-            box-shadow: 0 0 0 3px rgba(48,209,88,0.14), 0 0 10px rgba(103,232,249,0.38);
-          }
-          .field-fan-range::-moz-range-thumb {
-            width: 13px;
-            height: 13px;
-            border-radius: 999px;
-            border: 1px solid rgba(255,255,255,0.86);
-            background: #30d158;
-            box-shadow: 0 0 0 3px rgba(48,209,88,0.14), 0 0 10px rgba(103,232,249,0.38);
-          }
-          @keyframes fldFanSpin {
-            to { transform: rotate(360deg); }
-          }
           @keyframes fldHealthPing {
             0%   { transform: scale(1);   opacity: 0.55; }
             80%  { transform: scale(2.4); opacity: 0;    }
