@@ -77,12 +77,12 @@ export function useBoardLive(initial = true): boolean {
       timer = setTimeout(tick, POLL_MS)
     }
 
-    tick()
+    timer = setTimeout(tick, initial ? POLL_MS : 0)
     return () => {
       cancelled = true
       if (timer) clearTimeout(timer)
     }
-  }, [])
+  }, [initial])
 
   return live
 }

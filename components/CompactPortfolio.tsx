@@ -41,16 +41,7 @@ import FieldHealthCard from './FieldHealthCard'
 import CameraSourceToggle from './CameraSourceToggle'
 import { FieldThemeProvider, useFieldTheme } from './fieldTheme'
 import Modal from './Modal'
-import {
-  AboutModalContent,
-  AirpodsMountModalContent,
-  ContactModalContent,
-  ExperienceModalContent,
-  LiveModalContent,
-  MarathonModalContent,
-  ProjectsModalContent,
-  type ModalKey,
-} from './CompactModals'
+import type { ModalKey } from './CompactModals'
 import { useBoardLive } from '@/lib/useBoardLive'
 import { haptic } from '@/lib/haptics'
 import type { FieldCameraSource } from '@/lib/fieldCameraConfig'
@@ -60,6 +51,40 @@ import type { FieldCameraSource } from '@/lib/fieldCameraConfig'
 const CameraFeedSwitcher = dynamic(() => import('./CameraFeedSwitcher'), {
   ssr: false,
   loading: () => <CameraIdleSurface mode="loading" />,
+})
+
+type LiveModalContentProps = {
+  selectedCamera?: FieldCameraSource
+  onCameraChange?: (value: FieldCameraSource) => void
+}
+
+const AboutModalContent = dynamic(() => import('./CompactModals').then((m) => m.AboutModalContent), {
+  ssr: false,
+  loading: () => <ModalLoading />,
+})
+const LiveModalContent = dynamic<LiveModalContentProps>(() => import('./CompactModals').then((m) => m.LiveModalContent), {
+  ssr: false,
+  loading: () => <ModalLoading />,
+})
+const ExperienceModalContent = dynamic(() => import('./CompactModals').then((m) => m.ExperienceModalContent), {
+  ssr: false,
+  loading: () => <ModalLoading />,
+})
+const ProjectsModalContent = dynamic(() => import('./CompactModals').then((m) => m.ProjectsModalContent), {
+  ssr: false,
+  loading: () => <ModalLoading />,
+})
+const MarathonModalContent = dynamic(() => import('./CompactModals').then((m) => m.MarathonModalContent), {
+  ssr: false,
+  loading: () => <ModalLoading />,
+})
+const ContactModalContent = dynamic(() => import('./CompactModals').then((m) => m.ContactModalContent), {
+  ssr: false,
+  loading: () => <ModalLoading />,
+})
+const AirpodsMountModalContent = dynamic(() => import('./CompactModals').then((m) => m.AirpodsMountModalContent), {
+  ssr: false,
+  loading: () => <ModalLoading />,
 })
 
 export default function CompactPortfolio({
@@ -91,7 +116,7 @@ function CompactInner({ initialBoardLive }: { initialBoardLive: boolean }) {
   return (
     <main
       id="main-content"
-      className="relative w-full flex flex-col min-h-screen md:h-[100dvh] md:overflow-hidden"
+      className="relative w-full flex flex-col min-h-screen lg:h-[100dvh] lg:overflow-hidden"
       style={{
         background: palette.sectionBackground,
         color: isLight ? '#1c1a1c' : '#fff',
@@ -102,17 +127,17 @@ function CompactInner({ initialBoardLive }: { initialBoardLive: boolean }) {
       {/* Site is dark-only — no theme toggle, no header. The bento IS the
           page.
 
-          Desktop / laptop: bento fills the viewport exactly. `md:h-[100dvh]`
+          Desktop / laptop: bento fills the viewport exactly. `lg:h-[100dvh]`
           on <main> + `overflow-hidden` + a flex column that hands the
           remaining height down to the grid. Tile min-heights are zeroed on
-          md+, the grid uses `1fr` rows, so cards auto-size to fit without
+          lg+, the grid uses `1fr` rows, so cards auto-size to fit without
           ever scrolling.
           Mobile: keeps `min-h-screen` and natural vertical scrolling. */}
       <div
-        className="bento-shell flex-1 flex flex-col px-4 sm:px-6 md:px-8 py-3 sm:py-4 md:py-5 md:min-h-0"
+        className="bento-shell flex-1 flex flex-col px-4 sm:px-6 md:px-8 py-3 sm:py-4 md:py-5 lg:min-h-0"
         data-camera-performance="true"
       >
-        <div className="w-full max-w-[1380px] mx-auto md:flex-1 md:flex md:flex-col md:min-h-0">
+        <div className="w-full max-w-[1380px] mx-auto lg:flex-1 lg:flex lg:flex-col lg:min-h-0">
           <Bento
             boardLive={boardLive}
             cameraEnabled={openModal !== 'live'}
@@ -190,6 +215,25 @@ function CompactInner({ initialBoardLive }: { initialBoardLive: boolean }) {
   )
 }
 
+function ModalLoading() {
+  const palette = useFieldTheme()
+  const isLight = palette.mode === 'light'
+  return (
+    <div className="space-y-3" aria-label="Loading modal content">
+      {[0, 1, 2].map((i) => (
+        <div
+          key={i}
+          className="h-16 rounded-2xl"
+          style={{
+            background: isLight ? 'rgba(0,0,0,0.035)' : 'rgba(255,255,255,0.045)',
+            border: palette.cardBorder,
+          }}
+        />
+      ))}
+    </div>
+  )
+}
+
 /* Header removed — bento itself is the page identity. The theme toggle
    floats in the top-right corner via CompactInner. */
 
@@ -210,18 +254,18 @@ function Bento({
 }) {
   return (
     <div
-      className="grid gap-3 md:gap-4 mt-4 md:mt-0 md:flex-1 md:min-h-0 [grid-auto-rows:auto] md:grid-rows-4 md:[grid-auto-rows:minmax(0,1fr)]"
+      className="grid gap-3 md:gap-4 mt-4 lg:mt-0 lg:flex-1 lg:min-h-0 [grid-auto-rows:auto] lg:grid-rows-4 lg:[grid-auto-rows:minmax(0,1fr)]"
       style={{
         gridTemplateColumns: 'repeat(12, minmax(0, 1fr))',
       }}
     >
       {/* Camera now spans two rows. The feed is 4:3-ish, so height is the
           clean fix; stretching the pixels was the wrong trade. */}
-      <div className="col-span-12 md:col-span-3 md:col-start-1 md:row-start-1">
+      <div className="order-1 col-span-12 lg:order-none lg:col-span-3 lg:col-start-1 lg:row-start-1">
         <IdentityTile onOpen={() => onOpen('about')} />
       </div>
 
-      <div className="col-span-12 md:col-span-6 md:col-start-4 md:row-start-1 md:row-span-2">
+      <div className="order-2 col-span-12 lg:order-none lg:col-span-6 lg:col-start-4 lg:row-start-1 lg:row-span-2">
         <CameraTile
           enabled={cameraEnabled}
           selectedCamera={selectedCamera}
@@ -230,11 +274,11 @@ function Bento({
         />
       </div>
 
-      <div className="col-span-12 md:col-span-3 md:col-start-10 md:row-start-1 md:row-span-2">
+      <div className="order-7 col-span-12 lg:order-none lg:col-span-3 lg:col-start-10 lg:row-start-1 lg:row-span-2">
         <SolarTile onOpen={() => onOpen('live')} />
       </div>
 
-      <div className="col-span-12 md:col-span-3 md:col-start-1 md:row-start-2">
+      <div className="order-6 col-span-12 lg:order-none lg:col-span-3 lg:col-start-1 lg:row-start-2">
         <StableSwapTile
           showLive={boardLive}
           live={<HealthTile onOpen={() => onOpen('live')} />}
@@ -242,16 +286,16 @@ function Bento({
         />
       </div>
 
-      <div className="col-span-12 md:col-span-5 md:col-start-1 md:row-start-3">
+      <div className="order-5 col-span-12 lg:order-none lg:col-span-5 lg:col-start-1 lg:row-start-3">
         <ExperienceTile onOpen={() => onOpen('experience')} />
       </div>
-      <div className="col-span-12 md:col-span-5 md:col-start-1 md:row-start-4">
+      <div className="order-4 col-span-12 lg:order-none lg:col-span-5 lg:col-start-1 lg:row-start-4">
         <ProjectsTile onOpen={() => onOpen('projects')} />
       </div>
-      <div className="col-span-12 md:col-span-4 md:col-start-6 md:row-start-3 md:row-span-2">
+      <div className="order-8 col-span-12 lg:order-none lg:col-span-4 lg:col-start-6 lg:row-start-3 lg:row-span-2">
         <MarathonTile onOpen={() => onOpen('marathon')} />
       </div>
-      <div className="col-span-12 md:col-span-3 md:col-start-10 md:row-start-3 md:row-span-2">
+      <div className="order-3 col-span-12 lg:order-none lg:col-span-3 lg:col-start-10 lg:row-start-3 lg:row-span-2">
         <ContactTile onOpen={() => onOpen('contact')} />
       </div>
     </div>
@@ -305,10 +349,19 @@ function Tile({
       ? accent.light
       : accent.dark
     : undefined
+  const modalAriaLabel = modalLabel ?? (label ? `Open ${label}` : 'Open')
   const openFromTileChrome = (event: React.MouseEvent<HTMLDivElement>) => {
     if (!onOpen) return
     const target = event.target as HTMLElement | null
-    if (target?.closest('a, button, input, select, textarea, [role="button"], [role="link"]')) return
+    const nestedInteractive = target?.closest('a, button, input, select, textarea, [role="button"], [role="link"]')
+    if (nestedInteractive && nestedInteractive !== event.currentTarget) return
+    haptic('open')
+    onOpen()
+  }
+  const openFromTileKeyboard = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!onOpen || event.target !== event.currentTarget) return
+    if (event.key !== 'Enter' && event.key !== ' ') return
+    event.preventDefault()
     haptic('open')
     onOpen()
   }
@@ -317,7 +370,12 @@ function Tile({
     <div
       data-peek-target="true"
       onClick={openFromTileChrome}
-      className={`group relative z-[1] rounded-2xl overflow-hidden h-full flex flex-col ${className}`}
+      onKeyDown={openFromTileKeyboard}
+      role={onOpen ? 'button' : undefined}
+      tabIndex={onOpen ? 0 : undefined}
+      aria-label={onOpen ? modalAriaLabel : undefined}
+      aria-haspopup={onOpen ? 'dialog' : undefined}
+      className={`group relative z-[1] rounded-2xl overflow-hidden h-full flex flex-col ${onOpen || deepLink ? 'cursor-pointer' : ''} ${className}`}
       style={{
         background: palette.cardBackground,
         border: palette.cardBorder,
@@ -327,18 +385,10 @@ function Tile({
         transition: 'transform 0.4s cubic-bezier(0.16,1,0.3,1), box-shadow 0.4s cubic-bezier(0.16,1,0.3,1)',
       }}
     >
-      {/* Whole-tile click target. `onOpen` (modal) wins over `deepLink`
-          (anchor). Sits behind interactive content (z-0) so explicit
-          inner <a>s and <button>s win the click. */}
-      {onOpen ? (
-        <button
-          type="button"
-          onClick={() => { haptic('open'); onOpen() }}
-          aria-haspopup="dialog"
-          aria-label={modalLabel ?? (label ? `Open ${label}` : 'Open')}
-          className="absolute inset-0 z-0 cursor-pointer"
-        />
-      ) : deepLink ? (
+      {/* Deep-link fallback when the tile is rendered outside modal mode.
+          Modal mode uses the tile container itself as the accessible target,
+          while nested links/buttons still win the click. */}
+      {!onOpen && deepLink ? (
         <a
           href={deepLink}
           aria-label={label ? `Open ${label} on the full site` : 'Open on the full site'}
@@ -388,7 +438,7 @@ function IdentityTile({ onOpen }: { onOpen?: () => void }) {
       deepLink="/#about"
       onOpen={onOpen}
       modalLabel="Open About"
-      className="min-h-[170px] md:min-h-0"
+      className="min-h-[170px] lg:min-h-0"
     >
       <div className="flex-1 min-h-0 flex flex-col items-center justify-center px-5 md:px-[clamp(1rem,1.7vw,1.5rem)] py-5 md:py-[clamp(0.75rem,1.7dvh,1.25rem)] gap-[clamp(0.35rem,1.05dvh,0.8rem)]">
         {/* Hero portrait — square card with a subtle ring + soft drop. */}
@@ -431,6 +481,13 @@ function IdentityTile({ onOpen }: { onOpen?: () => void }) {
         >
           Dallas, TX
         </div>
+        <p
+          className="max-w-[24ch] text-center text-[12px] md:text-[clamp(9px,1.08dvh,11.5px)] leading-snug tracking-tight"
+          style={{ color: palette.bodyText }}
+        >
+          Hardware/software engineer building aircraft systems, edge AI,
+          robotics, and iOS products.
+        </p>
 
         <div className="flex justify-center flex-shrink-0">
           <a
@@ -482,7 +539,7 @@ function CameraTile({
       deepLink="/#now"
       onOpen={onOpen}
       modalLabel="Open Field Live"
-      className="min-h-[280px] md:min-h-0"
+      className="min-h-[280px] lg:min-h-0"
     >
       <div className="absolute right-5 top-3.5 z-20">
         <CameraSourceToggle
@@ -492,9 +549,9 @@ function CameraTile({
           compact
         />
       </div>
-      <div className="px-3 md:px-[clamp(0.75rem,1.15vw,1rem)] pt-2 md:pt-[clamp(0.35rem,1.0dvh,0.75rem)] pb-3 md:pb-[clamp(0.55rem,1.35dvh,1rem)] flex-1 min-h-0">
+      <div className="px-3 md:px-[clamp(0.75rem,1.15vw,1rem)] pt-2 md:pt-[clamp(0.35rem,1.0dvh,0.75rem)] pb-3 md:pb-[clamp(0.55rem,1.35dvh,1rem)] flex-1 min-h-0 flex flex-col gap-2">
         <div
-          className="relative w-full h-full min-h-[132px] overflow-hidden rounded-[14px]"
+          className="relative w-full flex-1 min-h-[132px] overflow-hidden rounded-[14px]"
           style={{
             background: isLight ? '#0a0a0c' : '#000',
             border: isLight ? '1px solid rgba(0,0,0,0.08)' : '1px solid rgba(255,255,255,0.08)',
@@ -528,8 +585,49 @@ function CameraTile({
             </button>
           )}
         </div>
+        <CameraSignalStrip selectedCamera={selectedCamera} streamEnabled={streamEnabled} />
       </div>
     </Tile>
+  )
+}
+
+function CameraSignalStrip({
+  selectedCamera,
+  streamEnabled,
+}: {
+  selectedCamera: FieldCameraSource
+  streamEnabled: boolean
+}) {
+  const palette = useFieldTheme()
+  const isLight = palette.mode === 'light'
+  const cameraLabel = selectedCamera === 'field' ? 'Cam 1 · Edge AI' : 'Cam 2 · Thingino'
+  const stateLabel = streamEnabled ? 'Live relay' : 'Paused'
+  const stateColor = streamEnabled
+    ? (isLight ? '#0f9d4f' : '#86efac')
+    : palette.mutedText
+
+  return (
+    <div
+      className="flex items-center justify-between gap-3 rounded-full px-3 py-1.5 text-[9px] md:text-[clamp(7.5px,0.9dvh,9px)] font-semibold uppercase tracking-[0.16em]"
+      style={{
+        background: isLight ? 'rgba(0,0,0,0.035)' : 'rgba(255,255,255,0.045)',
+        border: palette.cardBorder,
+        color: palette.mutedText,
+      }}
+    >
+      <span className="truncate">{cameraLabel}</span>
+      <span className="flex items-center gap-1.5 whitespace-nowrap" style={{ color: stateColor }}>
+        <span
+          aria-hidden="true"
+          className="h-1.5 w-1.5 rounded-full"
+          style={{
+            background: stateColor,
+            boxShadow: streamEnabled ? `0 0 8px ${stateColor}` : undefined,
+          }}
+        />
+        {stateLabel}
+      </span>
+    </div>
   )
 }
 
@@ -546,7 +644,7 @@ function SolarTile({ onOpen }: { onOpen?: () => void }) {
         onClick={() => { haptic('open'); onOpen() }}
         aria-haspopup="dialog"
         aria-label="Open Field Live"
-        className="block w-full h-full min-h-[520px] sm:min-h-[430px] md:min-h-0 [&>div]:h-full hover:scale-[1.005] transition-transform duration-300 text-left"
+        className="block w-full h-full min-h-[520px] sm:min-h-[430px] lg:min-h-0 [&>div]:h-full hover:scale-[1.005] transition-transform duration-300 text-left"
       >
         <FieldSolarCard variant="compact" />
       </button>
@@ -556,7 +654,7 @@ function SolarTile({ onOpen }: { onOpen?: () => void }) {
     <a
       href="/#now"
       aria-label="Open Field Live on the full site"
-      className="block h-full min-h-[520px] sm:min-h-[430px] md:min-h-0 [&>div]:h-full hover:scale-[1.005] transition-transform duration-300"
+      className="block h-full min-h-[520px] sm:min-h-[430px] lg:min-h-0 [&>div]:h-full hover:scale-[1.005] transition-transform duration-300"
     >
       <FieldSolarCard variant="compact" />
     </a>
@@ -569,7 +667,7 @@ function HealthTile({ onOpen }: { onOpen?: () => void }) {
   if (onOpen) {
     return (
       <div
-        className="block w-full h-full min-h-[260px] md:min-h-0 [&>div]:h-full transition-transform duration-300 text-left"
+        className="block w-full h-full min-h-[260px] lg:min-h-0 [&>div]:h-full transition-transform duration-300 text-left"
       >
         <FieldHealthCard variant="compact" />
       </div>
@@ -579,7 +677,7 @@ function HealthTile({ onOpen }: { onOpen?: () => void }) {
     <a
       href="/#now"
       aria-label="Open Field Live on the full site"
-      className="block h-full min-h-[260px] md:min-h-0 [&>div]:h-full hover:scale-[1.005] transition-transform duration-300"
+      className="block h-full min-h-[260px] lg:min-h-0 [&>div]:h-full hover:scale-[1.005] transition-transform duration-300"
     >
       <FieldHealthCard variant="compact" />
     </a>
@@ -603,7 +701,7 @@ function EducationTile() {
 
   return (
     <div
-      className="relative z-[1] rounded-2xl h-full min-h-[260px] md:min-h-0 flex flex-col p-5 md:p-[clamp(1rem,1.8dvh,1.5rem)] overflow-hidden"
+      className="relative z-[1] rounded-2xl h-full min-h-[260px] lg:min-h-0 flex flex-col p-5 md:p-[clamp(1rem,1.8dvh,1.5rem)] overflow-hidden"
       style={{
         background: palette.cardBackground,
         border: palette.cardBorder,
@@ -708,7 +806,7 @@ function BuildingTile() {
 
   return (
     <div
-      className="relative z-[1] rounded-2xl h-full min-h-[170px] md:min-h-0 flex flex-col p-6 md:p-[clamp(1rem,2dvh,1.75rem)] overflow-hidden"
+      className="relative z-[1] rounded-2xl h-full min-h-[170px] lg:min-h-0 flex flex-col p-6 md:p-[clamp(1rem,2dvh,1.75rem)] overflow-hidden"
       style={{
         background: palette.cardBackground,
         border: palette.cardBorder,
@@ -1003,7 +1101,7 @@ function MoreProjectsTile({ onOpen }: { onOpen?: (key: ModalKey) => void }) {
 
   return (
     <div
-      className="relative z-[1] rounded-2xl h-full min-h-[360px] md:min-h-0 flex flex-col overflow-hidden"
+      className="relative z-[1] rounded-2xl h-full min-h-[360px] lg:min-h-0 flex flex-col overflow-hidden"
       style={{
         background: palette.cardBackground,
         border: palette.cardBorder,
@@ -1232,7 +1330,7 @@ function ExperienceTile({ onOpen }: { onOpen?: () => void }) {
       deepLink="/#experience"
       onOpen={onOpen}
       modalLabel="Open Experience"
-      className="min-h-[200px] md:min-h-0"
+      className="min-h-[200px] lg:min-h-0"
     >
       <div className="px-5 md:px-[clamp(1rem,1.7vw,1.5rem)] pt-2 md:pt-[clamp(0.25rem,0.9dvh,0.75rem)] pb-3 md:pb-[clamp(0.5rem,1.4dvh,1.25rem)] flex-1 min-h-0 flex flex-col overflow-hidden">
         <div className="h-full min-h-0 flex flex-col justify-between gap-[clamp(0.125rem,0.55dvh,0.625rem)]">
@@ -1327,7 +1425,7 @@ function ProjectsTile({ onOpen }: { onOpen?: () => void }) {
       deepLink="/#projects"
       onOpen={onOpen}
       modalLabel="Open Projects"
-      className="min-h-[180px] md:min-h-0"
+      className="min-h-[180px] lg:min-h-0"
     >
       <div className="px-5 md:px-[clamp(1rem,1.7vw,1.5rem)] pt-2 md:pt-[clamp(0.25rem,0.9dvh,0.75rem)] pb-3 md:pb-[clamp(0.5rem,1.4dvh,1.25rem)] flex-1 min-h-0 flex flex-col overflow-hidden">
         <div className="flex-1 min-h-0 flex flex-col justify-evenly gap-[clamp(0.125rem,0.55dvh,0.625rem)]">
@@ -1451,7 +1549,7 @@ function MarathonTile({ onOpen }: { onOpen?: () => void }) {
 
   return (
     <div
-      className="relative z-[1] rounded-2xl h-full min-h-[180px] md:min-h-0 overflow-hidden group"
+      className="relative z-[1] rounded-2xl h-full min-h-[180px] lg:min-h-0 overflow-hidden group"
       data-peek-target="true"
       role="region"
       aria-label="2026 TCS NYC Marathon"
@@ -1700,7 +1798,7 @@ function ContactTile({ onOpen }: { onOpen?: () => void }) {
       deepLink="/#contact"
       onOpen={onOpen}
       modalLabel="Open Contact"
-      className="min-h-[180px] md:min-h-0"
+      className="min-h-[180px] lg:min-h-0"
     >
       <div className="px-5 md:px-[clamp(0.9rem,1.45vw,1.25rem)] pt-3 md:pt-[clamp(0.35rem,1dvh,0.75rem)] pb-3 md:pb-[clamp(0.45rem,1.1dvh,0.75rem)] flex-1 flex flex-col min-h-0">
         <div className="grid grid-cols-2 gap-2 md:gap-[clamp(0.35rem,0.95dvh,0.5rem)] flex-1 min-h-0">

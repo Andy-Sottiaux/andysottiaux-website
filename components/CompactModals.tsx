@@ -316,9 +316,39 @@ const EXPERIENCE_FULL = [
 export function ExperienceModalContent() {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
+  const proof = [
+    { label: 'Current focus', value: 'UAV systems, autonomy, rotor hardware' },
+    { label: 'Product range', value: 'Aircraft programs to App Store releases' },
+    { label: 'Operating style', value: 'Design, build, integrate, test' },
+  ]
 
   return (
     <div className="space-y-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+        {proof.map((item) => (
+          <div
+            key={item.label}
+            className="rounded-2xl p-3.5"
+            style={{
+              background: isLight ? 'rgba(0,0,0,0.025)' : 'rgba(255,255,255,0.03)',
+              border: palette.cardBorder,
+            }}
+          >
+            <div
+              className="text-[9.5px] font-semibold uppercase tracking-[0.18em]"
+              style={{ color: palette.mutedText }}
+            >
+              {item.label}
+            </div>
+            <div
+              className="mt-1.5 text-[13px] leading-snug font-semibold tracking-tight"
+              style={{ color: isLight ? '#1c1a1c' : '#fff' }}
+            >
+              {item.value}
+            </div>
+          </div>
+        ))}
+      </div>
       {EXPERIENCE_FULL.map((exp) => (
         <div
           key={exp.company}
@@ -419,6 +449,7 @@ const PROJECTS_FULL = [
     title: 'WYZECAR',
     problem: 'Turn a small RC platform into a controllable autonomy testbed with live video and person-following behavior.',
     built: 'Integrated YOLOv8 perception, ROS2-style control plumbing, web-based WASD control, live video, and PID motion.',
+    outcome: 'A visible robotics demo that makes perception-to-control work inspectable from a browser.',
     proof: 'Shows the robotics loop end-to-end: perception, control, hardware interface, operator UI, and field iteration.',
     tech: ['Python', 'YOLOv8', 'ROS2', 'DART-MX95', 'ESP32'],
     link: 'https://github.com/Andy-Sottiaux/WYZECAR',
@@ -429,6 +460,7 @@ const PROJECTS_FULL = [
     title: 'Rot Dot',
     problem: 'Create real physical friction for phone distraction without making the app feel like a punishment tool.',
     built: 'Used NFC stickers, SwiftUI, FamilyControls, and the Screen Time API to bind lock/unlock behavior to places.',
+    outcome: 'A shipped iOS product built around a physical-world interaction instead of another timer screen.',
     proof: 'Combines product judgment with a restricted Apple API surface and real-world interaction design.',
     tech: ['iOS', 'Swift', 'SwiftUI', 'NFC', 'FamilyControls'],
     link: 'https://apps.apple.com/us/app/rot-dot/id6758902103',
@@ -438,6 +470,7 @@ const PROJECTS_FULL = [
     title: 'Record + Transcribe',
     problem: 'Make long voice notes and meetings useful immediately after capture.',
     built: 'Built recording, live transcription, and AI summary flows that extract decisions, key points, and action items.',
+    outcome: 'A production AI utility that turns raw audio capture into immediately usable notes.',
     proof: 'Demonstrates a production mobile AI workflow: capture, streaming text, summary UX, and shipped App Store release.',
     tech: ['iOS', 'Swift', 'SwiftUI', 'Speech Recognition', 'OpenAI'],
     link: 'https://apps.apple.com/app/record-transcribe/id6758643630',
@@ -447,6 +480,7 @@ const PROJECTS_FULL = [
     title: 'AirMD+',
     problem: 'Expose HVAC behavior as live telemetry instead of intermittent technician observations.',
     built: 'Built the custom monitoring hardware path plus iOS and web surfaces for temperature tracking and system visibility.',
+    outcome: 'An embedded-to-app monitoring path for operational visibility outside the lab.',
     proof: 'Bridges embedded data collection, full-stack product work, and a practical operational monitoring use case.',
     tech: ['iOS', 'Swift', 'Hardware', 'IoT', 'Embedded'],
     link: 'https://www.hatchingpoint.com/airmd',
@@ -463,9 +497,39 @@ const SECONDARY_PROJECTS = [
 export function ProjectsModalContent() {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
+  const proof = [
+    { label: 'Robotics', value: 'Perception, controls, operator UI' },
+    { label: 'Mobile', value: 'Production iOS apps and App Store releases' },
+    { label: 'Hardware', value: 'CAD, embedded telemetry, custom devices' },
+  ]
 
   return (
     <div className="space-y-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+        {proof.map((item) => (
+          <div
+            key={item.label}
+            className="rounded-2xl p-3.5"
+            style={{
+              background: isLight ? 'rgba(0,0,0,0.025)' : 'rgba(255,255,255,0.03)',
+              border: palette.cardBorder,
+            }}
+          >
+            <div
+              className="text-[9.5px] font-semibold uppercase tracking-[0.18em]"
+              style={{ color: palette.mutedText }}
+            >
+              {item.label}
+            </div>
+            <div
+              className="mt-1.5 text-[13px] leading-snug font-semibold tracking-tight"
+              style={{ color: isLight ? '#1c1a1c' : '#fff' }}
+            >
+              {item.value}
+            </div>
+          </div>
+        ))}
+      </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {PROJECTS_FULL.map((p) => (
           <a
@@ -508,6 +572,7 @@ export function ProjectsModalContent() {
             >
               <div><span className="font-semibold">Problem:</span> {p.problem}</div>
               <div><span className="font-semibold">Built:</span> {p.built}</div>
+              <div><span className="font-semibold">Outcome:</span> {p.outcome}</div>
               <div><span className="font-semibold">Proof:</span> {p.proof}</div>
             </div>
             <div className="flex flex-wrap gap-1">

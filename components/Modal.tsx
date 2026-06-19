@@ -141,7 +141,7 @@ export default function Modal({ open, onClose, title, eyebrow, children, size = 
         style={{
           maxWidth,
           maxHeight: 'min(86vh, 760px)',
-          background: palette.cardBackground,
+          background: isLight ? 'rgba(255,255,255,0.94)' : 'rgba(12,12,15,0.94)',
           border: palette.cardBorder,
           backdropFilter: 'blur(28px)',
           WebkitBackdropFilter: 'blur(28px)',

@@ -17,6 +17,8 @@ import { useFieldTheme } from './fieldTheme'
 
 const SOLAR_URL = '/api/v3/solar'
 const SOLAR_HISTORY_URL = '/api/v3/solar/history'
+const COMPACT_HISTORY_POINTS = 72
+const FULL_HISTORY_POINTS = 288
 
 type Solar = {
   battery_voltage: number
@@ -79,12 +81,15 @@ function calcSOC(bv: number, chargeA = 0): number {
 
 export default function FieldSolarCard({
   variant = 'default',
+  historyPoints,
 }: {
   variant?: SolarCardVariant
+  historyPoints?: number
 }) {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
   const compact = variant === 'compact'
+  const requestedHistoryPoints = historyPoints ?? (compact ? COMPACT_HISTORY_POINTS : FULL_HISTORY_POINTS)
 
   const [solar, setSolar] = useState<Solar | null>(null)
   const [state, setState] = useState<CardState>('loading')
@@ -150,7 +155,10 @@ export default function FieldSolarCard({
       try {
         const ctrl = new AbortController()
         const t = setTimeout(() => ctrl.abort(), 8000)
-        const res = await fetch(SOLAR_HISTORY_URL, { signal: ctrl.signal, cache: 'no-store' })
+        const res = await fetch(`${SOLAR_HISTORY_URL}?points=${requestedHistoryPoints}`, {
+          signal: ctrl.signal,
+          cache: 'no-store',
+        })
         clearTimeout(t)
         if (!cancelled && res.ok) {
           const data = await res.json()
@@ -167,7 +175,7 @@ export default function FieldSolarCard({
       cancelled = true
       if (timer) clearTimeout(timer)
     }
-  }, [])
+  }, [requestedHistoryPoints])
 
   const soc = solar
     ? Math.round(typeof solar.battery_soc === 'number'
