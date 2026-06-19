@@ -12,6 +12,7 @@
 
 import { type CSSProperties, type RefObject, useEffect, useRef, useState } from 'react'
 import {
+  CAMERA_FALLBACK_MEDIA_ENABLED,
   CAMERA_HOST,
   FAST_PLAYER_ENABLED,
   HLS_URL,
@@ -313,7 +314,7 @@ export default function FieldCameraFeed({
   const showStream = active && !mediaHealthBad
   const showFastPlayer = FAST_PLAYER_ENABLED && showStream && !fastPlayerFailed
   const showHttpRtc = HTTP_RTC_ENABLED && showStream && fastPlayerFailed && !httpRtcFailed
-  const showHls = showStream && fastPlayerFailed && !hlsFailed
+  const showHls = CAMERA_FALLBACK_MEDIA_ENABLED && showStream && fastPlayerFailed && httpRtcFailed && !hlsFailed
   const hasPaintedTransport = streamReady || fastPlayerReady || httpRtcReady || hlsReady
 
   useEffect(() => {
@@ -932,7 +933,7 @@ export default function FieldCameraFeed({
   }, [hlsUrl, showHls])
 
   useEffect(() => {
-    if (!showStream || !fastPlayerFailed || !hlsFailed || httpRtcReady) return
+    if (!CAMERA_FALLBACK_MEDIA_ENABLED || !showStream || !fastPlayerFailed || !hlsFailed || httpRtcReady) return
     const retry = window.setTimeout(() => {
       setPhase('connecting')
       setStreamReady(false)
@@ -1066,7 +1067,7 @@ export default function FieldCameraFeed({
         />
       )}
 
-      {showStream && fastPlayerFailed && hlsFailed && !httpRtcReady && (
+      {CAMERA_FALLBACK_MEDIA_ENABLED && showStream && fastPlayerFailed && hlsFailed && !httpRtcReady && (
         <img
           key={streamNonce}
           src={mjpegUrl}
@@ -1140,13 +1141,7 @@ export default function FieldCameraFeed({
 }
 
 export function prewarmFieldCameraFeed() {
-  if (typeof window === 'undefined') return
-  const image = new Image()
-  image.decoding = 'async'
-  image.src = `${SNAPSHOT_URL}?v=${Date.now()}`
-  fetch(`${HLS_URL}?v=${Date.now()}`, { cache: 'no-store' }).catch(() => undefined)
-  fetch(QUALITY_URL, { cache: 'no-store' }).catch(() => undefined)
-  fetch(TRAINING_STATUS_URL, { cache: 'no-store' }).catch(() => undefined)
+  return
 }
 
 function isConfirmedCameraBad(quality: CameraQuality): boolean {

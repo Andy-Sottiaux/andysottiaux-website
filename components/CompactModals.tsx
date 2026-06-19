@@ -17,7 +17,7 @@
 import dynamic from 'next/dynamic'
 import Image from 'next/image'
 import { useEffect, useState } from 'react'
-import FieldCameraPreview from './FieldCameraPreview'
+import CameraIdleSurface from './CameraIdleSurface'
 import FieldHealthCard from './FieldHealthCard'
 import FieldSolarCard from './FieldSolarCard'
 import CameraSourceToggle from './CameraSourceToggle'
@@ -26,7 +26,7 @@ import type { FieldCameraSource } from '@/lib/fieldCameraConfig'
 
 const CameraFeedSwitcher = dynamic(() => import('./CameraFeedSwitcher'), {
   ssr: false,
-  loading: () => <FieldCameraPreview muted />,
+  loading: () => <CameraIdleSurface mode="loading" />,
 })
 
 const STLViewer = dynamic(() => import('./STLViewer'), {
@@ -133,6 +133,16 @@ export function LiveModalContent({
 }) {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
+  const [streamEnabled, setStreamEnabled] = useState(false)
+  const changeCamera = (value: FieldCameraSource) => {
+    setStreamEnabled(false)
+    onCameraChange(value)
+  }
+
+  useEffect(() => {
+    setStreamEnabled(false)
+  }, [selectedCamera])
+
   const intro = selectedCamera === 'field'
     ? 'Live edge-AI camera and solar telemetry from a board I built end-to-end: hardware integration, Linux services, relay APIs, and the public read-only stream you are seeing.'
     : 'HatchingPoint-branded Thingino E220 view through the tailnet proxy. The site only consumes a read-only relay; control and device credentials stay off the browser.'
@@ -152,7 +162,7 @@ export function LiveModalContent({
         <div className="shrink-0">
           <CameraSourceToggle
             value={selectedCamera}
-            onChange={onCameraChange}
+            onChange={changeCamera}
             isLight={isLight}
           />
         </div>
@@ -211,7 +221,11 @@ export function LiveModalContent({
                 : '0 8px 24px rgba(0,0,0,0.4)',
             }}
           >
-            <CameraFeedSwitcher selectedCamera={selectedCamera} />
+            <CameraFeedSwitcher
+              selectedCamera={selectedCamera}
+              enabled={streamEnabled}
+              onStart={() => setStreamEnabled(true)}
+            />
           </div>
         </div>
         <div className="md:col-span-1 [&>div]:h-full">

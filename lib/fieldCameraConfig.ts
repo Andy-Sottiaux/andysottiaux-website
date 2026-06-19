@@ -34,6 +34,7 @@ export const PRIMARY_FEED_STREAM = process.env.NEXT_PUBLIC_V3_FEED_STREAM || 'ca
 export const PLAYER_MODE = process.env.NEXT_PUBLIC_V3_PLAYER_MODE || 'webrtc,mse,hls,mjpeg'
 export const FAST_PLAYER_ENABLED = process.env.NEXT_PUBLIC_V3_FAST_PLAYER_ENABLED === '1'
 export const HTTP_RTC_ENABLED = process.env.NEXT_PUBLIC_V3_HTTP_RTC_ENABLED !== '0'
+export const CAMERA_FALLBACK_MEDIA_ENABLED = process.env.NEXT_PUBLIC_V3_CAMERA_FALLBACK_MEDIA_ENABLED === '1'
 
 export const SNAPSHOT_URL =
   process.env.NEXT_PUBLIC_V3_CAMERA_SNAPSHOT_URL ||

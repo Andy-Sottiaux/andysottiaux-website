@@ -19,7 +19,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
-import FieldCameraPreview from './FieldCameraPreview'
+import CameraIdleSurface from './CameraIdleSurface'
 import FieldHealthCard from './FieldHealthCard'
 import FieldSolarCard from './FieldSolarCard'
 import { FieldThemeProvider, useFieldTheme } from './fieldTheme'
@@ -31,7 +31,7 @@ import { useReducedMotion } from '@/lib/useReducedMotion'
 // relay-sanitized preview path, so SSR work here does not help first paint.
 const CameraFeedSwitcher = dynamic(() => import('./CameraFeedSwitcher'), {
   ssr: false,
-  loading: () => <FieldCameraPreview muted />,
+  loading: () => <CameraIdleSurface mode="loading" />,
 })
 
 // IntersectionObserver-based scroll reveal. Reduced-motion users get the
@@ -199,9 +199,16 @@ function CameraCardShell() {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
   const [selectedCamera, setSelectedCamera] = useState<FieldCameraSource>('field')
-  const footerCopy = selectedCamera === 'field'
+  const [streamEnabled, setStreamEnabled] = useState(false)
+  const footerCopy = !streamEnabled
+    ? 'Live stream paused.'
+    : selectedCamera === 'field'
     ? 'Live edge-AI camera. Public read-only stream.'
     : 'Thingino E220 camera. Tailnet view.'
+  const changeCamera = (value: FieldCameraSource) => {
+    setSelectedCamera(value)
+    setStreamEnabled(false)
+  }
 
   return (
     <div
@@ -225,7 +232,7 @@ function CameraCardShell() {
           </div>
           <CameraSourceToggle
             value={selectedCamera}
-            onChange={setSelectedCamera}
+            onChange={changeCamera}
             isLight={isLight}
             compact
           />
@@ -244,7 +251,11 @@ function CameraCardShell() {
               : '0 8px 24px rgba(0,0,0,0.4)',
           }}
         >
-          <CameraFeedSwitcher selectedCamera={selectedCamera} />
+          <CameraFeedSwitcher
+            selectedCamera={selectedCamera}
+            enabled={streamEnabled}
+            onStart={() => setStreamEnabled(true)}
+          />
         </div>
       </div>
 

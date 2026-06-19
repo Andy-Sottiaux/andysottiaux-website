@@ -1,6 +1,7 @@
 'use client'
 
 import type { FieldCameraSource } from '@/lib/fieldCameraConfig'
+import CameraIdleSurface from './CameraIdleSurface'
 import FieldCameraFeed from './FieldCameraFeed'
 import ThinginoCameraFeed from './ThinginoCameraFeed'
 
@@ -11,12 +12,18 @@ export default function CameraFeedSwitcher({
   enabled = true,
   fit = 'contain',
   position = 'center center',
+  onStart,
 }: {
   selectedCamera?: FieldCameraSource
   enabled?: boolean
   fit?: VideoFit
   position?: string
+  onStart?: () => void
 }) {
+  if (!enabled) {
+    return <CameraIdleSurface selectedCamera={selectedCamera} onStart={onStart} />
+  }
+
   if (selectedCamera === 'thingino') {
     return <ThinginoCameraFeed fit={fit} position={position} />
   }

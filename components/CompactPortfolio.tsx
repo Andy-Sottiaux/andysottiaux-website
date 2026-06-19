@@ -35,13 +35,12 @@
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
+import CameraIdleSurface from './CameraIdleSurface'
 import FieldSolarCard from './FieldSolarCard'
 import FieldHealthCard from './FieldHealthCard'
-import FieldCameraPreview from './FieldCameraPreview'
 import CameraSourceToggle from './CameraSourceToggle'
 import { FieldThemeProvider, useFieldTheme } from './fieldTheme'
 import Modal from './Modal'
-import { prewarmFieldCameraSurface } from './prewarmFieldCamera'
 import {
   AboutModalContent,
   AirpodsMountModalContent,
@@ -60,7 +59,7 @@ import type { FieldCameraSource } from '@/lib/fieldCameraConfig'
 // original relay feed and routes Cam 2 to the Thingino view client-side.
 const CameraFeedSwitcher = dynamic(() => import('./CameraFeedSwitcher'), {
   ssr: false,
-  loading: () => <FieldCameraPreview fit="cover" muted />,
+  loading: () => <CameraIdleSurface mode="loading" />,
 })
 
 export default function CompactPortfolio({
@@ -87,14 +86,7 @@ function CompactInner({ initialBoardLive }: { initialBoardLive: boolean }) {
   const [openModal, setOpenModal] = useState<ModalKey | null>(null)
   const [selectedCamera, setSelectedCamera] = useState<FieldCameraSource>('field')
   const close = () => setOpenModal(null)
-  const open = (key: ModalKey) => {
-    if (key === 'live') prewarmFieldCameraSurface()
-    setOpenModal(key)
-  }
-
-  useEffect(() => {
-    prewarmFieldCameraSurface()
-  }, [])
+  const open = (key: ModalKey) => setOpenModal(key)
 
   return (
     <main
@@ -477,6 +469,11 @@ function CameraTile({
 }) {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
+  const [streamEnabled, setStreamEnabled] = useState(false)
+
+  useEffect(() => {
+    setStreamEnabled(false)
+  }, [selectedCamera, enabled])
 
   return (
     <Tile
@@ -506,14 +503,29 @@ function CameraTile({
               : '0 8px 24px rgba(0,0,0,0.4)',
           }}
         >
-          <CameraFeedSwitcher enabled={enabled} fit="cover" selectedCamera={selectedCamera} />
-          {onOpen && (
+          <CameraFeedSwitcher
+            enabled={enabled && streamEnabled}
+            fit="cover"
+            selectedCamera={selectedCamera}
+            onStart={() => setStreamEnabled(true)}
+          />
+          {onOpen && streamEnabled && (
             <button
               type="button"
               aria-label="Expand Field Live camera"
               onClick={() => { haptic('open'); onOpen() }}
-              className="absolute inset-0 z-10 cursor-pointer"
-            />
+              className="absolute right-3 bottom-3 z-20 flex h-8 w-8 items-center justify-center rounded-full text-white/82 transition hover:text-white focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
+              style={{
+                background: 'rgba(0,0,0,0.58)',
+                border: '1px solid rgba(255,255,255,0.14)',
+                backdropFilter: 'blur(10px)',
+                WebkitBackdropFilter: 'blur(10px)',
+              }}
+            >
+              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.3} d="M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4" />
+              </svg>
+            </button>
           )}
         </div>
       </div>

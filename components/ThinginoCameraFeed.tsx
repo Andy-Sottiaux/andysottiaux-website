@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
+  CAMERA_FALLBACK_MEDIA_ENABLED,
   CAMERA_2_CONTROL_URL,
   CAMERA_2_MJPEG_URL,
   CAMERA_2_NATIVE_URL,
@@ -77,6 +78,7 @@ export default function ThinginoCameraFeed({
   const webrtcOfferUrl = `${CAMERA_2_WEBRTC_OFFER_URL}?stream=${encodeURIComponent(CAMERA_2_STREAM)}`
   const openUrl = CAMERA_2_NATIVE_URL === CAMERA_2_URL ? playerUrl : CAMERA_2_NATIVE_URL
   const statusCopy = cam2StatusCopy(status)
+  const fallbackExhausted = playerFailed && (!CAMERA_FALLBACK_MEDIA_ENABLED || streamFailed) && !streamReady
 
   const reload = () => {
     setSnapshotReady(false)
@@ -262,7 +264,7 @@ export default function ThinginoCameraFeed({
   }, [streamVersion, webrtcOfferUrl])
 
   useEffect(() => {
-    if (!(playerFailed && streamFailed)) return
+    if (!fallbackExhausted) return
     let cancelled = false
     fetch(CAMERA_2_STATUS_URL, { cache: 'no-store' })
       .then((r) => r.json())
@@ -275,7 +277,7 @@ export default function ThinginoCameraFeed({
     return () => {
       cancelled = true
     }
-  }, [playerFailed, streamFailed, streamVersion])
+  }, [fallbackExhausted, streamVersion])
 
   return (
     <div className="relative h-full w-full overflow-hidden rounded-[16px] bg-black">
@@ -312,7 +314,7 @@ export default function ThinginoCameraFeed({
         }}
       />
 
-      {playerFailed && (
+      {CAMERA_FALLBACK_MEDIA_ENABLED && playerFailed && (
         <img
           key={streamVersion}
           src={mjpegUrl}
@@ -352,7 +354,7 @@ export default function ThinginoCameraFeed({
         </div>
       )}
 
-      {playerFailed && streamFailed && !streamReady && (
+      {fallbackExhausted && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/70 px-6 text-center">
           <div className="flex max-w-[18rem] flex-col items-center gap-3">
             <img
