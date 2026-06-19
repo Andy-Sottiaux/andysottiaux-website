@@ -59,8 +59,18 @@ payloads for smooth pan/tilt:
 ```
 
 The relay should emit short motor steps at roughly 55 ms, keep movement alive
-for roughly 750 ms, and ramp over roughly 180 ms. The browser sends joystick
+for roughly 750 ms, and ramp over roughly 120 ms. The browser sends joystick
 heartbeats over WebSocket and falls back to HTTP when WebSocket is unavailable.
+The tuned relay should also apply separate axis gains so the Thingino legacy
+motor endpoint receives useful deltas from normal joystick movement:
+
+```text
+CAM2_RELAY_MOTION_MIN_STEP=18
+CAM2_RELAY_MOTION_PAN_GAIN=3.0
+CAM2_RELAY_MOTION_TILT_GAIN=4.5
+CAM2_RELAY_MOTION_DEADZONE=0.04
+CAM2_RELAY_MOTION_RAMP_SECONDS=0.12
+```
 
 Cam 2 quality presets must be supported by the relay with browser-compatible
 H.264 settings. Current high-quality target:

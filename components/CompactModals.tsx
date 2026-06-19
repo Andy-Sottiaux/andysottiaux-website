@@ -133,15 +133,9 @@ export function LiveModalContent({
 }) {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
-  const [streamEnabled, setStreamEnabled] = useState(false)
   const changeCamera = (value: FieldCameraSource) => {
-    setStreamEnabled(false)
     onCameraChange(value)
   }
-
-  useEffect(() => {
-    setStreamEnabled(false)
-  }, [selectedCamera])
 
   const intro = selectedCamera === 'field'
     ? 'Live edge-AI camera and solar telemetry from a board I built end-to-end: hardware integration, Linux services, relay APIs, and the public read-only stream you are seeing.'
@@ -223,8 +217,7 @@ export function LiveModalContent({
           >
             <CameraFeedSwitcher
               selectedCamera={selectedCamera}
-              enabled={streamEnabled}
-              onStart={() => setStreamEnabled(true)}
+              enabled
             />
           </div>
         </div>

@@ -88,6 +88,8 @@ type SystemLoose = {
     target_fps?: number
     duration_ms?: number
     age_s?: number
+    interval_sec?: number
+    message?: string
   }
   victron_advert_age_s?: number
   victron_hearing?: boolean
@@ -480,6 +482,10 @@ export default function FieldHealthCard({
     : valueColor
   const rknn = sys?.rknn_detector
   const rknnOk = rknn?.ok === true || rknn?.state === 'ok' || rknn?.status === 'ok'
+  const rknnWaitingForRelay = (
+    rknn?.state === 'starting' ||
+    rknn?.status === 'starting'
+  ) && typeof rknn?.message === 'string' && rknn.message.toLowerCase().includes('relay stream')
   const rknnFps = typeof rknn?.actual_fps === 'number' && Number.isFinite(rknn.actual_fps)
     ? rknn.actual_fps
     : typeof rknn?.target_fps === 'number' && Number.isFinite(rknn.target_fps)
@@ -487,10 +493,25 @@ export default function FieldHealthCard({
       : null
   const rknnText = rknn?.available === false
     ? 'off'
-    : rknnOk
-      ? `${rknnFps != null ? rknnFps.toFixed(rknnFps >= 10 ? 0 : 1) : '1.0'} FPS`
-      : rknn?.state || 'check'
-  const rknnColor = rknnOk ? valueColor : palette.mutedText
+    : rknnWaitingForRelay
+      ? 'waiting'
+      : rknn?.stale === true
+        ? 'stale'
+        : rknnOk
+          ? `${rknnFps != null ? rknnFps.toFixed(rknnFps >= 10 ? 0 : 1) : '1.0'} FPS`
+          : rknn?.state || 'check'
+  const rknnDetail = rknnWaitingForRelay
+    ? 'relay stream'
+    : typeof rknn?.duration_ms === 'number'
+      ? `${Math.round(rknn.duration_ms)} ms`
+      : typeof rknn?.interval_sec === 'number' && rknn.interval_sec > 0
+        ? `${Math.round(rknn.interval_sec)}s interval`
+        : `${rknn?.detections ?? 0} objects`
+  const rknnColor = rknnOk
+    ? valueColor
+    : rknnWaitingForRelay
+      ? (isLight ? '#b45309' : '#fcd34d')
+      : palette.mutedText
   const thermalPct = typeof sys?.cpu_temp_c === 'number'
     ? Math.max(0, Math.min(100, ((sys.cpu_temp_c - 35) / 45) * 100))
     : 0
@@ -670,7 +691,7 @@ export default function FieldHealthCard({
               {rknnText}
             </div>
             <div className="mt-0.5 text-[7.5px] font-semibold tabular-nums truncate" style={{ color: palette.fadedText }}>
-              {typeof rknn?.duration_ms === 'number' ? `${Math.round(rknn.duration_ms)} ms` : `${rknn?.detections ?? 0} objects`}
+              {rknnDetail}
             </div>
           </div>
         </div>
