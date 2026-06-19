@@ -439,6 +439,16 @@ export function ExperienceModalContent() {
 
 const PROJECTS_FULL = [
   {
+    title: 'Travel Agent AI',
+    problem: 'Make travel planning useful after the booking confirmation, not just during destination search.',
+    built: 'Built an iOS trip assistant for bookings, flights, packing lists, calendar sync, itinerary sharing, and trip cost tracking.',
+    outcome: 'A polished consumer AI app that turns scattered travel details into one practical mobile planning surface.',
+    proof: 'Shows production mobile product execution across AI UX, App Store delivery, subscriptions, CloudKit-style sync patterns, and everyday utility design.',
+    tech: ['iOS', 'SwiftUI', 'AI', 'Travel', 'Subscriptions'],
+    link: 'https://apps.apple.com/us/app/travel-agent-ai/id6758284691',
+    icon: '/images/travelagentai-icon.png',
+  },
+  {
     title: 'WYZECAR',
     problem: 'Turn a small RC platform into a controllable autonomy testbed with live video and person-following behavior.',
     built: 'Integrated YOLOv8 perception, ROS2-style control plumbing, web-based WASD control, live video, and PID motion.',

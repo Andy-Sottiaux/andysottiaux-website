@@ -38,13 +38,13 @@ import dynamic from 'next/dynamic'
 import CameraIdleSurface from './CameraIdleSurface'
 import FieldSolarCard from './FieldSolarCard'
 import FieldHealthCard from './FieldHealthCard'
-import CameraSourceToggle from './CameraSourceToggle'
 import { FieldThemeProvider, useFieldTheme } from './fieldTheme'
 import Modal from './Modal'
 import type { ModalKey } from './CompactModals'
 import { useBoardLive } from '@/lib/useBoardLive'
 import { haptic } from '@/lib/haptics'
 import type { FieldCameraSource } from '@/lib/fieldCameraConfig'
+import { useReducedMotion } from '@/lib/useReducedMotion'
 
 // Same dynamic import the home page uses. The switcher keeps Cam 1 on the
 // original relay feed and routes Cam 2 to the Thingino view client-side.
@@ -140,8 +140,8 @@ function CompactInner({ initialBoardLive }: { initialBoardLive: boolean }) {
         <div className="w-full max-w-[1380px] mx-auto lg:flex-1 lg:flex lg:flex-col lg:min-h-0">
           <Bento
             boardLive={boardLive}
-            cameraEnabled={openModal !== 'live'}
-            selectedCamera={selectedCamera}
+            cameraEnabled={openModal === null}
+            modalOpen={openModal !== null}
             onCameraChange={setSelectedCamera}
             onOpen={open}
           />
@@ -242,13 +242,13 @@ function ModalLoading() {
 function Bento({
   boardLive,
   cameraEnabled,
-  selectedCamera,
+  modalOpen,
   onCameraChange,
   onOpen,
 }: {
   boardLive: boolean
   cameraEnabled: boolean
-  selectedCamera: FieldCameraSource
+  modalOpen: boolean
   onCameraChange: (value: FieldCameraSource) => void
   onOpen: (key: ModalKey) => void
 }) {
@@ -259,18 +259,18 @@ function Bento({
         gridTemplateColumns: 'repeat(12, minmax(0, 1fr))',
       }}
     >
-      {/* Camera now spans two rows. The feed is 4:3-ish, so height is the
-          clean fix; stretching the pixels was the wrong trade. */}
+      {/* Spotlight spans two rows and keeps live camera streams paused until
+          the visitor explicitly presses play. */}
       <div className="order-1 col-span-12 lg:order-none lg:col-span-3 lg:col-start-1 lg:row-start-1">
         <IdentityTile onOpen={() => onOpen('about')} />
       </div>
 
       <div className="order-2 col-span-12 lg:order-none lg:col-span-6 lg:col-start-4 lg:row-start-1 lg:row-span-2">
-        <CameraTile
+        <SpotlightTile
           enabled={cameraEnabled}
-          selectedCamera={selectedCamera}
+          modalOpen={modalOpen}
           onCameraChange={onCameraChange}
-          onOpen={() => onOpen('live')}
+          onOpen={onOpen}
         />
       </div>
 
@@ -512,83 +512,493 @@ function IdentityTile({ onOpen }: { onOpen?: () => void }) {
   )
 }
 
-/* ───────────────────── Camera tile ──────────────────────── */
+/* ───────────────────── Spotlight tile ──────────────────────── */
 
-function CameraTile({
+type SpotlightItem = {
+  id: string
+  kind: 'camera' | 'project'
+  eyebrow: string
+  title: string
+  railLabel?: string
+  subtitle: string
+  description: string
+  accent: { light: string; dark: string }
+  halo?: { light: string; dark: string }
+  modal: ModalKey
+  camera?: FieldCameraSource
+  icon?: string
+  iconContain?: boolean
+  href?: string
+  cta?: string
+}
+
+const SPOTLIGHT_ROTATION_MS = 7000
+
+const SPOTLIGHT_ITEMS: SpotlightItem[] = [
+  {
+    id: 'cam1',
+    kind: 'camera',
+    eyebrow: 'Clean live',
+    title: 'Cam 1',
+    subtitle: 'Edge-AI field camera',
+    description: 'Live board telemetry, on-device inference, solar power, and health monitoring.',
+    accent: { light: '#0a8aa8', dark: 'rgba(103, 232, 249, 0.9)' },
+    modal: 'live',
+    camera: 'field',
+  },
+  {
+    id: 'cam2',
+    kind: 'camera',
+    eyebrow: 'PTZ relay',
+    title: 'Cam 2',
+    subtitle: 'Thingino pan / tilt',
+    description: 'High-quality public relay with browser-safe controls and no Vercel video proxying.',
+    accent: { light: '#10a366', dark: 'rgba(134, 239, 172, 0.92)' },
+    modal: 'live',
+    camera: 'thingino',
+  },
+  {
+    id: 'travel-agent-ai',
+    kind: 'project',
+    eyebrow: 'Featured app',
+    title: 'Travel Agent AI',
+    railLabel: 'Travel',
+    subtitle: 'AI-powered trip planner',
+    description: 'Snap bookings, track flights, build packing lists, sync calendars, and share itineraries.',
+    accent: { light: '#2563eb', dark: 'rgba(147, 197, 253, 0.95)' },
+    halo: { light: 'rgba(37, 99, 235, 0.16)', dark: 'rgba(147, 197, 253, 0.18)' },
+    modal: 'projects',
+    icon: '/images/travelagentai-icon.png',
+    href: 'https://apps.apple.com/us/app/travel-agent-ai/id6758284691',
+    cta: 'App Store',
+  },
+  {
+    id: 'wyzecar',
+    kind: 'project',
+    eyebrow: 'Robotics',
+    title: 'WYZECAR',
+    railLabel: 'WYZECAR',
+    subtitle: 'Vision RC autonomy',
+    description: 'YOLOv8 perception, browser controls, live video, and PID motion on a small RC platform.',
+    accent: { light: '#b45309', dark: 'rgba(252, 211, 77, 0.95)' },
+    halo: { light: 'rgba(180, 83, 9, 0.16)', dark: 'rgba(252, 211, 77, 0.18)' },
+    modal: 'projects',
+    icon: '/images/wyzecar.png',
+    iconContain: true,
+    href: 'https://github.com/Andy-Sottiaux/WYZECAR',
+    cta: 'GitHub',
+  },
+]
+
+function SpotlightTile({
   enabled,
-  selectedCamera,
+  modalOpen,
   onCameraChange,
   onOpen,
 }: {
   enabled: boolean
-  selectedCamera: FieldCameraSource
+  modalOpen: boolean
   onCameraChange: (value: FieldCameraSource) => void
-  onOpen?: () => void
+  onOpen: (key: ModalKey) => void
 }) {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
+  const reducedMotion = useReducedMotion()
+  const [activeIndex, setActiveIndex] = useState(0)
   const [streamEnabled, setStreamEnabled] = useState(false)
+  const [interactionPaused, setInteractionPaused] = useState(false)
+  const active = SPOTLIGHT_ITEMS[activeIndex]
 
   useEffect(() => {
     setStreamEnabled(false)
-  }, [selectedCamera, enabled])
+  }, [active.id, enabled])
+
+  useEffect(() => {
+    if (reducedMotion || interactionPaused || modalOpen || streamEnabled) return
+
+    const timer = window.setTimeout(() => {
+      setActiveIndex((current) => (current + 1) % SPOTLIGHT_ITEMS.length)
+    }, SPOTLIGHT_ROTATION_MS)
+
+    return () => window.clearTimeout(timer)
+  }, [activeIndex, interactionPaused, modalOpen, reducedMotion, streamEnabled])
+
+  const selectSpotlight = (index: number) => {
+    setActiveIndex(index)
+    setStreamEnabled(false)
+
+    const nextCamera = SPOTLIGHT_ITEMS[index]?.camera
+    if (nextCamera) onCameraChange(nextCamera)
+  }
+
+  const openActive = () => {
+    if (active.camera) onCameraChange(active.camera)
+    onOpen(active.modal)
+  }
+
+  const startActiveCamera = () => {
+    if (!active.camera) return
+    onCameraChange(active.camera)
+    setStreamEnabled(true)
+  }
+
+  const resumeAfterFocus = (event: React.FocusEvent<HTMLDivElement>) => {
+    const nextTarget = event.relatedTarget
+    if (!(nextTarget instanceof Node) || !event.currentTarget.contains(nextTarget)) {
+      setInteractionPaused(false)
+    }
+  }
 
   return (
     <Tile
-      label="Camera"
-      accent={{ light: '#0a8aa8', dark: 'rgba(103, 232, 249, 0.9)' }}
+      label="Spotlight"
+      accent={active.accent}
       deepLink="/#now"
-      onOpen={onOpen}
-      modalLabel="Open Field Live"
-      className="min-h-[280px] lg:min-h-0"
+      onOpen={openActive}
+      modalLabel={`Open ${active.title}`}
+      className="min-h-[310px] lg:min-h-0"
     >
-      <div className="absolute right-5 top-3.5 z-20">
-        <CameraSourceToggle
-          value={selectedCamera}
-          onChange={onCameraChange}
+      <div
+        data-spotlight-motion="true"
+        className="flex flex-1 min-h-0 flex-col"
+        onPointerEnter={() => setInteractionPaused(true)}
+        onPointerLeave={() => setInteractionPaused(false)}
+        onFocusCapture={() => setInteractionPaused(true)}
+        onBlurCapture={resumeAfterFocus}
+      >
+        <div className="relative flex-1 min-h-[230px] overflow-hidden">
+          {SPOTLIGHT_ITEMS.map((item, index) => {
+            const isActive = index === activeIndex
+            return (
+              <div
+                key={item.id}
+                aria-hidden={!isActive}
+                className={`spotlight-slide absolute inset-0 ${isActive
+                  ? 'opacity-100 translate-x-0 scale-100 pointer-events-auto'
+                  : 'opacity-0 translate-x-4 scale-[0.985] pointer-events-none'}`}
+              >
+                {item.kind === 'camera' ? (
+                  <SpotlightCameraPanel
+                    item={item}
+                    active={isActive}
+                    enabled={enabled}
+                    streamEnabled={isActive && streamEnabled}
+                    onStart={startActiveCamera}
+                    onOpen={openActive}
+                  />
+                ) : (
+                  <SpotlightProjectPanel
+                    item={item}
+                    active={isActive}
+                    onOpen={onOpen}
+                  />
+                )}
+              </div>
+            )
+          })}
+        </div>
+
+        <SpotlightRail
+          items={SPOTLIGHT_ITEMS}
+          activeIndex={activeIndex}
+          onSelect={selectSpotlight}
           isLight={isLight}
-          compact
+          border={palette.cardBorder}
+          muted={palette.mutedText}
         />
       </div>
-      <div className="px-3 md:px-[clamp(0.75rem,1.15vw,1rem)] pt-2 md:pt-[clamp(0.35rem,1.0dvh,0.75rem)] pb-3 md:pb-[clamp(0.55rem,1.35dvh,1rem)] flex-1 min-h-0 flex flex-col gap-2">
-        <div
-          className="relative w-full flex-1 min-h-[132px] overflow-hidden rounded-[14px]"
+    </Tile>
+  )
+}
+
+function SpotlightCameraPanel({
+  item,
+  active,
+  enabled,
+  streamEnabled,
+  onStart,
+  onOpen,
+}: {
+  item: SpotlightItem
+  active: boolean
+  enabled: boolean
+  streamEnabled: boolean
+  onStart: () => void
+  onOpen: () => void
+}) {
+  const palette = useFieldTheme()
+  const isLight = palette.mode === 'light'
+  const camera = item.camera ?? 'field'
+
+  return (
+    <div className="h-full px-3 md:px-[clamp(0.75rem,1.15vw,1rem)] pt-2 md:pt-[clamp(0.35rem,1.0dvh,0.75rem)] pb-2 flex flex-col gap-2">
+      <div
+        className="relative w-full flex-1 min-h-[148px] overflow-hidden rounded-[14px]"
+        style={{
+          background: isLight ? '#0a0a0c' : '#000',
+          border: isLight ? '1px solid rgba(0,0,0,0.08)' : '1px solid rgba(255,255,255,0.08)',
+          boxShadow: isLight
+            ? '0 4px 12px rgba(28,26,28,0.12)'
+            : '0 8px 24px rgba(0,0,0,0.4)',
+        }}
+      >
+        <CameraFeedSwitcher
+          enabled={enabled && streamEnabled}
+          fit="cover"
+          selectedCamera={camera}
+          onStart={active ? onStart : undefined}
+        />
+        <div className="pointer-events-none absolute left-3 top-3 z-20 flex items-center gap-2 rounded-full bg-black/58 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-white/82">
+          <span
+            aria-hidden="true"
+            className="h-1.5 w-1.5 rounded-full"
+            style={{ background: item.accent.dark, boxShadow: `0 0 8px ${item.accent.dark}` }}
+          />
+          {item.eyebrow}
+        </div>
+        <div className="pointer-events-none absolute right-3 top-3 z-20 rounded-full bg-black/54 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-white/72">
+          {item.title}
+        </div>
+        {active && streamEnabled && (
+          <button
+            type="button"
+            aria-label={`Expand ${item.title}`}
+            onClick={(event) => {
+              event.stopPropagation()
+              haptic('open')
+              onOpen()
+            }}
+            className="absolute right-3 bottom-3 z-20 flex h-8 w-8 items-center justify-center rounded-full text-white/82 hover:text-white focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
+            style={{
+              background: 'rgba(0,0,0,0.58)',
+              border: '1px solid rgba(255,255,255,0.14)',
+              backdropFilter: 'blur(10px)',
+              WebkitBackdropFilter: 'blur(10px)',
+            }}
+          >
+            <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.3} d="M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4" />
+            </svg>
+          </button>
+        )}
+      </div>
+      <div className="grid grid-cols-[1fr_auto] items-end gap-3">
+        <div className="min-w-0">
+          <div
+            className="truncate text-[18px] md:text-[clamp(14px,1.8dvh,18px)] font-semibold leading-tight tracking-tight"
+            style={{ color: isLight ? '#1c1a1c' : '#fff' }}
+          >
+            {item.subtitle}
+          </div>
+          <p
+            className="mt-0.5 line-clamp-1 text-[11px] md:text-[clamp(9px,1.1dvh,11px)] leading-tight"
+            style={{ color: palette.bodyText }}
+          >
+            {item.description}
+          </p>
+        </div>
+        <span
+          className="rounded-full px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.16em]"
           style={{
-            background: isLight ? '#0a0a0c' : '#000',
-            border: isLight ? '1px solid rgba(0,0,0,0.08)' : '1px solid rgba(255,255,255,0.08)',
-            boxShadow: isLight
-              ? '0 4px 12px rgba(28,26,28,0.12)'
-              : '0 8px 24px rgba(0,0,0,0.4)',
+            color: streamEnabled ? (isLight ? '#0f9d4f' : '#86efac') : palette.mutedText,
+            background: isLight ? 'rgba(0,0,0,0.035)' : 'rgba(255,255,255,0.045)',
+            border: palette.cardBorder,
           }}
         >
-          <CameraFeedSwitcher
-            enabled={enabled && streamEnabled}
-            fit="cover"
-            selectedCamera={selectedCamera}
-            onStart={() => setStreamEnabled(true)}
-          />
-          {onOpen && streamEnabled && (
-            <button
-              type="button"
-              aria-label="Expand Field Live camera"
-              onClick={() => { haptic('open'); onOpen() }}
-              className="absolute right-3 bottom-3 z-20 flex h-8 w-8 items-center justify-center rounded-full text-white/82 transition hover:text-white focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
+          {streamEnabled ? 'Live' : 'Paused'}
+        </span>
+      </div>
+      <CameraSignalStrip selectedCamera={camera} streamEnabled={streamEnabled} />
+    </div>
+  )
+}
+
+function SpotlightProjectPanel({
+  item,
+  active,
+  onOpen,
+}: {
+  item: SpotlightItem
+  active: boolean
+  onOpen: (key: ModalKey) => void
+}) {
+  const palette = useFieldTheme()
+  const isLight = palette.mode === 'light'
+  const accent = isLight ? item.accent.light : item.accent.dark
+  const halo = isLight ? item.halo?.light : item.halo?.dark
+
+  return (
+    <div className="h-full px-3 md:px-[clamp(0.75rem,1.15vw,1rem)] pt-2 md:pt-[clamp(0.35rem,1.0dvh,0.75rem)] pb-2">
+      <div
+        className="relative h-full min-h-0 overflow-hidden rounded-[14px] p-4 md:p-[clamp(0.9rem,1.7dvh,1.25rem)] flex flex-col justify-between"
+        style={{
+          background: isLight
+            ? 'linear-gradient(135deg, rgba(255,255,255,0.94), rgba(245,247,250,0.92))'
+            : 'linear-gradient(135deg, rgba(19,22,28,0.98), rgba(9,10,13,0.98))',
+          border: isLight ? '1px solid rgba(0,0,0,0.07)' : '1px solid rgba(255,255,255,0.08)',
+          boxShadow: isLight
+            ? '0 4px 12px rgba(28,26,28,0.10)'
+            : '0 8px 24px rgba(0,0,0,0.34)',
+        }}
+      >
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full"
+          style={{ background: `radial-gradient(circle, ${halo ?? 'rgba(255,255,255,0.12)'}, transparent 68%)` }}
+        />
+        <div className="relative flex items-start justify-between gap-4">
+          <div
+            className="relative h-16 w-16 md:h-[clamp(3.2rem,8dvh,4.75rem)] md:w-[clamp(3.2rem,8dvh,4.75rem)] flex-shrink-0 overflow-hidden rounded-2xl"
+            style={{
+              background: isLight ? '#fff' : 'rgba(255,255,255,0.94)',
+              border: palette.cardBorder,
+              boxShadow: isLight
+                ? '0 10px 24px rgba(28,26,28,0.10)'
+                : '0 14px 32px rgba(0,0,0,0.32)',
+            }}
+          >
+            {item.icon ? (
+              <Image
+                src={item.icon}
+                alt=""
+                fill
+                sizes="80px"
+                className={item.iconContain ? 'object-contain p-1.5' : 'object-cover'}
+              />
+            ) : null}
+          </div>
+          <div
+            className="rounded-full px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.16em]"
+            style={{
+              color: accent,
+              background: isLight ? 'rgba(0,0,0,0.035)' : 'rgba(255,255,255,0.05)',
+              border: palette.cardBorder,
+            }}
+          >
+            {item.eyebrow}
+          </div>
+        </div>
+
+        <div className="relative max-w-[30rem]">
+          <div
+            className="text-[30px] md:text-[clamp(24px,4.2dvh,40px)] font-semibold leading-[0.95] tracking-tight"
+            style={{ color: isLight ? '#1c1a1c' : '#fff' }}
+          >
+            {item.title}
+          </div>
+          <div
+            className="mt-2 text-[13px] md:text-[clamp(11px,1.55dvh,14px)] font-semibold tracking-tight"
+            style={{ color: accent }}
+          >
+            {item.subtitle}
+          </div>
+          <p
+            className="mt-2 max-w-[42ch] text-[12px] md:text-[clamp(10px,1.35dvh,13px)] leading-snug"
+            style={{ color: palette.bodyText }}
+          >
+            {item.description}
+          </p>
+        </div>
+
+        <div className="relative flex flex-wrap items-center gap-2">
+          {item.href ? (
+            <a
+              href={item.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              tabIndex={active ? undefined : -1}
+              className="rounded-full px-3 py-1.5 text-[11px] font-semibold tracking-tight focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
               style={{
-                background: 'rgba(0,0,0,0.58)',
-                border: '1px solid rgba(255,255,255,0.14)',
-                backdropFilter: 'blur(10px)',
-                WebkitBackdropFilter: 'blur(10px)',
+                color: isLight ? '#fff' : '#081012',
+                background: accent,
               }}
             >
-              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.3} d="M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4" />
-              </svg>
-            </button>
-          )}
+              {item.cta ?? 'Open'}
+            </a>
+          ) : null}
+          <button
+            type="button"
+            tabIndex={active ? undefined : -1}
+            onClick={(event) => {
+              event.stopPropagation()
+              haptic('open')
+              onOpen(item.modal)
+            }}
+            className="rounded-full px-3 py-1.5 text-[11px] font-semibold tracking-tight focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
+            style={{
+              color: palette.bodyText,
+              background: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.07)',
+              border: palette.cardBorder,
+            }}
+          >
+            Details
+          </button>
         </div>
-        <CameraSignalStrip selectedCamera={selectedCamera} streamEnabled={streamEnabled} />
       </div>
-    </Tile>
+    </div>
+  )
+}
+
+function SpotlightRail({
+  items,
+  activeIndex,
+  onSelect,
+  isLight,
+  border,
+  muted,
+}: {
+  items: SpotlightItem[]
+  activeIndex: number
+  onSelect: (index: number) => void
+  isLight: boolean
+  border: string
+  muted: string
+}) {
+  return (
+    <div
+      className="grid grid-cols-4 gap-1 sm:gap-1.5 px-3 pb-3"
+      role="tablist"
+      aria-label="Featured spotlight"
+    >
+      {items.map((item, index) => {
+        const active = index === activeIndex
+        const accent = isLight ? item.accent.light : item.accent.dark
+
+        return (
+          <button
+            key={item.id}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            aria-label={`Show ${item.title}`}
+            onClick={(event) => {
+              event.stopPropagation()
+              haptic('tap')
+              onSelect(index)
+            }}
+            className="min-w-0 rounded-full px-2 sm:px-2.5 py-1.5 text-left focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
+            style={{
+              color: active ? accent : muted,
+              background: active
+                ? (isLight ? `${accent}14` : 'rgba(255,255,255,0.07)')
+                : (isLight ? 'rgba(0,0,0,0.025)' : 'rgba(255,255,255,0.035)'),
+              border,
+            }}
+          >
+            <span className="flex min-w-0 items-center gap-1 sm:gap-1.5">
+              <span
+                aria-hidden="true"
+                className="h-1.5 w-1.5 flex-shrink-0 rounded-full"
+                style={{ background: active ? accent : muted }}
+              />
+              <span className="truncate text-[8px] sm:text-[9px] font-semibold uppercase tracking-[0.08em] sm:tracking-[0.14em]">
+                {item.railLabel ?? item.title}
+              </span>
+            </span>
+          </button>
+        )
+      })}
+    </div>
   )
 }
 
@@ -1077,12 +1487,6 @@ const MORE_PROJECTS: {
     icon: '/images/doordot-icon.png',
     href: 'https://apps.apple.com/app/doordot/id6758969043',
   },
-  {
-    name: 'Travel Agent AI',
-    desc: 'AI trip-planning assistant · iOS',
-    icon: '/images/travelagentai-icon.png',
-    href: 'https://apps.apple.com/us/app/travel-agent-ai/id6758284691',
-  },
   // CAD entry — shorter name, opens the in-page 3D modal instead of
   // navigating. The icon slot renders a live STL preview (lazy-loaded).
   {
@@ -1416,8 +1820,8 @@ function ExperienceTile({ onOpen }: { onOpen?: () => void }) {
 /* ───────────────────── Projects tile ──────────────────────── */
 
 const PROJECTS = [
+  { name: 'Travel Agent AI', desc: 'AI trip-planning assistant · iOS', url: 'https://apps.apple.com/us/app/travel-agent-ai/id6758284691', icon: '/images/travelagentai-icon.png' },
   { name: 'WYZECAR', desc: 'Vision-based autonomous RC car · YOLOv8 · ROS2', url: 'https://github.com/Andy-Sottiaux/WYZECAR', icon: '/images/wyzecar.png', round: true },
-  { name: 'Rot Dot', desc: 'NFC-tap app blocker · iOS · Screen Time API', url: 'https://apps.apple.com/us/app/rot-dot/id6758902103', icon: '/images/rotdot-icon.png' },
   { name: 'Record + Transcribe', desc: 'Voice notes with AI summary · iOS', url: 'https://apps.apple.com/app/record-transcribe/id6758643630', icon: '/images/recordtranscribe-icon.png' },
 ]
 
