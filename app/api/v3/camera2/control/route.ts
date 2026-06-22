@@ -117,7 +117,7 @@ function vectorMove(body: { x?: number; y?: number; speed?: number }, params: Mo
   }
 
   const shapedSpeed = 0.25 + speed * 0.75
-  const panStep = Math.max(18, panMax / 95)
+  const panStep = Math.max(28, panMax / 62)
   const tiltStep = Math.max(16, tiltMax / 55)
 
   return {

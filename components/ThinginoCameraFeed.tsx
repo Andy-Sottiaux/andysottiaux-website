@@ -133,7 +133,6 @@ export default function ThinginoCameraFeed({
   const [controlConnected, setControlConnected] = useState(false)
   const [motionState, setMotionState] = useState<Cam2MotionState | null>(null)
   const [playbackMetrics, setPlaybackMetrics] = useState<Cam2PlaybackMetrics | null>(null)
-  const [qualityPending, setQualityPending] = useState<string | null>(null)
   const rtcVideoRef = useRef<HTMLVideoElement>(null)
   const controlWsRef = useRef<WebSocket | null>(null)
   const controlWsRetryRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -286,20 +285,6 @@ export default function ThinginoCameraFeed({
   const stopVectorControl = useCallback(() => {
     sendQueuedVectorHttp({ command: 'stop', action: 'stop', step: 'fine' }, true)
   }, [sendQueuedVectorHttp])
-
-  const applyPreset = async (preset: 'hq30' | 'balanced24') => {
-    setQualityPending(preset)
-    try {
-      const next = await postJsonCandidate<{ ok?: boolean; stream0?: Cam2Settings['stream0'] }>(settingsUrls, {
-        method: 'POST',
-        body: JSON.stringify({ preset }),
-      })
-      setSettings({ ok: next.ok !== false, stream0: next.stream0 ?? settings?.stream0 ?? null })
-      reload()
-    } finally {
-      setQualityPending(null)
-    }
-  }
 
   useEffect(() => {
     loadSettings()
@@ -687,7 +672,7 @@ export default function ThinginoCameraFeed({
       </div>
 
       <div
-        className="pointer-events-none absolute right-3 top-11 hidden rounded-full px-2.5 py-1 text-[9px] font-semibold uppercase sm:block"
+        className="pointer-events-none absolute right-3 top-3 hidden max-w-[calc(100%-1.5rem)] rounded-full px-2.5 py-1 text-right text-[9px] font-semibold uppercase sm:block"
         style={{
           background: 'rgba(0,0,0,0.58)',
           color: '#fff',
@@ -711,41 +696,6 @@ export default function ThinginoCameraFeed({
           onHome={() => void sendControl('home')}
           homeDisabled={controlPending != null}
         />
-
-        <div
-          className="hidden min-w-[132px] flex-col gap-1 rounded-[14px] p-1.5 sm:flex"
-          aria-label="Cam 2 quality controls"
-          style={{
-            background: 'rgba(0,0,0,0.58)',
-            border: '1px solid rgba(255,255,255,0.12)',
-            backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)',
-          }}
-        >
-          <div className="px-1 text-[8px] font-semibold uppercase tracking-[0.16em] text-white/45">
-            {formatStreamSettings(settings)}
-          </div>
-          <div className="grid grid-cols-2 gap-1">
-            <button
-              type="button"
-              onClick={() => applyPreset('hq30')}
-              disabled={qualityPending != null}
-              className="rounded-[8px] px-2 py-1 text-[9px] font-bold uppercase text-white/88 transition hover:bg-white/18 disabled:opacity-45"
-              style={{ background: qualityPending === 'hq30' ? 'rgba(103,232,249,0.24)' : 'rgba(255,255,255,0.10)' }}
-            >
-              Max 30
-            </button>
-            <button
-              type="button"
-              onClick={() => applyPreset('balanced24')}
-              disabled={qualityPending != null}
-              className="rounded-[8px] px-2 py-1 text-[9px] font-bold uppercase text-white/78 transition hover:bg-white/18 disabled:opacity-45"
-              style={{ background: qualityPending === 'balanced24' ? 'rgba(103,232,249,0.24)' : 'rgba(255,255,255,0.08)' }}
-            >
-              24 fps
-            </button>
-          </div>
-        </div>
       </div>
 
       <a
@@ -925,15 +875,6 @@ function Cam2Joystick({
   )
 }
 
-function formatStreamSettings(settings: Cam2Settings | null) {
-  const stream = settings?.stream0
-  if (!stream) return 'loading'
-  const resolution = stream.width && stream.height ? `${stream.width}×${stream.height}` : 'stream'
-  const fps = stream.fps ? `${stream.fps} fps` : 'fps'
-  const bitrate = stream.bitrate ? `${Math.round(stream.bitrate / 100) / 10} Mbps` : ''
-  return [resolution, fps, bitrate].filter(Boolean).join(' · ')
-}
-
 function formatPlaybackTelemetry(metrics: Cam2PlaybackMetrics | null, settings: Cam2Settings | null) {
   const stream = settings?.stream0
   const resolution = metrics?.videoWidth && metrics.videoHeight
@@ -962,12 +903,16 @@ function joystickVectorFromPointer(event: PointerEvent<HTMLDivElement>, pad: HTM
   const rect = pad.getBoundingClientRect()
   const rawX = ((event.clientX - rect.left) / rect.width) * 2 - 1
   const rawY = -(((event.clientY - rect.top) / rect.height) * 2 - 1)
-  const magnitude = Math.hypot(rawX, rawY)
-  const deadZone = 0.08
+  const panGain = 1.65
+  const tiltGain = 1
+  const shapedX = rawX * panGain
+  const shapedY = rawY * tiltGain
+  const magnitude = Math.hypot(shapedX, shapedY)
+  const deadZone = 0.07
   if (!Number.isFinite(magnitude) || magnitude < deadZone) return { x: 0, y: 0, speed: 0 }
   const scale = magnitude > 1 ? 1 / magnitude : 1
-  const x = clampUnit(rawX * scale)
-  const y = clampUnit(rawY * scale)
+  const x = clampUnit(shapedX * scale)
+  const y = clampUnit(shapedY * scale)
   const speed = clamp01((Math.min(1, magnitude) - deadZone) / (1 - deadZone))
   return { x, y, speed }
 }
@@ -1023,28 +968,6 @@ async function fetchJsonCandidate<T>(urls: string[]): Promise<T> {
         continue
       }
       return await res.json() as T
-    } catch (error) {
-      lastError = error
-    }
-  }
-  throw lastError || new Error('all_candidates_failed')
-}
-
-async function postJsonCandidate<T>(urls: string[], init: RequestInit): Promise<T> {
-  let lastError: unknown = null
-  for (const url of urls) {
-    try {
-      const res = await fetch(url, {
-        ...init,
-        cache: 'no-store',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(init.headers || {}),
-        },
-      })
-      const data = await res.json().catch(() => null) as T | null
-      if (res.ok && data) return data
-      lastError = new Error(`${url}_${res.status}`)
     } catch (error) {
       lastError = error
     }
