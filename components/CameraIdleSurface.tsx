@@ -46,8 +46,8 @@ export default function CameraIdleSurface({
             background: 'rgba(255,255,255,0.16)',
             border: '1px solid rgba(255,255,255,0.24)',
             boxShadow: '0 14px 36px rgba(0,0,0,0.42)',
-            backdropFilter: 'blur(14px)',
-            WebkitBackdropFilter: 'blur(14px)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
           }}
         >
           <span
@@ -67,7 +67,7 @@ export default function CameraIdleSurface({
             background:
               'linear-gradient(90deg, rgba(255,255,255,0.05), rgba(255,255,255,0.16), rgba(255,255,255,0.05))',
             backgroundSize: '200% 100%',
-            animation: 'cameraIdleShimmer 1.2s linear infinite',
+            animation: 'cameraIdleShimmer 0.9s linear infinite',
           }}
         >
           camera
@@ -90,7 +90,7 @@ export default function CameraIdleSurface({
         {mode === 'loading' ? 'Camera loading' : `${cameraLabel} paused`}
       </div>
 
-      <style jsx>{`
+      <style>{`
         @keyframes cameraIdleShimmer {
           0% {
             background-position: -200% 0;

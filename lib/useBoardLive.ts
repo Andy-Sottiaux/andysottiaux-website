@@ -17,7 +17,8 @@
  * immediately.
  */
 
-import { useEffect, useRef, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { fetchWithTimeout } from './fetchWithTimeout'
 
 const HEALTH_URL = '/api/v3/health'
 const POLL_MS = 15_000
@@ -27,62 +28,32 @@ const OFFLINE_FAIL_LIMIT = 3
 
 type HealthLoose = { ok?: boolean; error?: string }
 
+async function fetchBoardHealth({ signal }: { signal: AbortSignal }): Promise<{ ok: true }> {
+  const res = await fetchWithTimeout(HEALTH_URL, { signal, cache: 'no-store' }, REQUEST_TIMEOUT_MS)
+  if (!res.ok) throw new Error(`health_http_${res.status}`)
+
+  const parsed = (await res.json()) as HealthLoose
+  if (!parsed || parsed.ok === false || parsed.error) {
+    throw new Error(parsed?.error || 'health_not_ok')
+  }
+
+  return { ok: true }
+}
+
 export function useBoardLive(initial = true): boolean {
-  // Caller can pass an SSR-resolved initial state (page.tsx probes the
-  // health endpoint on the server and passes the result down). When given,
-  // the initial paint already matches reality — no live→fallback flicker
-  // for visitors arriving while the board is down.
-  const [live, setLive] = useState(initial)
-  // If we already know we're offline, treat "last success" as ancient so
-  // client polling keeps us offline until the first good response.
-  const lastSuccessRef = useRef<number>(initial ? Date.now() : 0)
-  const consecutiveFailRef = useRef<number>(initial ? 0 : OFFLINE_FAIL_LIMIT)
+  const { data, dataUpdatedAt, failureCount } = useQuery({
+    queryKey: ['board-live'],
+    queryFn: fetchBoardHealth,
+    refetchInterval: POLL_MS,
+    initialData: initial ? { ok: true as const } : undefined,
+    initialDataUpdatedAt: initial ? Date.now() : undefined,
+  })
 
-  useEffect(() => {
-    let cancelled = false
-    let timer: ReturnType<typeof setTimeout> | null = null
+  if (data?.ok === true) return true
 
-    const tick = async () => {
-      let ok = false
-      try {
-        const ctrl = new AbortController()
-        const timeoutId = setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT_MS)
-        const res = await fetch(HEALTH_URL, { signal: ctrl.signal, cache: 'no-store' })
-        clearTimeout(timeoutId)
-        if (res.ok) {
-          const parsed = (await res.json()) as HealthLoose
-          if (parsed && parsed.ok !== false && !parsed.error) {
-            ok = true
-          }
-        }
-      } catch {
-        ok = false
-      }
-      if (cancelled) return
+  const lastSuccessAt = dataUpdatedAt
+  if (lastSuccessAt <= 0) return false
 
-      if (ok) {
-        lastSuccessRef.current = Date.now()
-        consecutiveFailRef.current = 0
-        setLive(true)
-      } else {
-        consecutiveFailRef.current += 1
-        const sinceLastOk = Date.now() - lastSuccessRef.current
-        if (
-          consecutiveFailRef.current >= OFFLINE_FAIL_LIMIT &&
-          sinceLastOk >= OFFLINE_GRACE_MS
-        ) {
-          setLive(false)
-        }
-      }
-      timer = setTimeout(tick, POLL_MS)
-    }
-
-    timer = setTimeout(tick, initial ? POLL_MS : 0)
-    return () => {
-      cancelled = true
-      if (timer) clearTimeout(timer)
-    }
-  }, [initial])
-
-  return live
+  const sinceLastOk = Date.now() - lastSuccessAt
+  return failureCount < OFFLINE_FAIL_LIMIT || sinceLastOk < OFFLINE_GRACE_MS
 }

@@ -4,10 +4,18 @@ export const CAMERA_HOST =
 
 export type FieldCameraSource = 'field' | 'thingino'
 
-// Keep camera media same-origin by default. The public Cloudflare camera
-// hostnames must be explicitly enabled after DNS/routes are proven healthy;
-// otherwise a bad camera subdomain can break the whole live section.
-const DIRECT_GATEWAY_ENABLED = process.env.NEXT_PUBLIC_V3_DIRECT_CAMERA_GATEWAY_ENABLED === '1'
+// Prefer the public Cloudflare camera gateways whenever the deployment provides
+// them. The explicit flag is still supported, and setting it to "0" is the
+// manual kill switch if a bad camera subdomain needs to be bypassed quickly.
+const DIRECT_GATEWAY_DISABLED = process.env.NEXT_PUBLIC_V3_DIRECT_CAMERA_GATEWAY_ENABLED === '0'
+const DIRECT_GATEWAY_CONFIGURED = Boolean(
+  process.env.NEXT_PUBLIC_V3_CAMERA_GATEWAY_HOST ||
+  process.env.NEXT_PUBLIC_V3_CAMERA_2_GATEWAY_HOST ||
+  process.env.NEXT_PUBLIC_V3_CAMERA_2_FALLBACK_GATEWAY_HOST
+)
+const DIRECT_GATEWAY_ENABLED =
+  !DIRECT_GATEWAY_DISABLED &&
+  (process.env.NEXT_PUBLIC_V3_DIRECT_CAMERA_GATEWAY_ENABLED === '1' || DIRECT_GATEWAY_CONFIGURED)
 
 export const CAMERA_GATEWAY_HOST =
   DIRECT_GATEWAY_ENABLED
@@ -87,9 +95,6 @@ export const CAMERA_FALLBACK_MEDIA_ENABLED = process.env.NEXT_PUBLIC_V3_CAMERA_F
 export const SNAPSHOT_URL =
   process.env.NEXT_PUBLIC_V3_CAMERA_SNAPSHOT_URL ||
   (CAMERA_GATEWAY_HOST ? `${CAMERA_GATEWAY_HOST}/api/camera/snapshot.jpeg` : '/api/v3/camera/snapshot')
-export const SANITIZED_SNAPSHOT_URL =
-  process.env.NEXT_PUBLIC_V3_CAMERA_SANITIZED_SNAPSHOT_URL ||
-  (CAMERA_GATEWAY_HOST ? `${CAMERA_GATEWAY_HOST}/api/camera/sanitized.jpeg` : '/api/v3/camera/sanitized')
 export const MJPEG_URL =
   process.env.NEXT_PUBLIC_V3_CAMERA_MJPEG_URL ||
   (CAMERA_GATEWAY_HOST ? `${CAMERA_GATEWAY_HOST}/api/camera/mjpeg` : '/api/v3/camera/mjpeg')

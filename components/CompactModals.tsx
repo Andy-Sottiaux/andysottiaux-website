@@ -24,6 +24,7 @@ import FieldSolarCard from './FieldSolarCard'
 import CameraSourceToggle from './CameraSourceToggle'
 import { useFieldTheme } from './fieldTheme'
 import type { FieldCameraSource } from '@/lib/fieldCameraConfig'
+import { useFundraising } from '@/lib/useFundraising'
 
 const CameraFeedSwitcher = dynamic(() => import('./CameraFeedSwitcher'), {
   ssr: false,
@@ -89,10 +90,11 @@ function Chip({
 
 /* ─────────────────── About ─────────────────── */
 
+const ABOUT_TAGS = ['UAV systems', 'Rotor hardware', 'Edge AI', 'Robotics', 'iOS products']
+
 export function AboutModalContent() {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
-  const tags = ['UAV systems', 'Rotor hardware', 'Edge AI', 'Robotics', 'iOS products']
 
   return (
     <div className="flex flex-col gap-5">
@@ -154,7 +156,7 @@ export function AboutModalContent() {
             and architected robust back-end systems. I thrive at the intersection of hardware and software.
           </p>
           <div className="flex flex-wrap gap-1.5 pt-1">
-            {tags.map((tag) => (
+            {ABOUT_TAGS.map((tag) => (
               <Chip key={tag}>{tag}</Chip>
             ))}
           </div>
@@ -189,6 +191,14 @@ export function AboutModalContent() {
 
 /* ─────────────────── Field Live ─────────────────── */
 
+const LIVE_PROOF = [
+  { label: 'Edge stack', value: 'Linux board, 5 MP camera, on-device inference, thermal/fan health' },
+  { label: 'Power stack', value: 'Solar + LiFePO4 telemetry with graceful stale/offline behavior' },
+  { label: 'Web stack', value: 'Same-origin Next.js APIs, stream fallback, public read-only surface' },
+]
+
+const LIVE_ROLES = ['Hardware integration', 'Embedded services', 'Camera relay', 'Telemetry UI', 'Failure states']
+
 export function LiveModalContent({
   selectedCamera = 'field',
   onCameraChange = () => undefined,
@@ -205,12 +215,6 @@ export function LiveModalContent({
   const intro = selectedCamera === 'field'
     ? 'Live edge-AI camera and solar telemetry from a board I built end-to-end: hardware integration, Linux services, relay APIs, and the public read-only stream you are seeing.'
     : 'HatchingPoint-branded Thingino E220 view through the tailnet proxy. The site only consumes a read-only relay; control and device credentials stay off the browser.'
-  const proof = [
-    { label: 'Edge stack', value: 'Linux board, 5 MP camera, on-device inference, thermal/fan health' },
-    { label: 'Power stack', value: 'Solar + LiFePO4 telemetry with graceful stale/offline behavior' },
-    { label: 'Web stack', value: 'Same-origin Next.js APIs, stream fallback, public read-only surface' },
-  ]
-  const roles = ['Hardware integration', 'Embedded services', 'Camera relay', 'Telemetry UI', 'Failure states']
 
   return (
     <div className="flex flex-col gap-5" data-camera-performance="true">
@@ -250,14 +254,14 @@ export function LiveModalContent({
         </div>
 
         <div className="mt-3 flex flex-wrap gap-1.5">
-          {roles.map((role) => (
+          {LIVE_ROLES.map((role) => (
             <Chip key={role}>{role}</Chip>
           ))}
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-        {proof.map((item) => (
+        {LIVE_PROOF.map((item) => (
           <div
             key={item.label}
             className="rounded-2xl p-3.5"
@@ -395,10 +399,11 @@ const EXPERIENCE_FULL = [
   },
 ]
 
+const EXPERIENCE_SUMMARY_TAGS = ['Rotor systems', 'UAV autonomy', 'Embedded telemetry', 'iOS/web products']
+
 export function ExperienceModalContent() {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
-  const summaryTags = ['Rotor systems', 'UAV autonomy', 'Embedded telemetry', 'iOS/web products']
 
   return (
     <div className="space-y-4">
@@ -430,7 +435,7 @@ export function ExperienceModalContent() {
           I work across the full path from design and integration to field test, telemetry, and product release.
         </p>
         <div className="mt-3 flex flex-wrap gap-1.5">
-          {summaryTags.map((tag) => (
+          {EXPERIENCE_SUMMARY_TAGS.map((tag) => (
             <span
               key={tag}
               className="rounded-md px-2 py-1 text-[10.5px] sm:text-[11px] font-medium"
@@ -509,9 +514,9 @@ export function ExperienceModalContent() {
           </p>
 
           <ul className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {exp.achievements.map((a, i) => (
+            {exp.achievements.map((a) => (
               <li
-                key={i}
+                key={a}
                 className="flex gap-2 rounded-xl px-2.5 py-2 text-[12px] sm:text-[12.5px] leading-snug"
                 style={{
                   color: palette.bodyText,
@@ -613,10 +618,11 @@ const SECONDARY_PROJECTS = [
   { name: 'AirPods Pro 3 Tesla Mount', description: 'Custom 3D-printed holder positioning AirPods Pro 3 at the right height for Tesla wireless chargers.', tech: ['SOLIDWORKS', '3D Printing'] },
 ]
 
+const PROJECT_SUMMARY_TAGS = ['Robotics', 'Production iOS', 'AI UX', 'Embedded telemetry', 'CAD artifacts']
+
 export function ProjectsModalContent() {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
-  const summaryTags = ['Robotics', 'Production iOS', 'AI UX', 'Embedded telemetry', 'CAD artifacts']
 
   return (
     <div className="space-y-4">
@@ -647,7 +653,7 @@ export function ProjectsModalContent() {
           The strongest work here shows the full loop: product judgment, implementation, release, and real-world integration.
         </p>
         <div className="mt-3 flex flex-wrap gap-1.5">
-          {summaryTags.map((tag) => (
+          {PROJECT_SUMMARY_TAGS.map((tag) => (
             <Chip key={tag}>{tag}</Chip>
           ))}
         </div>
@@ -804,33 +810,14 @@ export function ProjectsModalContent() {
 /* ─────────────────── Marathon ─────────────────── */
 
 const MARATHON_DATE = new Date('2026-11-01T00:00:00')
-const FALLBACK_RAISED = 1806
-const FALLBACK_GOAL = 3000
 
 export function MarathonModalContent() {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
+  const { raised, goal } = useFundraising()
 
-  const [raised, setRaised] = useState(FALLBACK_RAISED)
-  const [goal, setGoal] = useState(FALLBACK_GOAL)
-
+  const [now, setNow] = useState(() => new Date())
   useEffect(() => {
-    fetch('/api/fundraising')
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.raised !== null && data.raised !== undefined) {
-          setRaised(data.raised)
-          setGoal(data.goal)
-        }
-      })
-      .catch(() => {})
-  }, [])
-
-  const [now, setNow] = useState(MARATHON_DATE)
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => {
-    setMounted(true)
-    setNow(new Date())
     const id = setInterval(() => setNow(new Date()), 1000)
     return () => clearInterval(id)
   }, [])
@@ -891,7 +878,7 @@ export function MarathonModalContent() {
                 backgroundClip: 'text',
               }}
             >
-              {mounted ? c.v : '—'}
+              {c.v}
             </div>
             <div
               className="text-[9.5px] font-semibold tracking-[0.18em] mt-1.5"
@@ -911,10 +898,12 @@ export function MarathonModalContent() {
           <div
             className="h-full rounded-full"
             style={{
-              width: `${pct}%`,
+              width: '100%',
+              transform: `scaleX(${pct / 100})`,
+              transformOrigin: 'left',
               background: 'linear-gradient(90deg, #E8642C 0%, #ffb84d 100%)',
               boxShadow: '0 0 12px rgba(232,100,44,0.35)',
-              transition: 'width 0.9s cubic-bezier(0.16, 1, 0.3, 1)',
+              transition: 'transform 0.45s cubic-bezier(0.16, 1, 0.3, 1)',
             }}
           />
         </div>
@@ -1142,20 +1131,22 @@ function WebsiteIcon() {
 
 /* ───────────────────── AirPods Tesla Mount modal ──────────────────── */
 
+const AIRPODS_MOUNT_DOWNLOADS: { label: string; href: string }[] = [
+  { label: 'STL', href: '/files/AirPods Pro 3_Teslav2.STL' },
+  { label: 'SLDPRT', href: '/files/AirPods Pro 3_Teslav2.SLDPRT' },
+]
+
+const AIRPODS_MOUNT_STL_URLS = [
+  '/files/assembly-mount.STL',
+  '/files/assembly-airpods.STL',
+]
+
 /** CAD mini-modal for the AirPods Pro 3 Tesla wireless-charger mount.
  *  Mirrors the "featured design" panel from the old home page: live
  *  STL viewer + STL/SLDPRT downloads + a tip jar. */
 export function AirpodsMountModalContent() {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
-  const downloads: { label: string; href: string }[] = [
-    { label: 'STL', href: '/files/AirPods Pro 3_Teslav2.STL' },
-    { label: 'SLDPRT', href: '/files/AirPods Pro 3_Teslav2.SLDPRT' },
-  ]
-  const stlUrls = [
-    '/files/assembly-mount.STL',
-    '/files/assembly-airpods.STL',
-  ]
 
   return (
     <div className="flex flex-col gap-5">
@@ -1169,7 +1160,7 @@ export function AirpodsMountModalContent() {
             : '0 16px 40px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.05)',
         }}
       >
-        <STLViewer urls={stlUrls} />
+        <STLViewer urls={AIRPODS_MOUNT_STL_URLS} />
       </div>
 
       <div
@@ -1208,7 +1199,7 @@ export function AirpodsMountModalContent() {
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        {downloads.map((d) => (
+        {AIRPODS_MOUNT_DOWNLOADS.map((d) => (
           <a
             key={d.label}
             href={d.href}

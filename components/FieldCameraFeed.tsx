@@ -10,7 +10,8 @@
  * opt-in/native player path.
  */
 
-import { type CSSProperties, type RefObject, useEffect, useRef, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { type CSSProperties, type RefObject, useEffect, useReducer, useRef, useState } from 'react'
 import {
   CAMERA_FALLBACK_MEDIA_ENABLED,
   CAMERA_HOST,
@@ -28,6 +29,7 @@ import {
   WEBRTC_OFFER_URL,
   WEBRTC_SOURCE_PARAM,
 } from '@/lib/fieldCameraConfig'
+import { fetchWithTimeout } from '@/lib/fetchWithTimeout'
 import { useFieldTheme } from './fieldTheme'
 
 const DETECTION_WINDOW_SEC = 60
@@ -168,6 +170,46 @@ type CameraPlaybackMetrics = {
   rtcPacketsReceived?: number | null
 }
 
+type CameraPlaybackState = {
+  active: boolean
+  phase: Phase
+  snapshotNonce: number
+  streamNonce: number
+  snapshotReady: boolean
+  streamReady: boolean
+  fastPlayerReady: boolean
+  fastPlayerFailed: boolean
+  httpRtcReady: boolean
+  httpRtcFailed: boolean
+  hlsReady: boolean
+  hlsFailed: boolean
+  hlsRetryCount: number
+  playbackMetrics: CameraPlaybackMetrics | null
+}
+
+type CameraPlaybackAction =
+  | { type: 'sync-active'; active: boolean; now: number }
+  | { type: 'reload'; now: number }
+  | { type: 'start-timeout' }
+  | { type: 'refresh-snapshot'; now: number }
+  | { type: 'fast-player-failed' }
+  | { type: 'fast-player-live' }
+  | { type: 'http-rtc-unsupported' }
+  | { type: 'http-rtc-live' }
+  | { type: 'http-rtc-failed'; hlsPainted: boolean }
+  | { type: 'hls-live' }
+  | { type: 'hls-failed'; rtcPainted: boolean }
+  | { type: 'hls-recovering' }
+  | { type: 'hls-cleanup' }
+  | { type: 'retry-hls' }
+  | { type: 'media-offline' }
+  | { type: 'snapshot-live' }
+  | { type: 'snapshot-error'; hasPaintedTransport: boolean }
+  | { type: 'snapshot-preview'; canPreview: boolean }
+  | { type: 'video-live' }
+  | { type: 'video-error'; canPreview: boolean }
+  | { type: 'metrics'; metrics: CameraPlaybackMetrics | null }
+
 type DetectionItem = {
   ts?: number
   class?: string
@@ -275,6 +317,153 @@ type CollectionProgress = {
   recommendations?: string[]
 }
 
+function resetPlaybackState(
+  previous: CameraPlaybackState | null,
+  active: boolean,
+  now: number,
+): CameraPlaybackState {
+  return {
+    active,
+    phase: active ? 'connecting' : 'paused',
+    snapshotNonce: active ? now : (previous?.snapshotNonce ?? 0),
+    streamNonce: active ? (previous?.streamNonce ?? 0) + 1 : (previous?.streamNonce ?? 0),
+    snapshotReady: false,
+    streamReady: false,
+    fastPlayerReady: false,
+    fastPlayerFailed: !FAST_PLAYER_ENABLED,
+    httpRtcReady: false,
+    httpRtcFailed: !HTTP_RTC_ENABLED,
+    hlsReady: false,
+    hlsFailed: false,
+    hlsRetryCount: 0,
+    playbackMetrics: null,
+  }
+}
+
+function createInitialPlaybackState(active: boolean): CameraPlaybackState {
+  return resetPlaybackState(null, active, active ? Date.now() : 0)
+}
+
+function transitionAfterTransportFailure(phase: Phase, alternatePainted: boolean): Phase {
+  if (alternatePainted) return 'live'
+  return phase === 'connecting' || phase === 'live' ? 'preview' : phase
+}
+
+function cameraPlaybackReducer(
+  state: CameraPlaybackState,
+  action: CameraPlaybackAction,
+): CameraPlaybackState {
+  switch (action.type) {
+    case 'sync-active':
+      return state.active === action.active ? state : resetPlaybackState(state, action.active, action.now)
+    case 'reload':
+      return resetPlaybackState(state, true, action.now)
+    case 'start-timeout':
+      return state.phase === 'connecting' ? { ...state, phase: 'offline' } : state
+    case 'refresh-snapshot':
+      return { ...state, snapshotNonce: action.now }
+    case 'fast-player-failed':
+      return {
+        ...state,
+        fastPlayerReady: false,
+        fastPlayerFailed: true,
+        streamReady: false,
+        phase: transitionAfterTransportFailure(state.phase, false),
+      }
+    case 'fast-player-live':
+      return {
+        ...state,
+        fastPlayerReady: true,
+        snapshotReady: true,
+        streamReady: true,
+        hlsRetryCount: 0,
+        phase: 'live',
+      }
+    case 'http-rtc-unsupported':
+      return { ...state, httpRtcFailed: true }
+    case 'http-rtc-live':
+      return {
+        ...state,
+        httpRtcReady: true,
+        snapshotReady: true,
+        streamReady: true,
+        phase: 'live',
+      }
+    case 'http-rtc-failed':
+      return {
+        ...state,
+        httpRtcReady: false,
+        httpRtcFailed: true,
+        streamReady: action.hlsPainted,
+        phase: transitionAfterTransportFailure(state.phase, action.hlsPainted),
+      }
+    case 'hls-live':
+      return {
+        ...state,
+        hlsReady: true,
+        snapshotReady: true,
+        streamReady: true,
+        hlsRetryCount: 0,
+        phase: 'live',
+      }
+    case 'hls-failed':
+      return {
+        ...state,
+        hlsReady: false,
+        streamReady: action.rtcPainted,
+        hlsFailed: true,
+        hlsRetryCount: state.hlsRetryCount + 1,
+        phase: transitionAfterTransportFailure(state.phase, action.rtcPainted),
+      }
+    case 'hls-recovering':
+      return { ...state, phase: 'connecting' }
+    case 'hls-cleanup':
+      return { ...state, hlsReady: false, playbackMetrics: null }
+    case 'retry-hls':
+      return {
+        ...state,
+        phase: 'connecting',
+        streamReady: false,
+        hlsFailed: false,
+        streamNonce: state.streamNonce + 1,
+      }
+    case 'media-offline':
+      return state.phase === 'live' || state.phase === 'preview' || state.phase === 'connecting'
+        ? { ...state, phase: 'offline' }
+        : state
+    case 'snapshot-live':
+      return { ...state, snapshotReady: true }
+    case 'snapshot-preview':
+      return {
+        ...state,
+        phase: action.canPreview && (state.phase === 'connecting' || state.phase === 'offline') ? 'preview' : state.phase,
+      }
+    case 'snapshot-error':
+      return {
+        ...state,
+        snapshotReady: false,
+        phase: state.phase === 'live' && action.hasPaintedTransport ? state.phase : 'offline',
+      }
+    case 'video-live':
+      return {
+        ...state,
+        snapshotReady: true,
+        streamReady: true,
+        phase: 'live',
+      }
+    case 'video-error':
+      return {
+        ...state,
+        streamReady: false,
+        phase: action.canPreview ? 'preview' : 'offline',
+      }
+    case 'metrics':
+      return { ...state, playbackMetrics: action.metrics }
+    default:
+      return state
+  }
+}
+
 export default function FieldCameraFeed({
   enabled = true,
   fit = 'contain',
@@ -289,20 +478,27 @@ export default function FieldCameraFeed({
   const containerRef = useRef<HTMLDivElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const rtcVideoRef = useRef<HTMLVideoElement>(null)
-  const [active, setActive] = useState<boolean>(() => enabled && initialActive())
-  const [phase, setPhase] = useState<Phase>(() => (enabled && initialActive() ? 'connecting' : 'paused'))
-  const [snapshotNonce, setSnapshotNonce] = useState(0)
-  const [streamNonce, setStreamNonce] = useState(0)
-  const [snapshotReady, setSnapshotReady] = useState(false)
-  const [streamReady, setStreamReady] = useState(false)
-  const [fastPlayerReady, setFastPlayerReady] = useState(false)
-  const [fastPlayerFailed, setFastPlayerFailed] = useState(!FAST_PLAYER_ENABLED)
-  const [httpRtcReady, setHttpRtcReady] = useState(false)
-  const [httpRtcFailed, setHttpRtcFailed] = useState(!HTTP_RTC_ENABLED)
-  const [hlsReady, setHlsReady] = useState(false)
-  const [hlsFailed, setHlsFailed] = useState(false)
-  const [hlsRetryCount, setHlsRetryCount] = useState(0)
-  const [playbackMetrics, setPlaybackMetrics] = useState<CameraPlaybackMetrics | null>(null)
+  const [playback, dispatchPlayback] = useReducer(
+    cameraPlaybackReducer,
+    enabled && initialActive(),
+    createInitialPlaybackState,
+  )
+  const {
+    active,
+    phase,
+    snapshotNonce,
+    streamNonce,
+    snapshotReady,
+    streamReady,
+    fastPlayerReady,
+    fastPlayerFailed,
+    httpRtcReady,
+    httpRtcFailed,
+    hlsReady,
+    hlsFailed,
+    hlsRetryCount,
+    playbackMetrics,
+  } = playback
   const debugMode = useDebugFlag()
   const overlay = useCameraHealthOverlay(active)
   const detections = useDetectionOverlay(active)
@@ -331,7 +527,13 @@ export default function FieldCameraFeed({
     if (!el || typeof document === 'undefined') return
 
     let intersecting = true
-    const recompute = () => setActive(enabled && document.visibilityState === 'visible' && intersecting)
+    const recompute = () => {
+      dispatchPlayback({
+        type: 'sync-active',
+        active: enabled && document.visibilityState === 'visible' && intersecting,
+        now: Date.now(),
+      })
+    }
     const onVis = () => recompute()
     document.addEventListener('visibilitychange', onVis)
 
@@ -355,45 +557,20 @@ export default function FieldCameraFeed({
   }, [enabled])
 
   useEffect(() => {
-    if (!active) {
-      setPhase('paused')
-      setSnapshotReady(false)
-      setStreamReady(false)
-      setFastPlayerReady(false)
-      setFastPlayerFailed(!FAST_PLAYER_ENABLED)
-      setHttpRtcReady(false)
-      setHttpRtcFailed(!HTTP_RTC_ENABLED)
-      setHlsReady(false)
-      setHlsFailed(false)
-      setHlsRetryCount(0)
-      setPlaybackMetrics(null)
-      return
-    }
-
-    setPhase('connecting')
-    setSnapshotReady(false)
-    setStreamReady(false)
-    setFastPlayerReady(false)
-    setFastPlayerFailed(!FAST_PLAYER_ENABLED)
-    setHttpRtcReady(false)
-    setHttpRtcFailed(!HTTP_RTC_ENABLED)
-    setHlsReady(false)
-    setHlsFailed(false)
-    setHlsRetryCount(0)
-    setPlaybackMetrics(null)
-    setStreamNonce((n) => n + 1)
-    setSnapshotNonce(Date.now())
+    if (!active) return
     const timeout = window.setTimeout(() => {
-      setPhase((p) => (p === 'connecting' ? 'offline' : p))
+      dispatchPlayback({ type: 'start-timeout' })
     }, STREAM_START_TIMEOUT_MS)
     return () => {
       window.clearTimeout(timeout)
     }
-  }, [active])
+  }, [active, streamNonce])
 
   useEffect(() => {
     if (!active || hasPaintedTransport) return
-    const refresh = window.setInterval(() => setSnapshotNonce(Date.now()), SNAPSHOT_REFRESH_MS)
+    const refresh = window.setInterval(() => {
+      dispatchPlayback({ type: 'refresh-snapshot', now: Date.now() })
+    }, SNAPSHOT_REFRESH_MS)
     return () => window.clearInterval(refresh)
   }, [active, hasPaintedTransport])
 
@@ -403,10 +580,7 @@ export default function FieldCameraFeed({
     let cancelled = false
     const startTimeout = window.setTimeout(() => {
       if (cancelled) return
-      setFastPlayerReady(false)
-      setFastPlayerFailed(true)
-      setStreamReady(false)
-      setPhase((p) => (p === 'connecting' || p === 'live' ? 'preview' : p))
+      dispatchPlayback({ type: 'fast-player-failed' })
     }, FAST_PLAYER_START_TIMEOUT_MS)
 
     return () => {
@@ -420,7 +594,7 @@ export default function FieldCameraFeed({
 
     const video = rtcVideoRef.current
     if (!video || typeof RTCPeerConnection === 'undefined') {
-      setHttpRtcFailed(true)
+      dispatchPlayback({ type: 'http-rtc-unsupported' })
       return
     }
 
@@ -609,7 +783,7 @@ export default function FieldCameraFeed({
         ...rtcStats,
       }
       metricsWindow.__cayleyCameraMetrics = nextMetrics
-      setPlaybackMetrics(nextMetrics)
+      dispatchPlayback({ type: 'metrics', metrics: nextMetrics })
       evaluateRtcHealth(nextMetrics)
     }
     const markLive = () => {
@@ -621,10 +795,7 @@ export default function FieldCameraFeed({
       degradedReason = null
       metricsWindow.__cayleyCameraLastRtcDegradedReason = null
       publishMetrics()
-      setHttpRtcReady(true)
-      setSnapshotReady(true)
-      setStreamReady(true)
-      setPhase('live')
+      dispatchPlayback({ type: 'http-rtc-live' })
     }
     const fail = (reason?: string) => {
       if (cancelled || failing) return
@@ -633,10 +804,7 @@ export default function FieldCameraFeed({
       metricsWindow.__cayleyCameraLastRtcDegradedReason = degradedReason
       publishMetrics()
       const hlsPainted = (videoRef.current?.readyState ?? 0) >= 2
-      setHttpRtcReady(false)
-      setHttpRtcFailed(true)
-      setStreamReady(hlsPainted)
-      setPhase((p) => (hlsPainted ? 'live' : (p === 'connecting' || p === 'live' ? 'preview' : p)))
+      dispatchPlayback({ type: 'http-rtc-failed', hlsPainted })
     }
     const onVideoError = () => fail('video_error')
     const closePeer = () => {
@@ -720,7 +888,7 @@ export default function FieldCameraFeed({
       if (metricsWindow.__cayleyCameraMetrics?.mode === 'rtc') {
         delete metricsWindow.__cayleyCameraMetrics
       }
-      setPlaybackMetrics(null)
+      dispatchPlayback({ type: 'metrics', metrics: null })
     }
   }, [showHttpRtc, webrtcOfferUrl])
 
@@ -803,27 +971,19 @@ export default function FieldCameraFeed({
         metricsWindow.__cayleyCameraMetrics.videoDroppedFrames = rounded(quality.droppedVideoFrames, 0)
         metricsWindow.__cayleyCameraMetrics.videoTotalFrames = rounded(quality.totalVideoFrames, 0)
       }
-      setPlaybackMetrics(metricsWindow.__cayleyCameraMetrics)
+      dispatchPlayback({ type: 'metrics', metrics: metricsWindow.__cayleyCameraMetrics })
     }
 
     const markLive = () => {
       if (cancelled) return
       painted = true
       publishMetrics()
-      setHlsReady(true)
-      setSnapshotReady(true)
-      setStreamReady(true)
-      setHlsRetryCount(0)
-      setPhase('live')
+      dispatchPlayback({ type: 'hls-live' })
     }
     const fail = () => {
       if (cancelled) return
       const rtcPainted = (rtcVideoRef.current?.readyState ?? 0) >= 2
-      setHlsReady(false)
-      setStreamReady(rtcPainted)
-      setHlsFailed(true)
-      setHlsRetryCount((n) => n + 1)
-      setPhase((p) => (rtcPainted ? 'live' : (p === 'connecting' || p === 'live' ? 'preview' : p)))
+      dispatchPlayback({ type: 'hls-failed', rtcPainted })
     }
 
     video.muted = true
@@ -912,7 +1072,7 @@ export default function FieldCameraFeed({
           if (!data?.fatal) return
           if (recoverAttempts < 3) {
             recoverAttempts += 1
-            setPhase('connecting')
+            dispatchPlayback({ type: 'hls-recovering' })
             if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
               instance.recoverMediaError()
             } else {
@@ -939,12 +1099,11 @@ export default function FieldCameraFeed({
       video.removeEventListener('loadeddata', markLive)
       video.removeEventListener('playing', markLive)
       video.removeEventListener('error', fail)
-      setHlsReady(false)
+      dispatchPlayback({ type: 'hls-cleanup' })
       video.playbackRate = 1
       if (metricsWindow.__cayleyCameraMetrics?.mode === 'hls') {
         delete metricsWindow.__cayleyCameraMetrics
       }
-      setPlaybackMetrics(null)
       hls?.destroy()
       video.removeAttribute('src')
       video.load()
@@ -954,10 +1113,7 @@ export default function FieldCameraFeed({
   useEffect(() => {
     if (!CAMERA_FALLBACK_MEDIA_ENABLED || !showStream || !fastPlayerFailed || !hlsFailed || httpRtcReady) return
     const retry = window.setTimeout(() => {
-      setPhase('connecting')
-      setStreamReady(false)
-      setHlsFailed(false)
-      setStreamNonce((n) => n + 1)
+      dispatchPlayback({ type: 'retry-hls' })
     }, Math.min(30_000, HLS_RETRY_MS * Math.max(1, hlsRetryCount)))
     return () => window.clearTimeout(retry)
   }, [fastPlayerFailed, hlsFailed, hlsRetryCount, httpRtcReady, showStream])
@@ -965,27 +1121,16 @@ export default function FieldCameraFeed({
   useEffect(() => {
     if (!active) return
     if (mediaHealthBad) {
-      setPhase((p) => (p === 'live' || p === 'preview' || p === 'connecting' ? 'offline' : p))
+      dispatchPlayback({ type: 'media-offline' })
       return
     }
     if (snapshotReady) {
-      setPhase((p) => (p === 'connecting' || p === 'offline' ? 'preview' : p))
+      dispatchPlayback({ type: 'snapshot-preview', canPreview: true })
     }
   }, [active, mediaHealthBad, snapshotReady])
 
   const reload = () => {
-    setPhase('connecting')
-    setSnapshotReady(false)
-    setStreamReady(false)
-    setFastPlayerReady(false)
-    setFastPlayerFailed(!FAST_PLAYER_ENABLED)
-    setHttpRtcReady(false)
-    setHttpRtcFailed(!HTTP_RTC_ENABLED)
-    setHlsReady(false)
-    setHlsFailed(false)
-    setHlsRetryCount(0)
-    setStreamNonce((n) => n + 1)
-    setSnapshotNonce(Date.now())
+    dispatchPlayback({ type: 'reload', now: Date.now() })
   }
 
   const streamActive = hasPaintedTransport && phase !== 'paused' && phase !== 'offline'
@@ -1007,12 +1152,11 @@ export default function FieldCameraFeed({
         fetchPriority="high"
         className="pointer-events-none absolute inset-0 h-full w-full"
         onLoad={() => {
-          setSnapshotReady(true)
-          setPhase((p) => (active && !mediaHealthBad && (p === 'connecting' || p === 'offline') ? 'preview' : p))
+          dispatchPlayback({ type: 'snapshot-live' })
+          dispatchPlayback({ type: 'snapshot-preview', canPreview: active && !mediaHealthBad })
         }}
         onError={() => {
-          setSnapshotReady(false)
-          setPhase((p) => (p === 'live' && hasPaintedTransport ? p : 'offline'))
+          dispatchPlayback({ type: 'snapshot-error', hasPaintedTransport })
         }}
         style={{
           objectFit: fit,
@@ -1030,20 +1174,15 @@ export default function FieldCameraFeed({
           title="Cayley field camera low-latency live preview"
           aria-label="Cayley field camera low-latency live preview"
           allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+          sandbox="allow-forms allow-popups allow-presentation allow-same-origin allow-scripts"
+          referrerPolicy="no-referrer"
           allowFullScreen
           className="cayley-go2rtc-player absolute inset-0 h-full w-full"
           onLoad={() => {
-            setFastPlayerReady(true)
-            setSnapshotReady(true)
-            setStreamReady(true)
-            setHlsRetryCount(0)
-            setPhase('live')
+            dispatchPlayback({ type: 'fast-player-live' })
           }}
           onError={() => {
-            setFastPlayerReady(false)
-            setFastPlayerFailed(true)
-            setStreamReady(false)
-            setPhase((p) => (p === 'connecting' || p === 'live' ? 'preview' : p))
+            dispatchPlayback({ type: 'fast-player-failed' })
           }}
           style={{
             opacity: streamActive && fastPlayerReady ? 1 : 0,
@@ -1094,13 +1233,10 @@ export default function FieldCameraFeed({
           aria-label="Cayley field camera clean live preview"
           className="absolute inset-0 h-full w-full"
           onLoad={() => {
-            setSnapshotReady(true)
-            setStreamReady(true)
-            setPhase('live')
+            dispatchPlayback({ type: 'video-live' })
           }}
           onError={() => {
-            setStreamReady(false)
-            setPhase((p) => (snapshotReady && !mediaHealthBad ? 'preview' : 'offline'))
+            dispatchPlayback({ type: 'video-error', canPreview: snapshotReady && !mediaHealthBad })
           }}
           style={{
             objectFit: fit,
@@ -1136,7 +1272,7 @@ export default function FieldCameraFeed({
         native
       </a>
 
-      <style jsx global>{`
+      <style>{`
         @keyframes fldLivePulse {
           0%, 100% { opacity: 1; }
           50%      { opacity: 0.35; }
@@ -1154,13 +1290,13 @@ export default function FieldCameraFeed({
           border: 0;
           background: #000;
         }
+        .field-detection-box {
+          border-color: #34d399;
+          box-shadow: 0 0 0 1px rgba(0,0,0,0.45), 0 0 16px rgba(52,211,153,0.35);
+        }
       `}</style>
     </div>
   )
-}
-
-export function prewarmFieldCameraFeed() {
-  return
 }
 
 function withQueryParams(url: string, params: Record<string, string | number>): string {
@@ -1194,76 +1330,57 @@ function isConfirmedCameraBad(quality: CameraQuality): boolean {
 }
 
 function useCameraQuality(enabled: boolean): CameraQuality {
-  const [quality, setQuality] = useState<CameraQuality>({})
   const lastSampleRef = useRef<QualityRateSample | null>(null)
 
   useEffect(() => {
-    if (!enabled) {
-      setQuality({})
-      lastSampleRef.current = null
-      return
-    }
-
-    let cancelled = false
-    let timer: ReturnType<typeof setTimeout> | null = null
-
-    const tick = async () => {
-      try {
-        const res = await fetch(QUALITY_URL, { cache: 'no-store' })
-        if (res.ok) {
-          const next = (await res.json()) as CameraQuality
-          const hlsFramesWritten = next.sanitizer?.hls_frames_written
-          if (typeof hlsFramesWritten === 'number' && Number.isFinite(hlsFramesWritten)) {
-            const ts = Date.now()
-            const last = lastSampleRef.current
-            if (last && hlsFramesWritten >= last.hlsFramesWritten) {
-              const elapsedS = Math.max(0.001, (ts - last.ts) / 1000)
-              const fps = (hlsFramesWritten - last.hlsFramesWritten) / elapsedS
-              next.sanitizer = {
-                ...next.sanitizer,
-                observed_hls_fps: Number.isFinite(fps) ? fps : null,
-              }
-            }
-            lastSampleRef.current = { ts, hlsFramesWritten }
-          } else {
-            lastSampleRef.current = null
-          }
-          if (!cancelled) setQuality(next)
-        } else if (!cancelled) {
-          setQuality({ ok: false, error: `quality_${res.status}` })
-        }
-      } catch {
-        if (!cancelled) setQuality({ ok: false, error: 'quality_unreachable' })
-      }
-      if (!cancelled) timer = setTimeout(tick, 2_000)
-    }
-
-    tick()
-    return () => {
-      cancelled = true
-      if (timer) clearTimeout(timer)
-    }
+    if (!enabled) lastSampleRef.current = null
   }, [enabled])
 
-  return quality
+  const { data } = useQuery({
+    queryKey: ['camera-quality', enabled],
+    enabled,
+    refetchInterval: 2_000,
+    queryFn: async ({ signal }): Promise<CameraQuality> => {
+      try {
+        const res = await fetchWithTimeout(QUALITY_URL, { signal, cache: 'no-store' }, 4_000)
+        if (!res.ok) return { ok: false, error: `quality_${res.status}` }
+
+        const next = await res.json() as CameraQuality
+        const hlsFramesWritten = next.sanitizer?.hls_frames_written
+        if (typeof hlsFramesWritten === 'number' && Number.isFinite(hlsFramesWritten)) {
+          const ts = Date.now()
+          const last = lastSampleRef.current
+          if (last && hlsFramesWritten >= last.hlsFramesWritten) {
+            const elapsedS = Math.max(0.001, (ts - last.ts) / 1000)
+            const fps = (hlsFramesWritten - last.hlsFramesWritten) / elapsedS
+            next.sanitizer = {
+              ...next.sanitizer,
+              observed_hls_fps: Number.isFinite(fps) ? fps : null,
+            }
+          }
+          lastSampleRef.current = { ts, hlsFramesWritten }
+        } else {
+          lastSampleRef.current = null
+        }
+        return next
+      } catch {
+        return { ok: false, error: 'quality_unreachable' }
+      }
+    },
+  })
+
+  return enabled ? data ?? {} : {}
 }
 
 function useCameraHealthOverlay(enabled: boolean): CameraHealthOverlay {
-  const [overlay, setOverlay] = useState<CameraHealthOverlay>({})
-
-  useEffect(() => {
-    if (!enabled) {
-      setOverlay({})
-      return
-    }
-
-    let cancelled = false
-    let timer: ReturnType<typeof setTimeout> | null = null
-
-    const tick = async () => {
+  const { data } = useQuery({
+    queryKey: ['camera-health-overlay', enabled],
+    enabled,
+    refetchInterval: 10_000,
+    queryFn: async ({ signal }): Promise<CameraHealthOverlay> => {
       const next: CameraHealthOverlay = {}
       try {
-        const healthRes = await fetch(HEALTH_URL, { cache: 'no-store' })
+        const healthRes = await fetchWithTimeout(HEALTH_URL, { signal, cache: 'no-store' }, 6_000)
         if (healthRes.ok) {
           const health = (await healthRes.json()) as HealthPayload
           const media = health.system?.media_graph
@@ -1273,92 +1390,49 @@ function useCameraHealthOverlay(enabled: boolean): CameraHealthOverlay {
       } catch {
         // Overlay is informational only.
       }
-      if (!cancelled) {
-        setOverlay(next)
-        timer = setTimeout(tick, 10_000)
-      }
-    }
+      return next
+    },
+  })
 
-    tick()
-    return () => {
-      cancelled = true
-      if (timer) clearTimeout(timer)
-    }
-  }, [enabled])
-
-  return overlay
+  return enabled ? data ?? {} : {}
 }
 
 function useDetectionOverlay(enabled: boolean): DetectionPayload {
-  const [data, setData] = useState<DetectionPayload>({})
-
-  useEffect(() => {
-    if (!enabled) {
-      setData({})
-      return
-    }
-
-    let cancelled = false
-    let timer: ReturnType<typeof setTimeout> | null = null
-
-    const tick = async () => {
+  const { data } = useQuery({
+    queryKey: ['camera-detections', enabled],
+    enabled,
+    refetchInterval: 2_000,
+    queryFn: async ({ signal }): Promise<DetectionPayload> => {
       try {
-        const res = await fetch(DETECTIONS_POLL_URL, { cache: 'no-store' })
-        if (res.ok) {
-          const next = (await res.json()) as DetectionPayload
-          if (!cancelled) setData(next)
-        }
+        const res = await fetchWithTimeout(DETECTIONS_POLL_URL, { signal, cache: 'no-store' }, 4_000)
+        if (res.ok) return await res.json() as DetectionPayload
       } catch {
-        if (!cancelled) setData((prev) => ({ ...prev, error: 'unreachable' }))
+        return { error: 'unreachable' }
       }
-      if (!cancelled) timer = setTimeout(tick, 2_000)
-    }
+      return {}
+    },
+  })
 
-    tick()
-    return () => {
-      cancelled = true
-      if (timer) clearTimeout(timer)
-    }
-  }, [enabled])
-
-  return data
+  return enabled ? data ?? {} : {}
 }
 
 function useTrainingStatus(enabled: boolean): TrainingStatus {
-  const [data, setData] = useState<TrainingStatus>({})
-
-  useEffect(() => {
-    if (!enabled) {
-      setData({})
-      return
-    }
-
-    let cancelled = false
-    let timer: ReturnType<typeof setTimeout> | null = null
-
-    const tick = async () => {
+  const { data } = useQuery({
+    queryKey: ['camera-training-status', enabled],
+    enabled,
+    refetchInterval: 15_000,
+    queryFn: async ({ signal }): Promise<TrainingStatus> => {
       try {
-        const res = await fetch(TRAINING_STATUS_URL, { cache: 'no-store' })
-        if (res.ok) {
-          const next = (await res.json()) as TrainingStatus
-          if (!cancelled) setData(next)
-        } else if (!cancelled) {
-          setData({ ok: false, error: `training_${res.status}` })
-        }
+        const res = await fetchWithTimeout(TRAINING_STATUS_URL, { signal, cache: 'no-store' }, 6_000)
+        if (res.ok) return await res.json() as TrainingStatus
+        return { ok: false, error: `training_${res.status}` }
       } catch {
-        if (!cancelled) setData((prev) => ({ ...prev, ok: false, error: 'training_unreachable' }))
+        return { ok: false, error: 'training_unreachable' }
       }
-      if (!cancelled) timer = setTimeout(tick, 15_000)
-    }
+    },
+  })
 
-    tick()
-    return () => {
-      cancelled = true
-      if (timer) clearTimeout(timer)
-    }
-  }, [enabled])
-
-  return data
+  return enabled ? data ?? {} : {}
 }
 
 function useOverlayLayout(
@@ -1417,7 +1491,7 @@ function LiveBadge({ phase, quality }: { phase: Extract<Phase, 'preview' | 'live
         style={{
           background: '#34d399',
           boxShadow: '0 0 6px #34d399',
-          animation: 'fldLivePulse 1.6s cubic-bezier(0.4,0,0.6,1) infinite',
+          animation: 'fldLivePulse 0.9s cubic-bezier(0.4,0,0.6,1) infinite',
         }}
       />
       {label}{dropped > 0 ? ` · ${dropped} drops` : ''}
@@ -1550,10 +1624,12 @@ function CameraSpecsOverlay({
 function DetectionOverlay({ data, layout }: { data: DetectionPayload; layout: VideoOverlayLayout | null }) {
   const recent = Array.isArray(data.recent) ? data.recent : []
   const now = typeof data.now === 'number' ? data.now : Date.now() / 1000
-  const withAge = recent
-    .filter((item) => typeof item.ts === 'number')
-    .map((item) => ({ item, age: Math.max(0, now - (item.ts ?? now)) }))
-    .sort((a, b) => (a.item.ts ?? 0) - (b.item.ts ?? 0))
+  const withAge = recent.reduce<Array<{ item: DetectionItem; age: number }>>((acc, item) => {
+    if (typeof item.ts === 'number') {
+      acc.push({ item, age: Math.max(0, now - item.ts) })
+    }
+    return acc
+  }, []).sort((a, b) => (a.item.ts ?? 0) - (b.item.ts ?? 0))
   const latest = withAge.at(-1)
   const age = latest?.age ?? null
   const fresh = age != null && age <= 15
@@ -1600,7 +1676,7 @@ function DetectionOverlay({ data, layout }: { data: DetectionPayload; layout: Vi
   return (
     <>
       <div className="pointer-events-none absolute" style={overlayStyle}>
-        {boxes.map(({ item, age }, index) => {
+        {boxes.map(({ item, age }) => {
           const b = item.bbox
           if (!b) return null
           const left = clamp01(b.x ?? 0) * 100
@@ -1611,17 +1687,15 @@ function DetectionOverlay({ data, layout }: { data: DetectionPayload; layout: Vi
           const opacity = boxFresh ? 1 : Math.max(0.45, 1 - age / 24)
           return (
             <div
-              key={`${item.ts}-${index}`}
-              className="pointer-events-none absolute rounded-[6px] border"
+              key={`${item.ts ?? 'recent'}-${item.class ?? 'object'}-${left.toFixed(2)}-${top.toFixed(2)}-${width.toFixed(2)}-${height.toFixed(2)}`}
+              className="field-detection-box pointer-events-none absolute rounded-[6px] border"
               style={{
                 left: `${left}%`,
                 top: `${top}%`,
                 width: `${width}%`,
                 height: `${height}%`,
                 opacity,
-                borderColor: '#34d399',
                 borderStyle: boxFresh ? 'solid' : 'dashed',
-                boxShadow: '0 0 0 1px rgba(0,0,0,0.45), 0 0 16px rgba(52,211,153,0.35)',
               }}
             >
               <div
@@ -1722,7 +1796,7 @@ function FeedShimmer({ label, isLight }: { label: string; isLight: boolean }) {
           ? 'linear-gradient(105deg, rgba(236,236,239,0.42) 25%, rgba(246,246,248,0.55) 50%, rgba(236,236,239,0.42) 75%)'
           : 'linear-gradient(105deg, rgba(10,10,12,0.34) 25%, rgba(22,22,26,0.48) 50%, rgba(10,10,12,0.34) 75%)',
         backgroundSize: '200% 100%',
-        animation: 'fldShimmer 2.4s linear infinite',
+        animation: 'fldShimmer 0.9s linear infinite',
         backdropFilter: 'blur(1px)',
         WebkitBackdropFilter: 'blur(1px)',
       }}
@@ -1780,7 +1854,7 @@ function CameraGlyph({ dim = false, isLight }: { dim?: boolean; isLight: boolean
       fill="none"
       style={{
         opacity: dim ? 0.55 : 1,
-        animation: dim ? undefined : 'fldPlaceholderPulse 2.4s ease-in-out infinite',
+        animation: dim ? undefined : 'fldPlaceholderPulse 0.9s ease-in-out infinite',
       }}
     >
       <rect x="8" y="13" width="26" height="18" rx="5" fill={fill} stroke={stroke} />
@@ -2080,8 +2154,10 @@ function trainingDetail(data: TrainingStatus): string | null {
   }
 
   const failures = data.model_wait?.readiness_failures
-    ?.map(humanizeReadinessFailure)
-    .filter(Boolean)
+    ?.flatMap((failure) => {
+      const text = humanizeReadinessFailure(failure)
+      return text ? [text] : []
+    })
     .slice(0, 2)
   if (failures?.length) return failures.join(' · ')
 
@@ -2170,11 +2246,10 @@ function initialActive(): boolean {
 }
 
 function useDebugFlag(): boolean {
-  const [on, setOn] = useState(false)
-  useEffect(() => {
-    if (typeof window === 'undefined') return
+  const [on] = useState(() => {
+    if (typeof window === 'undefined') return false
     const url = new URL(window.location.href)
-    setOn(url.searchParams.get('debug') === '1')
-  }, [])
+    return url.searchParams.get('debug') === '1'
+  })
   return on
 }

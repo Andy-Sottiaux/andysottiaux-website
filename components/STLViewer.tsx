@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useEffect, useRef, useState } from 'react'
 
 function isWebGLAvailable(): boolean {
@@ -13,13 +14,12 @@ function isWebGLAvailable(): boolean {
 
 export default function STLViewer({ urls, colors }: { urls: string[]; colors?: number[] }) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const [supported, setSupported] = useState(true)
+  const [supported, setSupported] = useState(() =>
+    typeof document === 'undefined' ? true : isWebGLAvailable()
+  )
 
   useEffect(() => {
-    if (!isWebGLAvailable()) {
-      setSupported(false)
-      return
-    }
+    if (!supported) return
 
     const container = containerRef.current
     if (!container) return
@@ -29,8 +29,10 @@ export default function STLViewer({ urls, colors }: { urls: string[]; colors?: n
     let resumeTimer: ReturnType<typeof setTimeout>
 
     import('three').then(async (THREE) => {
-      const { STLLoader } = await import('three/examples/jsm/loaders/STLLoader.js')
-      const { OrbitControls } = await import('three/examples/jsm/controls/OrbitControls.js')
+      const [{ STLLoader }, { OrbitControls }] = await Promise.all([
+        import('three/examples/jsm/loaders/STLLoader.js'),
+        import('three/examples/jsm/controls/OrbitControls.js'),
+      ])
 
       const width = container.clientWidth
       const height = container.clientHeight
@@ -171,15 +173,17 @@ export default function STLViewer({ urls, colors }: { urls: string[]; colors?: n
         }
       }
     }
-  }, [urls, colors])
+  }, [colors, supported, urls])
 
   if (!supported) {
     return (
       <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-2xl">
-        <img
+        <Image
           src="/images/airpods-tesla-mount.png"
           alt="AirPods Pro 3 Tesla Charger Mount"
-          className="w-full h-full object-contain p-4"
+          fill
+          sizes="(max-width: 768px) 100vw, 50vw"
+          className="object-contain p-4"
         />
       </div>
     )

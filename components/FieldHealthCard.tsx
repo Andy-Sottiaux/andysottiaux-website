@@ -14,12 +14,16 @@
  * online/offline accent (emerald/red) stays constant in both themes.
  */
 
+import { useQuery, useQueryClient, type QueryFunctionContext } from '@tanstack/react-query'
 import { type CSSProperties, useEffect, useRef, useState } from 'react'
+import { fetchWithTimeout } from '@/lib/fetchWithTimeout'
 import { useFieldTheme } from './fieldTheme'
 
 const HEALTH_URL = '/api/v3/health'
 const FAN_URL = '/api/v3/fan'
 const FAN_OVERRIDE_TTL_SEC = 90
+const HEALTH_QUERY_KEY = ['field-health'] as const
+const FAN_COMMIT_KEYS = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Enter', ' '])
 
 // Defensive: the upstream /api/health JSON shape has evolved. Accept a
 // few field-name variants without exploding.
@@ -116,7 +120,59 @@ type HealthDigest = {
   system?: SystemLoose
 }
 
+type HealthPollResult = {
+  digest: HealthDigest | null
+}
+
 type HealthCardVariant = 'default' | 'compact'
+
+function buildHealthDigest(parsed: HealthLoose, rttMs: number): HealthDigest {
+  const services = parsed.services ?? []
+  const total = parsed.service_count ?? services.length
+  const downList = parsed.services_down ?? services.reduce<string[]>((acc, s) => {
+    const down = typeof s.OK === 'boolean'
+      ? !s.OK
+      : typeof s.ok === 'boolean'
+        ? !s.ok
+        : typeof s.status === 'string'
+          ? s.status !== 'running'
+          : false
+    if (down) acc.push(s.name ?? s.Name ?? '?')
+    return acc
+  }, [])
+  const down = downList?.length ?? 0
+  const up = Math.max(0, total - down)
+
+  // The board considers "ok" = critical-subsystems fresh. Detector and
+  // recorder being down is informational, not failure, but still shown.
+  return {
+    ok: parsed.ok ?? (down === 0),
+    uptimeSec: parsed.uptime_s ?? 0,
+    servicesUp: up,
+    servicesTotal: total,
+    servicesDown: downList ?? [],
+    rttMs,
+    fetchedAt: Date.now(),
+    system: parsed.system,
+  }
+}
+
+async function fetchHealthDigest({ signal }: QueryFunctionContext<typeof HEALTH_QUERY_KEY>): Promise<HealthPollResult> {
+  const t0 = performance.now()
+
+  try {
+    const res = await fetchWithTimeout(HEALTH_URL, { signal, cache: 'no-store' }, 8_000)
+    const rttMs = Math.round(performance.now() - t0)
+    if (!res.ok) return { digest: null }
+
+    const parsed = (await res.json()) as HealthLoose
+    if (!parsed || 'error' in (parsed as object)) return { digest: null }
+
+    return { digest: buildHealthDigest(parsed, rttMs) }
+  } catch {
+    return { digest: null }
+  }
+}
 
 function fmtUptime(s: number): string {
   if (s < 60) return `${Math.floor(s)}s`
@@ -215,7 +271,7 @@ function FanControl({
           onChange={(e) => onChange(Number(e.currentTarget.value))}
           onPointerUp={(e) => commitFromInput(e.currentTarget)}
           onKeyUp={(e) => {
-            if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Enter', ' '].includes(e.key)) {
+            if (FAN_COMMIT_KEYS.has(e.key)) {
               commitFromInput(e.currentTarget)
             }
           }}
@@ -237,84 +293,33 @@ export default function FieldHealthCard({
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
   const compact = variant === 'compact'
+  const queryClient = useQueryClient()
+  const { data: healthPoll } = useQuery({
+    queryKey: HEALTH_QUERY_KEY,
+    queryFn: fetchHealthDigest,
+    refetchInterval: 15_000,
+  })
 
-  const [digest, setDigest] = useState<HealthDigest | null>(null)
-  // Tri-state: 'connecting' until the first poll resolves, then 'online'
-  // or 'offline'. Avoids a "broken-looking" Offline flash on first paint.
-  const [phase, setPhase] = useState<'connecting' | 'resolved'>('connecting')
   const [, forceTick] = useState(0) // re-render every 30s for "X min ago"
   const [fanDraft, setFanDraft] = useState<number | null>(null)
   const [fanPending, setFanPending] = useState(false)
   const [fanError, setFanError] = useState<string | null>(null)
   const lastOkRef = useRef<HealthDigest | null>(null)
+  const digest = healthPoll?.digest ?? null
+  // Tri-state: 'connecting' until the first poll resolves, then 'online'
+  // or 'offline'. Avoids a broken-looking Offline flash on first paint.
+  const phase: 'connecting' | 'resolved' = healthPoll ? 'resolved' : 'connecting'
 
   useEffect(() => {
-    let cancelled = false
-    let timer: ReturnType<typeof setTimeout> | null = null
-
-    const tick = async () => {
-      const t0 = performance.now()
-      let ok = false
-      let parsed: HealthLoose | null = null
-      try {
-        const ctrl = new AbortController()
-        const timeoutId = setTimeout(() => ctrl.abort(), 8000)
-        const res = await fetch(HEALTH_URL, { signal: ctrl.signal, cache: 'no-store' })
-        clearTimeout(timeoutId)
-        if (res.ok) {
-          parsed = (await res.json()) as HealthLoose
-          ok = true
-        }
-      } catch {
-        ok = false
-      }
-      const rttMs = Math.round(performance.now() - t0)
-      if (cancelled) return
-
-      // Mark phase resolved either way — we've heard back (success or
-      // failure) at least once, so the UI can stop saying "Connecting".
-      setPhase('resolved')
-
-      if (ok && parsed && !('error' in (parsed as object))) {
-        const services = parsed.services ?? []
-        const total = parsed.service_count ?? services.length
-        const downList = parsed.services_down ?? services.filter((s) => {
-          if (typeof s.OK === 'boolean') return !s.OK
-          if (typeof s.ok === 'boolean') return !s.ok
-          if (typeof s.status === 'string') return s.status !== 'running'
-          return false
-        }).map((s) => s.name ?? s.Name ?? '?')
-        const down = downList?.length ?? 0
-        const up = Math.max(0, total - down)
-        // The board considers "ok" = critical-subsystems fresh. Detector
-        // and recorder being down is informational, not failure — but
-        // we still surface count + names in the UI.
-        const next: HealthDigest = {
-          ok: parsed.ok ?? (down === 0),
-          uptimeSec: parsed.uptime_s ?? 0,
-          servicesUp: up,
-          servicesTotal: total,
-          servicesDown: downList ?? [],
-          rttMs,
-          fetchedAt: Date.now(),
-          system: parsed.system,
-        }
-        setDigest(next)
-        lastOkRef.current = next
-      } else {
-        setDigest(null)
-      }
-      timer = setTimeout(tick, 15_000)
-    }
-
-    tick()
     const ageTimer = setInterval(() => forceTick((n) => n + 1), 30_000)
     return () => {
-      cancelled = true
-      if (timer) clearTimeout(timer)
       clearInterval(ageTimer)
     }
   }, [])
+
+  useEffect(() => {
+    if (digest) lastOkRef.current = digest
+  }, [digest])
 
   const connecting = phase === 'connecting'
   const online = digest != null && digest.ok
@@ -541,12 +546,6 @@ export default function FieldHealthCard({
     { label: 'Edge AI', value: aiState, detail: aiDetail, color: aiState === 'Standby' ? (isLight ? '#b45309' : '#fcd34d') : aiState === 'Active' ? valueColor : palette.mutedText },
   ]
 
-  useEffect(() => {
-    if (!fanPending && fanPct != null) {
-      setFanDraft(fanPct)
-    }
-  }, [fanPct, fanPending])
-
   const commitFanSpeed = async (rawSpeed: number) => {
     const speed = Math.max(0, Math.min(100, Math.round(rawSpeed)))
     setFanDraft(speed)
@@ -554,6 +553,7 @@ export default function FieldHealthCard({
 
     setFanPending(true)
     setFanError(null)
+    let applied = false
     try {
       const res = await fetch(FAN_URL, {
         method: 'POST',
@@ -566,20 +566,26 @@ export default function FieldHealthCard({
         throw new Error(data?.error || 'fan_command_failed')
       }
       if (data?.fan) {
-        setDigest((prev) => prev
-          ? {
-              ...prev,
+        applied = true
+        queryClient.setQueryData<HealthPollResult>(HEALTH_QUERY_KEY, (prev) => {
+          if (!prev?.digest) return prev
+          return {
+            ...prev,
+            digest: {
+              ...prev.digest,
               system: {
-                ...(prev.system ?? {}),
+                ...(prev.digest.system ?? {}),
                 argon_fan: data.fan,
               },
-            }
-          : prev)
+            },
+          }
+        })
       }
     } catch {
       setFanError('Retry')
     } finally {
       setFanPending(false)
+      if (applied) setFanDraft(null)
     }
   }
 
@@ -591,11 +597,10 @@ export default function FieldHealthCard({
         style={{
           background: palette.cardBackground,
           border: palette.cardBorder,
-          backdropFilter: 'var(--field-card-backdrop-filter, blur(24px))',
-          WebkitBackdropFilter: 'var(--field-card-backdrop-filter, blur(24px))',
+          backdropFilter: 'var(--field-card-backdrop-filter, blur(8px))',
+          WebkitBackdropFilter: 'var(--field-card-backdrop-filter, blur(8px))',
           boxShadow: palette.cardShadow,
         }}
-        role="region"
         aria-label="System health"
       >
         <div
@@ -722,7 +727,7 @@ export default function FieldHealthCard({
           )}
         </div>
 
-        <style jsx global>{`
+        <style>{`
           @keyframes fldHealthPing {
             0%   { transform: scale(1);   opacity: 0.55; }
             80%  { transform: scale(2.4); opacity: 0;    }
@@ -740,11 +745,10 @@ export default function FieldHealthCard({
       style={{
         background: palette.cardBackground,
         border: palette.cardBorder,
-        backdropFilter: 'var(--field-card-backdrop-filter, blur(24px))',
-        WebkitBackdropFilter: 'var(--field-card-backdrop-filter, blur(24px))',
+        backdropFilter: 'var(--field-card-backdrop-filter, blur(8px))',
+        WebkitBackdropFilter: 'var(--field-card-backdrop-filter, blur(8px))',
         boxShadow: palette.cardShadow,
       }}
-      role="region"
       aria-label="System health"
     >
       <div
@@ -1021,7 +1025,7 @@ export default function FieldHealthCard({
         </div>
       )}
 
-      <style jsx global>{`
+      <style>{`
         .field-fan-rotor {
           --fan-spin: 1s;
           width: 14px;

@@ -12,7 +12,7 @@
  * they're the visual hooks that say "this number is alive right now."
  */
 
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext } from 'react'
 import { useTheme } from 'next-themes'
 
 type FieldPalette = {
@@ -78,14 +78,7 @@ const FieldThemeContext = createContext<FieldPalette>(DARK_PALETTE)
 
 export function FieldThemeProvider({ children }: { children: React.ReactNode }) {
   const { resolvedTheme } = useTheme()
-  const [mounted, setMounted] = useState(false)
-
-  // Avoid an SSR/CSR palette mismatch — render the dark palette until we've
-  // mounted and read `resolvedTheme`. Matches how `next-themes` itself
-  // hydrates the `class` attribute.
-  useEffect(() => setMounted(true), [])
-
-  const palette = mounted && resolvedTheme === 'light' ? LIGHT_PALETTE : DARK_PALETTE
+  const palette = resolvedTheme === 'light' ? LIGHT_PALETTE : DARK_PALETTE
 
   return (
     <FieldThemeContext.Provider value={palette}>

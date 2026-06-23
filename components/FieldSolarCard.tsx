@@ -11,14 +11,16 @@
  * sparkline + green→cyan SOC gradient stay constant in both themes.
  */
 
-import { useEffect, useState } from 'react'
+import { useQuery, type QueryFunctionContext } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
+import { fetchWithTimeout } from '@/lib/fetchWithTimeout'
 import { useFieldTheme } from './fieldTheme'
 
 const SOLAR_URL = '/api/v3/solar'
 const SOLAR_HISTORY_URL = '/api/v3/solar/history'
 const COMPACT_HISTORY_POINTS = 72
 const FULL_HISTORY_POINTS = 288
+const SOLAR_QUERY_KEY = ['field-solar'] as const
 
 type Solar = {
   battery_voltage: number
@@ -46,6 +48,59 @@ type SolarHistoryPoint = {
   battery_voltage: number
   solar_power: number
   timestamp: number
+}
+
+type SolarPollResult = {
+  data: (Partial<Solar> & { error?: string }) | null
+  ok: boolean
+  offline: boolean
+  status: number
+}
+
+type SolarHistoryQueryKey = readonly ['field-solar-history', number]
+
+async function fetchSolarTelemetry({ signal }: QueryFunctionContext<typeof SOLAR_QUERY_KEY>): Promise<SolarPollResult> {
+  try {
+    const res = await fetchWithTimeout(SOLAR_URL, { signal, cache: 'no-store' }, 8_000)
+    let data: SolarPollResult['data'] = null
+    try {
+      data = await res.json()
+    } catch {
+      data = null
+    }
+
+    return {
+      data,
+      ok: res.ok,
+      offline: false,
+      status: res.status,
+    }
+  } catch {
+    return {
+      data: null,
+      ok: false,
+      offline: true,
+      status: 0,
+    }
+  }
+}
+
+async function fetchSolarHistory({
+  queryKey,
+  signal,
+}: QueryFunctionContext<SolarHistoryQueryKey>): Promise<SolarHistoryPoint[]> {
+  const [, points] = queryKey
+  try {
+    const res = await fetchWithTimeout(
+      `${SOLAR_HISTORY_URL}?points=${points}`,
+      { signal, cache: 'no-store' },
+      8_000,
+    )
+    if (!res.ok) return []
+    return normalizeHistory(await res.json())
+  } catch {
+    return []
+  }
 }
 
 function fmtAge(seconds: number): string {
@@ -91,91 +146,28 @@ export default function FieldSolarCard({
   const compact = variant === 'compact'
   const requestedHistoryPoints = historyPoints ?? (compact ? COMPACT_HISTORY_POINTS : FULL_HISTORY_POINTS)
 
-  const [solar, setSolar] = useState<Solar | null>(null)
-  const [state, setState] = useState<CardState>('loading')
-  const [history, setHistory] = useState<SolarHistoryPoint[]>([])
+  const { data: solarPoll, isPending: solarPending } = useQuery({
+    queryKey: SOLAR_QUERY_KEY,
+    queryFn: fetchSolarTelemetry,
+    refetchInterval: 30_000,
+  })
+  const { data: history = [] } = useQuery({
+    queryKey: ['field-solar-history', requestedHistoryPoints] as const,
+    queryFn: fetchSolarHistory,
+    refetchInterval: 5 * 60_000,
+  })
 
-  useEffect(() => {
-    let cancelled = false
-    let timer: ReturnType<typeof setTimeout> | null = null
-
-    const tick = async () => {
-      try {
-        const ctrl = new AbortController()
-        const t = setTimeout(() => ctrl.abort(), 8000)
-        const res = await fetch(SOLAR_URL, { signal: ctrl.signal, cache: 'no-store' })
-        clearTimeout(t)
-        if (cancelled) return
-
-        // Read body even on non-2xx — the upstream's 503 carries useful
-        // info ({"error":"no telemetry yet"}). We treat any successful HTTP
-        // round-trip with parseable JSON as "we heard from the device";
-        // only true network/proxy failures count as 'offline'.
-        let data: Partial<Solar> & { error?: string } | null = null
-        try {
-          data = await res.json()
-        } catch {
-          data = null
-        }
-
-        if (data && typeof data.battery_voltage === 'number' && !data.error) {
-          const reading = data as Solar
-          setSolar(reading)
-          // Server now distinguishes live (recent) from stale (cached
-          // last-known). Both render the values; only the badge differs.
-          setState(reading.live === false || reading.stale === true ? 'stale' : 'live')
-        } else if (data && (data.error || res.status === 503)) {
-          // Upstream is reachable but reports no telemetry yet (BMV never
-          // seen since boot). Treat as 'idle / awaiting', not broken.
-          setState('no-telemetry')
-        } else if (!res.ok) {
-          // Proxy or upstream actively failing (502 / unreachable).
-          setState('offline')
-        } else {
-          // 2xx but unparseable / unexpected shape.
-          setState('no-telemetry')
-        }
-      } catch {
-        if (!cancelled) setState('offline')
-      }
-      timer = setTimeout(tick, 30_000)
-    }
-    tick()
-    return () => {
-      cancelled = true
-      if (timer) clearTimeout(timer)
-    }
-  }, [])
-
-  useEffect(() => {
-    let cancelled = false
-    let timer: ReturnType<typeof setTimeout> | null = null
-
-    const tick = async () => {
-      try {
-        const ctrl = new AbortController()
-        const t = setTimeout(() => ctrl.abort(), 8000)
-        const res = await fetch(`${SOLAR_HISTORY_URL}?points=${requestedHistoryPoints}`, {
-          signal: ctrl.signal,
-          cache: 'no-store',
-        })
-        clearTimeout(t)
-        if (!cancelled && res.ok) {
-          const data = await res.json()
-          setHistory(normalizeHistory(data))
-        }
-      } catch {
-        if (!cancelled) setHistory([])
-      }
-      timer = setTimeout(tick, 5 * 60_000)
-    }
-
-    tick()
-    return () => {
-      cancelled = true
-      if (timer) clearTimeout(timer)
-    }
-  }, [requestedHistoryPoints])
+  const solarData = solarPoll?.data ?? null
+  const solar = solarData && typeof solarData.battery_voltage === 'number' && !solarData.error
+    ? solarData as Solar
+    : null
+  const state: CardState = solar
+    ? (solar.live === false || solar.stale === true ? 'stale' : 'live')
+    : solarPending
+      ? 'loading'
+      : solarPoll?.offline || solarPoll?.ok === false && solarPoll?.status !== 503 && !solarPoll?.data?.error
+        ? 'offline'
+        : 'no-telemetry'
 
   const soc = solar
     ? Math.round(typeof solar.battery_soc === 'number'
@@ -208,11 +200,10 @@ export default function FieldSolarCard({
       style={{
         background: palette.cardBackground,
         border: palette.cardBorder,
-        backdropFilter: 'var(--field-card-backdrop-filter, blur(24px))',
-        WebkitBackdropFilter: 'var(--field-card-backdrop-filter, blur(24px))',
+        backdropFilter: 'var(--field-card-backdrop-filter, blur(8px))',
+        WebkitBackdropFilter: 'var(--field-card-backdrop-filter, blur(8px))',
         boxShadow: palette.cardShadow,
       }}
-      role="region"
       aria-label="Solar power and battery"
     >
       {/* Ambient warm glow */}
@@ -305,7 +296,7 @@ export default function FieldSolarCard({
               style={{
                 background: isLight ? '#b45309' : '#fcd34d',
                 boxShadow: isLight ? '0 0 6px rgba(180,83,9,0.45)' : '0 0 8px rgba(252,211,77,0.55)',
-                animation: 'fldSolarIdlePulse 2.4s cubic-bezier(0.4,0,0.6,1) infinite',
+                animation: 'fldSolarIdlePulse 0.9s cubic-bezier(0.4,0,0.6,1) infinite',
               }}
             />
             <span>
@@ -328,10 +319,12 @@ export default function FieldSolarCard({
           <div
             className="h-full rounded-full"
             style={{
-              width: hasValues ? `${Math.max(0, Math.min(100, soc ?? 0))}%` : '0%',
+              width: '100%',
+              transform: `scaleX(${hasValues ? Math.max(0, Math.min(100, soc ?? 0)) / 100 : 0})`,
+              transformOrigin: 'left',
               background: 'linear-gradient(90deg, #30d158 0%, #06d6f4 100%)',
               boxShadow: '0 0 12px rgba(6,214,244,0.4)',
-              transition: 'width 0.9s cubic-bezier(0.16, 1, 0.3, 1)',
+              transition: 'transform 0.9s cubic-bezier(0.16, 1, 0.3, 1)',
             }}
           />
         </div>
@@ -445,7 +438,7 @@ export default function FieldSolarCard({
         </div>
       )}
 
-      <style jsx global>{`
+      <style>{`
         @keyframes fldSolarIdlePulse {
           0%, 100% { opacity: 0.4; transform: scale(1); }
           50%      { opacity: 1;   transform: scale(1.25); }

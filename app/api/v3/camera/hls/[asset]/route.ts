@@ -29,11 +29,16 @@ function cacheHeaders(asset: string) {
   }
 }
 
-export async function GET(_request: Request, { params }: { params: { asset: string } }) {
+type HlsAssetContext = {
+  params: Promise<{ asset: string }>
+}
+
+export async function GET(_request: Request, { params }: HlsAssetContext) {
   const blocked = fallbackMediaResponse('camera hls fallback')
   if (blocked) return blocked
 
-  const asset = params.asset
+  const resolvedParams = await params
+  const asset = resolvedParams.asset
   if (!asset || asset !== asset.split('/').at(-1) || (!asset.endsWith('.m3u8') && !asset.endsWith('.ts'))) {
     return new Response('bad hls asset', { status: 400, headers: { 'Cache-Control': 'no-store' } })
   }

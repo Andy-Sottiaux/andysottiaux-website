@@ -14,10 +14,9 @@ export default function CameraSourceToggle({
   compact?: boolean
 }) {
   return (
-    <div
-      role="group"
+    <fieldset
       aria-label="Camera source"
-      className={`${compact ? 'h-7 text-[10px]' : 'h-8 text-[10.5px]'} grid grid-cols-2 overflow-hidden rounded-full p-0.5 font-semibold uppercase`}
+      className={`${compact ? 'h-7 text-[10px]' : 'h-8 text-[10.5px]'} m-0 grid min-w-0 grid-cols-2 overflow-hidden rounded-full border-0 p-0.5 font-semibold uppercase`}
       style={{
         background: isLight ? 'rgba(28,26,28,0.08)' : 'rgba(255,255,255,0.1)',
         color: isLight ? 'rgba(28,26,28,0.66)' : 'rgba(255,255,255,0.64)',
@@ -49,6 +48,6 @@ export default function CameraSourceToggle({
           </button>
         )
       })}
-    </div>
+    </fieldset>
   )
 }

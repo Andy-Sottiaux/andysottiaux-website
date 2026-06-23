@@ -141,8 +141,10 @@ async function readCurrentSettings() {
   const relay = await fetchRelaySettings()
   if (relay) return relay
 
-  const config = await postPrudynt(CONFIG_REQUEST, 10000)
-  const motor = await requestThinginoPath('/x/json-motor-params.cgi', {}, 5000)
+  const [config, motor] = await Promise.all([
+    postPrudynt(CONFIG_REQUEST, 10000),
+    requestThinginoPath('/x/json-motor-params.cgi', {}, 5000),
+  ])
 
   const configData = config.ok ? await readJson(config.response) : null
   const motorData = motor.ok && motor.response.ok ? await readJson(motor.response) : null

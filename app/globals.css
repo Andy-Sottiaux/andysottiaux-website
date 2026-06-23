@@ -72,8 +72,8 @@ html {
 @media (max-width: 767px) {
   [data-peek-target="true"],
   [data-field-card="true"] {
-    backdrop-filter: blur(10px) !important;
-    -webkit-backdrop-filter: blur(10px) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
   }
 }
 
@@ -81,7 +81,7 @@ html {
  * animations and heavy glass compositing compete with the browser video
  * pipeline, which shows up as perceived flicker and dropped rendered frames. */
 [data-camera-performance="true"] {
-  --field-card-backdrop-filter: blur(10px);
+  --field-card-backdrop-filter: blur(8px);
 }
 
 [data-camera-performance="true"] *,

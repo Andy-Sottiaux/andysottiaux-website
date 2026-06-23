@@ -1,6 +1,4 @@
-import { ImageResponse } from '@vercel/og'
-
-export const runtime = 'edge'
+import { ImageResponse } from 'next/og'
 
 export const alt = 'Andy Sottiaux - Hardware/Software Engineer'
 export const size = {

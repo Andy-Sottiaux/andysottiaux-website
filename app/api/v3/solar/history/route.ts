@@ -125,7 +125,7 @@ function historyItems(data: unknown): { items: unknown[]; key: 'points' | 'histo
 function downsampleHistory(items: unknown[], maxPoints: number): unknown[] {
   if (items.length <= maxPoints) return items
 
-  const sorted = [...items].sort((a, b) => pointTimestamp(a) - pointTimestamp(b))
+  const sorted = items.toSorted((a, b) => pointTimestamp(a) - pointTimestamp(b))
   const sampled: unknown[] = []
   const bucketSize = sorted.length / maxPoints
 
