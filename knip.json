@@ -1,0 +1,14 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "app/**/*.{ts,tsx}",
+    "components/**/*.{ts,tsx}",
+    "lib/**/*.{ts,tsx}",
+    "scripts/**/*.{js,mjs,cjs}",
+    "tests/**/*.{ts,tsx}",
+    "doctor.config.ts"
+  ],
+  "project": [
+    "**/*.{ts,tsx,js,mjs,cjs}"
+  ]
+}
