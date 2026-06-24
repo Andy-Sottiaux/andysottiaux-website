@@ -101,3 +101,47 @@ CAMERA_TRANSPORT_OFFER_URL=https://cam2.andysottiaux.com/api/webrtc \
 CAMERA_TRANSPORT_SOURCE_PARAM=src \
 node scripts/audit-camera-transport.mjs
 ```
+
+## Cam 2 DHCP Recovery
+
+Cam 2 is served through `cayley-relay`, but the Thingino camera itself still
+receives a LAN DHCP address. If that address changes, update both files
+together:
+
+```text
+/etc/hatchingpoint/cam2-relay.env
+/opt/cayley-relay/go2rtc.yaml
+```
+
+`ops/cam2-recover.py` is the versioned recovery utility for that failure mode.
+It first probes the currently configured host. Only if that host is broken does
+it scan `192.168.4.0/22` for a Thingino device, verify login, motor metadata,
+snapshot JPEG, and RTSP, then update both config files and restart the affected
+services.
+
+Installed on `cayley-relay`:
+
+```text
+/opt/hatchingpoint/cam2-recover.py
+/etc/systemd/system/hatchingpoint-cam2-recover.service
+/etc/systemd/system/hatchingpoint-cam2-recover.timer
+```
+
+Useful commands:
+
+```sh
+sudo systemctl start hatchingpoint-cam2-recover.service
+sudo systemctl status hatchingpoint-cam2-recover.timer
+sudo journalctl -u hatchingpoint-cam2-recover.service -n 80 --no-pager
+sudo python3 /opt/hatchingpoint/cam2-recover.py --check-only
+```
+
+The website also exposes a same-origin diagnostics endpoint:
+
+```text
+/api/v3/camera2/diagnostics
+/api/v3/camera2/diagnostics?active=1
+```
+
+The default diagnostics endpoint is read-mostly. Passing `active=1` also sends
+a safe `stop` command through the public control path to verify control writes.
