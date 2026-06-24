@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import { Analytics } from "@vercel/analytics/next"
 import { SpeedInsights } from "@vercel/speed-insights/next"
-import QueryProvider from '../components/QueryProvider'
 import ThemeProvider from '../components/ThemeProvider'
 import './globals.css'
 
@@ -195,15 +194,13 @@ export default function RootLayout({
       </head>
       <body>
         <ThemeProvider>
-          <QueryProvider>
-            <a
-              href="#main-content"
-              className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-white dark:focus:bg-gray-800 focus:text-foreground focus:rounded-lg focus:shadow-lg focus:font-medium"
-            >
-              Skip to main content
-            </a>
-            {children}
-          </QueryProvider>
+          <a
+            href="#main-content"
+            className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-white dark:focus:bg-gray-800 focus:text-foreground focus:rounded-lg focus:shadow-lg focus:font-medium"
+          >
+            Skip to main content
+          </a>
+          {children}
         </ThemeProvider>
         <Analytics />
         <SpeedInsights />

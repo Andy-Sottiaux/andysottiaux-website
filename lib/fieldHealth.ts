@@ -1,5 +1,3 @@
-export const FIELD_HEALTH_QUERY_KEY = ['field-health'] as const
-
 export type ServiceLoose = {
   name?: string
   Name?: string

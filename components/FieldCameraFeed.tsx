@@ -12,7 +12,6 @@
  * opt-in/native player path.
  */
 
-import { useQuery } from '@tanstack/react-query'
 import { type CSSProperties, type RefObject, useEffect, useReducer, useRef, useState } from 'react'
 import {
   CAMERA_FALLBACK_MEDIA_ENABLED,
@@ -1333,56 +1332,79 @@ function isConfirmedCameraBad(quality: CameraQuality): boolean {
 
 function useCameraQuality(enabled: boolean): CameraQuality {
   const lastSampleRef = useRef<QualityRateSample | null>(null)
+  const [data, setData] = useState<CameraQuality>({})
 
   useEffect(() => {
-    if (!enabled) lastSampleRef.current = null
+    if (!enabled) {
+      lastSampleRef.current = null
+      return
+    }
+
+    let cancelled = false
+    let ctrl: AbortController | null = null
+
+    const poll = async () => {
+      ctrl?.abort()
+      ctrl = new AbortController()
+      let next: CameraQuality
+      try {
+        const res = await fetchWithTimeout(QUALITY_URL, { signal: ctrl.signal, cache: 'no-store' }, 4_000)
+        if (!res.ok) {
+          next = { ok: false, error: `quality_${res.status}` }
+        } else {
+          next = await res.json() as CameraQuality
+          const hlsFramesWritten = next.sanitizer?.hls_frames_written
+          if (typeof hlsFramesWritten === 'number' && Number.isFinite(hlsFramesWritten)) {
+            const ts = Date.now()
+            const last = lastSampleRef.current
+            if (last && hlsFramesWritten >= last.hlsFramesWritten) {
+              const elapsedS = Math.max(0.001, (ts - last.ts) / 1000)
+              const fps = (hlsFramesWritten - last.hlsFramesWritten) / elapsedS
+              next.sanitizer = {
+                ...next.sanitizer,
+                observed_hls_fps: Number.isFinite(fps) ? fps : null,
+              }
+            }
+            lastSampleRef.current = { ts, hlsFramesWritten }
+          } else {
+            lastSampleRef.current = null
+          }
+        }
+      } catch {
+        next = { ok: false, error: 'quality_unreachable' }
+      }
+      if (!cancelled) setData(next)
+    }
+
+    poll()
+    const timer = window.setInterval(poll, 2_000)
+    return () => {
+      cancelled = true
+      ctrl?.abort()
+      window.clearInterval(timer)
+    }
   }, [enabled])
 
-  const { data } = useQuery({
-    queryKey: ['camera-quality', enabled],
-    enabled,
-    refetchInterval: 2_000,
-    queryFn: async ({ signal }): Promise<CameraQuality> => {
-      try {
-        const res = await fetchWithTimeout(QUALITY_URL, { signal, cache: 'no-store' }, 4_000)
-        if (!res.ok) return { ok: false, error: `quality_${res.status}` }
-
-        const next = await res.json() as CameraQuality
-        const hlsFramesWritten = next.sanitizer?.hls_frames_written
-        if (typeof hlsFramesWritten === 'number' && Number.isFinite(hlsFramesWritten)) {
-          const ts = Date.now()
-          const last = lastSampleRef.current
-          if (last && hlsFramesWritten >= last.hlsFramesWritten) {
-            const elapsedS = Math.max(0.001, (ts - last.ts) / 1000)
-            const fps = (hlsFramesWritten - last.hlsFramesWritten) / elapsedS
-            next.sanitizer = {
-              ...next.sanitizer,
-              observed_hls_fps: Number.isFinite(fps) ? fps : null,
-            }
-          }
-          lastSampleRef.current = { ts, hlsFramesWritten }
-        } else {
-          lastSampleRef.current = null
-        }
-        return next
-      } catch {
-        return { ok: false, error: 'quality_unreachable' }
-      }
-    },
-  })
-
-  return enabled ? data ?? {} : {}
+  return enabled ? data : {}
 }
 
 function useCameraHealthOverlay(enabled: boolean): CameraHealthOverlay {
-  const { data } = useQuery({
-    queryKey: ['camera-health-overlay', enabled],
-    enabled,
-    refetchInterval: 10_000,
-    queryFn: async ({ signal }): Promise<CameraHealthOverlay> => {
+  const [data, setData] = useState<CameraHealthOverlay>({})
+
+  useEffect(() => {
+    if (!enabled) {
+      return
+    }
+
+    let cancelled = false
+    let ctrl: AbortController | null = null
+
+    const poll = async () => {
+      ctrl?.abort()
+      ctrl = new AbortController()
       const next: CameraHealthOverlay = {}
       try {
-        const healthRes = await fetchWithTimeout(HEALTH_URL, { signal, cache: 'no-store' }, 6_000)
+        const healthRes = await fetchWithTimeout(HEALTH_URL, { signal: ctrl.signal, cache: 'no-store' }, 6_000)
         if (healthRes.ok) {
           const health = (await healthRes.json()) as HealthPayload
           const media = health.system?.media_graph
@@ -1392,49 +1414,93 @@ function useCameraHealthOverlay(enabled: boolean): CameraHealthOverlay {
       } catch {
         // Overlay is informational only.
       }
-      return next
-    },
-  })
+      if (!cancelled) setData(next)
+    }
 
-  return enabled ? data ?? {} : {}
+    poll()
+    const timer = window.setInterval(poll, 10_000)
+    return () => {
+      cancelled = true
+      ctrl?.abort()
+      window.clearInterval(timer)
+    }
+  }, [enabled])
+
+  return enabled ? data : {}
 }
 
 function useDetectionOverlay(enabled: boolean): DetectionPayload {
-  const { data } = useQuery({
-    queryKey: ['camera-detections', enabled],
-    enabled,
-    refetchInterval: 2_000,
-    queryFn: async ({ signal }): Promise<DetectionPayload> => {
-      try {
-        const res = await fetchWithTimeout(DETECTIONS_POLL_URL, { signal, cache: 'no-store' }, 4_000)
-        if (res.ok) return await res.json() as DetectionPayload
-      } catch {
-        return { error: 'unreachable' }
-      }
-      return {}
-    },
-  })
+  const [data, setData] = useState<DetectionPayload>({})
 
-  return enabled ? data ?? {} : {}
+  useEffect(() => {
+    if (!enabled) {
+      return
+    }
+
+    let cancelled = false
+    let ctrl: AbortController | null = null
+
+    const poll = async () => {
+      ctrl?.abort()
+      ctrl = new AbortController()
+      let next: DetectionPayload = {}
+      try {
+        const res = await fetchWithTimeout(DETECTIONS_POLL_URL, { signal: ctrl.signal, cache: 'no-store' }, 4_000)
+        if (res.ok) next = await res.json() as DetectionPayload
+      } catch {
+        next = { error: 'unreachable' }
+      }
+      if (!cancelled) setData(next)
+    }
+
+    poll()
+    const timer = window.setInterval(poll, 2_000)
+    return () => {
+      cancelled = true
+      ctrl?.abort()
+      window.clearInterval(timer)
+    }
+  }, [enabled])
+
+  return enabled ? data : {}
 }
 
 function useTrainingStatus(enabled: boolean): TrainingStatus {
-  const { data } = useQuery({
-    queryKey: ['camera-training-status', enabled],
-    enabled,
-    refetchInterval: 15_000,
-    queryFn: async ({ signal }): Promise<TrainingStatus> => {
-      try {
-        const res = await fetchWithTimeout(TRAINING_STATUS_URL, { signal, cache: 'no-store' }, 6_000)
-        if (res.ok) return await res.json() as TrainingStatus
-        return { ok: false, error: `training_${res.status}` }
-      } catch {
-        return { ok: false, error: 'training_unreachable' }
-      }
-    },
-  })
+  const [data, setData] = useState<TrainingStatus>({})
 
-  return enabled ? data ?? {} : {}
+  useEffect(() => {
+    if (!enabled) {
+      return
+    }
+
+    let cancelled = false
+    let ctrl: AbortController | null = null
+
+    const poll = async () => {
+      ctrl?.abort()
+      ctrl = new AbortController()
+      let next: TrainingStatus
+      try {
+        const res = await fetchWithTimeout(TRAINING_STATUS_URL, { signal: ctrl.signal, cache: 'no-store' }, 6_000)
+        next = res.ok
+          ? await res.json() as TrainingStatus
+          : { ok: false, error: `training_${res.status}` }
+      } catch {
+        next = { ok: false, error: 'training_unreachable' }
+      }
+      if (!cancelled) setData(next)
+    }
+
+    poll()
+    const timer = window.setInterval(poll, 15_000)
+    return () => {
+      cancelled = true
+      ctrl?.abort()
+      window.clearInterval(timer)
+    }
+  }, [enabled])
+
+  return enabled ? data : {}
 }
 
 function useOverlayLayout(

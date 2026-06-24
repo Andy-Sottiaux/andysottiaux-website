@@ -11,8 +11,7 @@
  * sparkline + green→cyan SOC gradient stay constant in both themes.
  */
 
-import { useQuery, type QueryFunctionContext } from '@tanstack/react-query'
-import type { ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { fetchWithTimeout } from '@/lib/fetchWithTimeout'
 import { useFieldTheme } from './fieldTheme'
 
@@ -20,7 +19,8 @@ const SOLAR_URL = '/api/v3/solar'
 const SOLAR_HISTORY_URL = '/api/v3/solar/history'
 const COMPACT_HISTORY_POINTS = 72
 const FULL_HISTORY_POINTS = 288
-const SOLAR_QUERY_KEY = ['field-solar'] as const
+const SOLAR_POLL_MS = 30_000
+const SOLAR_HISTORY_POLL_MS = 5 * 60_000
 
 type Solar = {
   battery_voltage: number
@@ -57,9 +57,7 @@ type SolarPollResult = {
   status: number
 }
 
-type SolarHistoryQueryKey = readonly ['field-solar-history', number]
-
-async function fetchSolarTelemetry({ signal }: QueryFunctionContext<typeof SOLAR_QUERY_KEY>): Promise<SolarPollResult> {
+async function fetchSolarTelemetry(signal: AbortSignal): Promise<SolarPollResult> {
   try {
     const res = await fetchWithTimeout(SOLAR_URL, { signal, cache: 'no-store' }, 8_000)
     let data: SolarPollResult['data'] = null
@@ -86,10 +84,12 @@ async function fetchSolarTelemetry({ signal }: QueryFunctionContext<typeof SOLAR
 }
 
 async function fetchSolarHistory({
-  queryKey,
   signal,
-}: QueryFunctionContext<SolarHistoryQueryKey>): Promise<SolarHistoryPoint[]> {
-  const [, points] = queryKey
+  points,
+}: {
+  signal: AbortSignal
+  points: number
+}): Promise<SolarHistoryPoint[]> {
   try {
     const res = await fetchWithTimeout(
       `${SOLAR_HISTORY_URL}?points=${points}`,
@@ -145,17 +145,48 @@ export default function FieldSolarCard({
   const isLight = palette.mode === 'light'
   const compact = variant === 'compact'
   const requestedHistoryPoints = historyPoints ?? (compact ? COMPACT_HISTORY_POINTS : FULL_HISTORY_POINTS)
+  const [solarPoll, setSolarPoll] = useState<SolarPollResult | null>(null)
+  const [history, setHistory] = useState<SolarHistoryPoint[]>([])
 
-  const { data: solarPoll, isPending: solarPending } = useQuery({
-    queryKey: SOLAR_QUERY_KEY,
-    queryFn: fetchSolarTelemetry,
-    refetchInterval: 30_000,
-  })
-  const { data: history = [] } = useQuery({
-    queryKey: ['field-solar-history', requestedHistoryPoints] as const,
-    queryFn: fetchSolarHistory,
-    refetchInterval: 5 * 60_000,
-  })
+  useEffect(() => {
+    let cancelled = false
+    let ctrl: AbortController | null = null
+
+    const poll = async () => {
+      ctrl?.abort()
+      ctrl = new AbortController()
+      const next = await fetchSolarTelemetry(ctrl.signal)
+      if (!cancelled) setSolarPoll(next)
+    }
+
+    poll()
+    const timer = window.setInterval(poll, SOLAR_POLL_MS)
+    return () => {
+      cancelled = true
+      ctrl?.abort()
+      window.clearInterval(timer)
+    }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    let ctrl: AbortController | null = null
+
+    const poll = async () => {
+      ctrl?.abort()
+      ctrl = new AbortController()
+      const next = await fetchSolarHistory({ signal: ctrl.signal, points: requestedHistoryPoints })
+      if (!cancelled) setHistory(next)
+    }
+
+    poll()
+    const timer = window.setInterval(poll, SOLAR_HISTORY_POLL_MS)
+    return () => {
+      cancelled = true
+      ctrl?.abort()
+      window.clearInterval(timer)
+    }
+  }, [requestedHistoryPoints])
 
   const solarData = solarPoll?.data ?? null
   const solar = solarData && typeof solarData.battery_voltage === 'number' && !solarData.error
@@ -163,7 +194,7 @@ export default function FieldSolarCard({
     : null
   const state: CardState = solar
     ? (solar.live === false || solar.stale === true ? 'stale' : 'live')
-    : solarPending
+    : solarPoll == null
       ? 'loading'
       : solarPoll?.offline || solarPoll?.ok === false && solarPoll?.status !== 503 && !solarPoll?.data?.error
         ? 'offline'

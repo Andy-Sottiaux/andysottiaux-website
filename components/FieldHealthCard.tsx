@@ -14,12 +14,10 @@
  * online/offline accent (emerald/red) stays constant in both themes.
  */
 
-import { useQuery, useQueryClient, type QueryFunctionContext } from '@tanstack/react-query'
 import { type CSSProperties, useEffect, useRef, useState } from 'react'
 import { fetchWithTimeout } from '@/lib/fetchWithTimeout'
 import {
   buildHealthDigest,
-  FIELD_HEALTH_QUERY_KEY,
   type HealthDigest,
   type HealthLoose,
   type HealthPollResult,
@@ -30,11 +28,12 @@ import { useFieldTheme } from './fieldTheme'
 const HEALTH_URL = '/api/v3/health'
 const FAN_URL = '/api/v3/fan'
 const FAN_OVERRIDE_TTL_SEC = 90
+const HEALTH_POLL_MS = 15_000
 const FAN_COMMIT_KEYS = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Enter', ' '])
 
 type HealthCardVariant = 'default' | 'compact'
 
-async function fetchHealthDigest({ signal }: QueryFunctionContext<typeof FIELD_HEALTH_QUERY_KEY>): Promise<HealthPollResult> {
+async function fetchHealthDigest(signal: AbortSignal): Promise<HealthPollResult> {
   const t0 = performance.now()
 
   try {
@@ -172,15 +171,7 @@ export default function FieldHealthCard({
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
   const compact = variant === 'compact'
-  const queryClient = useQueryClient()
-  const { data: healthPoll } = useQuery({
-    queryKey: FIELD_HEALTH_QUERY_KEY,
-    queryFn: fetchHealthDigest,
-    initialData: initialHealthPoll,
-    initialDataUpdatedAt: initialHealthPoll?.digest?.fetchedAt ?? (initialHealthPoll ? Date.now() : undefined),
-    refetchInterval: 15_000,
-    staleTime: 12_000,
-  })
+  const [healthPoll, setHealthPoll] = useState<HealthPollResult | undefined>(initialHealthPoll)
 
   const [, forceTick] = useState(0) // re-render every 30s for "X min ago"
   const [fanDraft, setFanDraft] = useState<number | null>(null)
@@ -198,6 +189,32 @@ export default function FieldHealthCard({
       clearInterval(ageTimer)
     }
   }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    let ctrl: AbortController | null = null
+
+    const poll = async () => {
+      ctrl?.abort()
+      ctrl = new AbortController()
+      const next = await fetchHealthDigest(ctrl.signal)
+      if (!cancelled) setHealthPoll(next)
+    }
+
+    const firstDelay = initialHealthPoll?.digest ? HEALTH_POLL_MS : 0
+    let interval: number | null = null
+    const firstTimer = window.setTimeout(() => {
+      poll()
+      interval = window.setInterval(poll, HEALTH_POLL_MS)
+    }, firstDelay)
+
+    return () => {
+      cancelled = true
+      ctrl?.abort()
+      window.clearTimeout(firstTimer)
+      if (interval) window.clearInterval(interval)
+    }
+  }, [initialHealthPoll])
 
   useEffect(() => {
     if (digest) lastOkRef.current = digest
@@ -449,7 +466,7 @@ export default function FieldHealthCard({
       }
       if (data?.fan) {
         applied = true
-        queryClient.setQueryData<HealthPollResult>(FIELD_HEALTH_QUERY_KEY, (prev) => {
+        setHealthPoll((prev) => {
           if (!prev?.digest) return prev
           return {
             ...prev,

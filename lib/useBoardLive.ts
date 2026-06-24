@@ -17,7 +17,7 @@
  * immediately.
  */
 
-import { useQuery } from '@tanstack/react-query'
+import { useEffect, useState } from 'react'
 import { fetchWithTimeout } from './fetchWithTimeout'
 
 const HEALTH_URL = '/api/v3/health'
@@ -27,9 +27,8 @@ const OFFLINE_GRACE_MS = 45_000
 const OFFLINE_FAIL_LIMIT = 3
 
 type HealthLoose = { ok?: boolean; error?: string }
-type BoardHealthResult = { ok: boolean }
 
-async function fetchBoardHealth({ signal }: { signal: AbortSignal }): Promise<BoardHealthResult> {
+async function fetchBoardHealth(signal: AbortSignal): Promise<true> {
   const res = await fetchWithTimeout(HEALTH_URL, { signal, cache: 'no-store' }, REQUEST_TIMEOUT_MS)
   if (!res.ok) throw new Error(`health_http_${res.status}`)
 
@@ -38,24 +37,58 @@ async function fetchBoardHealth({ signal }: { signal: AbortSignal }): Promise<Bo
     throw new Error(parsed?.error || 'health_not_ok')
   }
 
-  return { ok: true }
+  return true
 }
 
 export function useBoardLive(initial = true): boolean {
-  const { data, dataUpdatedAt, failureCount } = useQuery({
-    queryKey: ['board-live'],
-    queryFn: fetchBoardHealth,
-    refetchInterval: POLL_MS,
-    initialData: { ok: initial },
-    initialDataUpdatedAt: Date.now(),
-    staleTime: POLL_MS,
-  })
+  const [state, setState] = useState(() => ({
+    ok: initial,
+    lastSuccessAt: initial ? Date.now() : 0,
+    failureCount: initial ? 0 : OFFLINE_FAIL_LIMIT,
+  }))
 
-  if (data?.ok !== true) return false
+  useEffect(() => {
+    let cancelled = false
+    let ctrl: AbortController | null = null
 
-  const lastSuccessAt = dataUpdatedAt
+    const poll = async () => {
+      ctrl?.abort()
+      ctrl = new AbortController()
+      try {
+        await fetchBoardHealth(ctrl.signal)
+        if (!cancelled) {
+          setState({ ok: true, lastSuccessAt: Date.now(), failureCount: 0 })
+        }
+      } catch {
+        if (!cancelled) {
+          setState((prev) => ({
+            ok: false,
+            lastSuccessAt: prev.lastSuccessAt,
+            failureCount: prev.failureCount + 1,
+          }))
+        }
+      }
+    }
+
+    let interval: number | null = null
+    const firstTimer = window.setTimeout(() => {
+      poll()
+      interval = window.setInterval(poll, POLL_MS)
+    }, initial ? POLL_MS : 0)
+
+    return () => {
+      cancelled = true
+      ctrl?.abort()
+      window.clearTimeout(firstTimer)
+      if (interval) window.clearInterval(interval)
+    }
+  }, [initial])
+
+  if (state.ok) return true
+
+  const lastSuccessAt = state.lastSuccessAt
   if (lastSuccessAt <= 0) return false
 
   const sinceLastOk = Date.now() - lastSuccessAt
-  return failureCount < OFFLINE_FAIL_LIMIT || sinceLastOk < OFFLINE_GRACE_MS
+  return state.failureCount < OFFLINE_FAIL_LIMIT || sinceLastOk < OFFLINE_GRACE_MS
 }

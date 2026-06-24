@@ -1,21 +1,17 @@
 'use client'
 
-import { useQuery, type QueryFunctionContext } from '@tanstack/react-query'
+import { useEffect, useState } from 'react'
 import { fetchWithTimeout } from './fetchWithTimeout'
 
 export const FALLBACK_RAISED = 1806
 export const FALLBACK_GOAL = 3000
-
-const FUNDRAISING_QUERY_KEY = ['fundraising'] as const
 
 type FundraisingResult = {
   goal: number
   raised: number
 }
 
-async function fetchFundraising({
-  signal,
-}: QueryFunctionContext<typeof FUNDRAISING_QUERY_KEY>): Promise<FundraisingResult> {
+async function fetchFundraising(signal: AbortSignal): Promise<FundraisingResult> {
   try {
     const res = await fetchWithTimeout('/api/fundraising', { signal, cache: 'no-store' }, 8_000)
     if (!res.ok) return { raised: FALLBACK_RAISED, goal: FALLBACK_GOAL }
@@ -33,12 +29,30 @@ async function fetchFundraising({
 }
 
 export function useFundraising(): FundraisingResult {
-  const { data } = useQuery({
-    queryKey: FUNDRAISING_QUERY_KEY,
-    queryFn: fetchFundraising,
-    refetchInterval: 10 * 60_000,
-    staleTime: 60_000,
-  })
+  const [data, setData] = useState<FundraisingResult>(() => ({
+    raised: FALLBACK_RAISED,
+    goal: FALLBACK_GOAL,
+  }))
 
-  return data ?? { raised: FALLBACK_RAISED, goal: FALLBACK_GOAL }
+  useEffect(() => {
+    let cancelled = false
+    let ctrl: AbortController | null = null
+
+    const poll = async () => {
+      ctrl?.abort()
+      ctrl = new AbortController()
+      const next = await fetchFundraising(ctrl.signal)
+      if (!cancelled) setData(next)
+    }
+
+    poll()
+    const timer = window.setInterval(poll, 10 * 60_000)
+    return () => {
+      cancelled = true
+      ctrl?.abort()
+      window.clearInterval(timer)
+    }
+  }, [])
+
+  return data
 }
