@@ -7,6 +7,7 @@ const strategies = (process.env.PROD_SCORE_STRATEGIES || 'mobile,desktop')
   .split(',')
   .map((value) => value.trim())
   .filter(Boolean)
+const requirePageSpeed = process.env.PROD_SCORE_REQUIRE_PAGESPEED === '1'
 const budgets = {
   performance: Number.parseInt(process.env.PROD_SCORE_MIN_PERFORMANCE || '80', 10),
   accessibility: Number.parseInt(process.env.PROD_SCORE_MIN_ACCESSIBILITY || '95', 10),
@@ -50,9 +51,19 @@ async function fetchPageSpeed(strategy) {
 }
 
 const reports = []
+const pageSpeedErrors = []
 
 for (const strategy of strategies) {
-  const result = await fetchPageSpeed(strategy)
+  let result
+  try {
+    result = await fetchPageSpeed(strategy)
+  } catch (error) {
+    pageSpeedErrors.push({
+      strategy,
+      error: error instanceof Error ? error.message : String(error),
+    })
+    continue
+  }
   const categories = result?.lighthouseResult?.categories
   if (!categories) throw new Error(`PageSpeed ${strategy} did not return Lighthouse categories.`)
   const scores = Object.fromEntries(
@@ -71,13 +82,15 @@ const failing = reports.flatMap((report) =>
 )
 
 const output = {
-  ok: failing.length === 0,
+  ok: failing.length === 0 && (!requirePageSpeed || pageSpeedErrors.length === 0),
   targetUrl,
   reports,
   failing,
+  pageSpeedErrors,
+  pageSpeedRequired: requirePageSpeed,
 }
 
-if (failing.length > 0) {
+if (!output.ok) {
   console.error(JSON.stringify(output, null, 2))
   process.exit(1)
 }
