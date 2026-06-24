@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react'
 import type { ModalKey } from '../CompactModals'
 import type { FieldCameraSource } from '@/lib/fieldCameraConfig'
+import type { HealthPollResult } from '@/lib/fieldHealth'
 import ContactTile from './ContactTile'
 import EducationTile from './EducationTile'
 import ExperienceTile from './ExperienceTile'
@@ -18,12 +19,14 @@ import SpotlightTile from './SpotlightTile'
 export default function BentoGrid({
   boardLive,
   cameraEnabled,
+  initialHealthPoll,
   modalOpen,
   onCameraChange,
   onOpen,
 }: {
   boardLive: boolean
   cameraEnabled: boolean
+  initialHealthPoll?: HealthPollResult
   modalOpen: boolean
   onCameraChange: (value: FieldCameraSource) => void
   onOpen: (key: ModalKey) => void
@@ -57,7 +60,7 @@ export default function BentoGrid({
       <div className="order-6 col-span-12 lg:order-none lg:col-span-3 lg:col-start-1 lg:row-start-2">
         <StableSwapTile
           showLive={boardLive}
-          live={<HealthTile onOpen={() => onOpen('live')} />}
+          live={<HealthTile initialHealthPoll={initialHealthPoll} onOpen={() => onOpen('live')} />}
           fallback={<EducationTile />}
         />
       </div>

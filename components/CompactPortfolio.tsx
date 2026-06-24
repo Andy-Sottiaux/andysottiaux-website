@@ -38,24 +38,33 @@ import BentoGrid from './portfolio/BentoGrid'
 import PortfolioModals from './portfolio/PortfolioModals'
 import { useBoardLive } from '@/lib/useBoardLive'
 import type { FieldCameraSource } from '@/lib/fieldCameraConfig'
+import type { HealthPollResult } from '@/lib/fieldHealth'
 
 export default function CompactPortfolio({
   initialBoardLive = true,
+  initialHealthPoll,
 }: {
   /** SSR-resolved board liveness, passed in from app/compact/page.tsx
    *  so the initial HTML already shows the correct (live or fallback)
    *  tiles — no fallback-then-live flicker for visitors arriving while
    *  the board is down. */
   initialBoardLive?: boolean
+  initialHealthPoll?: HealthPollResult
 }) {
   return (
     <FieldThemeProvider>
-      <CompactInner initialBoardLive={initialBoardLive} />
+      <CompactInner initialBoardLive={initialBoardLive} initialHealthPoll={initialHealthPoll} />
     </FieldThemeProvider>
   )
 }
 
-function CompactInner({ initialBoardLive }: { initialBoardLive: boolean }) {
+function CompactInner({
+  initialBoardLive,
+  initialHealthPoll,
+}: {
+  initialBoardLive: boolean
+  initialHealthPoll?: HealthPollResult
+}) {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
   const boardLive = useBoardLive(initialBoardLive)
@@ -93,6 +102,7 @@ function CompactInner({ initialBoardLive }: { initialBoardLive: boolean }) {
           <BentoGrid
             boardLive={boardLive}
             cameraEnabled={openModal === null}
+            initialHealthPoll={initialHealthPoll}
             modalOpen={openModal !== null}
             onCameraChange={setSelectedCamera}
             onOpen={open}
@@ -101,6 +111,7 @@ function CompactInner({ initialBoardLive }: { initialBoardLive: boolean }) {
       </div>
 
       <PortfolioModals
+        initialHealthPoll={initialHealthPoll}
         openModal={openModal}
         selectedCamera={selectedCamera}
         onCameraChange={setSelectedCamera}

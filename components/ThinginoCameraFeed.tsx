@@ -1,5 +1,7 @@
 'use client'
 
+/* eslint-disable @next/next/no-img-element -- Live camera snapshots and MJPEG streams must bypass next/image optimization. */
+
 import Image from 'next/image'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {

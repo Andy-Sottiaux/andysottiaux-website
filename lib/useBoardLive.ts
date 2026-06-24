@@ -27,8 +27,9 @@ const OFFLINE_GRACE_MS = 45_000
 const OFFLINE_FAIL_LIMIT = 3
 
 type HealthLoose = { ok?: boolean; error?: string }
+type BoardHealthResult = { ok: boolean }
 
-async function fetchBoardHealth({ signal }: { signal: AbortSignal }): Promise<{ ok: true }> {
+async function fetchBoardHealth({ signal }: { signal: AbortSignal }): Promise<BoardHealthResult> {
   const res = await fetchWithTimeout(HEALTH_URL, { signal, cache: 'no-store' }, REQUEST_TIMEOUT_MS)
   if (!res.ok) throw new Error(`health_http_${res.status}`)
 
@@ -45,11 +46,12 @@ export function useBoardLive(initial = true): boolean {
     queryKey: ['board-live'],
     queryFn: fetchBoardHealth,
     refetchInterval: POLL_MS,
-    initialData: initial ? { ok: true as const } : undefined,
-    initialDataUpdatedAt: initial ? Date.now() : undefined,
+    initialData: { ok: initial },
+    initialDataUpdatedAt: Date.now(),
+    staleTime: POLL_MS,
   })
 
-  if (data?.ok === true) return true
+  if (data?.ok !== true) return false
 
   const lastSuccessAt = dataUpdatedAt
   if (lastSuccessAt <= 0) return false

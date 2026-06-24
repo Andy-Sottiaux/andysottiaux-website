@@ -24,6 +24,7 @@ import FieldSolarCard from './FieldSolarCard'
 import CameraSourceToggle from './CameraSourceToggle'
 import { useFieldTheme } from './fieldTheme'
 import type { FieldCameraSource } from '@/lib/fieldCameraConfig'
+import type { HealthPollResult } from '@/lib/fieldHealth'
 import { useFundraising } from '@/lib/useFundraising'
 
 const CameraFeedSwitcher = dynamic(() => import('./CameraFeedSwitcher'), {
@@ -200,9 +201,11 @@ const LIVE_PROOF = [
 const LIVE_ROLES = ['Hardware integration', 'Embedded services', 'Camera relay', 'Telemetry UI', 'Failure states']
 
 export function LiveModalContent({
+  initialHealthPoll,
   selectedCamera = 'field',
   onCameraChange = () => undefined,
 }: {
+  initialHealthPoll?: HealthPollResult
   selectedCamera?: FieldCameraSource
   onCameraChange?: (value: FieldCameraSource) => void
 }) {
@@ -302,7 +305,7 @@ export function LiveModalContent({
           </div>
         </div>
         <div className="md:col-span-1 [&>div]:h-full">
-          <FieldHealthCard />
+          <FieldHealthCard initialHealthPoll={initialHealthPoll} />
         </div>
         <div className="md:col-span-3 [&>div]:h-full">
           <FieldSolarCard />

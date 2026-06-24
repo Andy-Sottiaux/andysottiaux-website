@@ -1,5 +1,7 @@
 'use client'
 
+/* eslint-disable @next/next/no-img-element -- Live camera snapshots and MJPEG streams must bypass next/image optimization. */
+
 /**
  * FieldCameraFeed renders the lowest-latency relay camera surface that is safe
  * for a public website embed.

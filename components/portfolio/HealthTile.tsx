@@ -2,17 +2,24 @@
 
 import Link from 'next/link'
 import FieldHealthCard from '../FieldHealthCard'
+import type { HealthPollResult } from '@/lib/fieldHealth'
 
 /* ───────────────────── Health tile ──────────────────────── */
 
-export default function HealthTile({ onOpen }: { onOpen?: () => void }) {
+export default function HealthTile({
+  initialHealthPoll,
+  onOpen,
+}: {
+  initialHealthPoll?: HealthPollResult
+  onOpen?: () => void
+}) {
   if (onOpen) {
     return (
       <div
         data-card-hover="true"
         className="block w-full h-full min-h-[260px] lg:min-h-0 [&>div]:h-full text-left"
       >
-        <FieldHealthCard variant="compact" />
+        <FieldHealthCard initialHealthPoll={initialHealthPoll} variant="compact" />
       </div>
     )
   }
@@ -23,7 +30,7 @@ export default function HealthTile({ onOpen }: { onOpen?: () => void }) {
       data-card-hover="true"
       className="block h-full min-h-[260px] lg:min-h-0 [&>div]:h-full"
     >
-      <FieldHealthCard variant="compact" />
+      <FieldHealthCard initialHealthPoll={initialHealthPoll} variant="compact" />
     </Link>
   )
 }
