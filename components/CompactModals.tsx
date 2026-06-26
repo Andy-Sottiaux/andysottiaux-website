@@ -561,16 +561,42 @@ export function ExperienceModalContent() {
 
 /* ─────────────────── Projects ─────────────────── */
 
-const PROJECTS_FULL = [
+type ProjectCaseStudy = {
+  title: string
+  problem: string
+  built: string
+  outcome: string
+  proof: string
+  metrics: string[]
+  tech: string[]
+  link: string
+  icon: string
+  iconContain?: boolean
+}
+
+const PROJECTS_FULL: ProjectCaseStudy[] = [
   {
     title: 'Travel Agent AI',
     problem: 'Make travel planning useful after the booking confirmation, not just during destination search.',
-    built: 'Built an iOS trip assistant for bookings, flights, packing lists, calendar sync, itinerary sharing, and trip cost tracking.',
+    built: 'Built an iOS trip assistant for booking capture, flight tracking, packing lists, calendar sync, itinerary sharing, and trip cost tracking.',
     outcome: 'A polished consumer AI app that turns scattered travel details into one practical mobile planning surface.',
-    proof: 'Shows production mobile product execution across AI UX, App Store delivery, subscriptions, CloudKit-style sync patterns, and everyday utility design.',
-    tech: ['iOS', 'SwiftUI', 'AI', 'Travel', 'Subscriptions'],
+    proof: 'Shows production mobile product execution across AI UX, App Store delivery, subscription-ready product design, sync patterns, and everyday utility.',
+    metrics: ['App Store shipped', 'AI extraction flow', 'Calendar sync', 'Shared trip model'],
+    tech: ['iOS', 'SwiftUI', 'AI', 'Travel', 'Subscriptions', 'Calendar APIs'],
     link: 'https://apps.apple.com/us/app/travel-agent-ai/id6758284691',
     icon: '/images/travelagentai-icon.png',
+  },
+  {
+    title: 'Edge-AI Field Camera',
+    problem: 'Expose a real solar-powered edge system publicly without leaking private infrastructure or letting live hardware failures become invisible.',
+    built: 'Integrated camera streaming, on-device RKNN inference, solar telemetry, thermal/fan health, Cloudflare relay routing, and production diagnostics.',
+    outcome: 'A live hardware system that behaves like a production surface: opt-in streams, health fallbacks, quality checks, and deploy-time regression gates.',
+    proof: 'Demonstrates embedded Linux services, power telemetry, camera transport, edge inference, and full-stack operational visibility in one public product.',
+    metrics: ['Live solar telemetry', 'On-device inference', 'Cloudflare relay', 'Production health monitor'],
+    tech: ['Linux', 'Edge AI', 'Next.js', 'Cloudflare Tunnel', 'Telemetry', 'WebRTC'],
+    link: '/#now',
+    icon: '/images/hatchingpoint-mark.png',
+    iconContain: true,
   },
   {
     title: 'WYZECAR',
@@ -578,6 +604,7 @@ const PROJECTS_FULL = [
     built: 'Integrated YOLOv8 perception, ROS2-style control plumbing, web-based WASD control, live video, and PID motion.',
     outcome: 'A visible robotics demo that makes perception-to-control work inspectable from a browser.',
     proof: 'Shows the robotics loop end-to-end: perception, control, hardware interface, operator UI, and field iteration.',
+    metrics: ['Vision loop', 'Browser controls', 'PID tuning', 'Hardware testbed'],
     tech: ['Python', 'YOLOv8', 'ROS2', 'DART-MX95', 'ESP32'],
     link: 'https://github.com/Andy-Sottiaux/WYZECAR',
     icon: '/images/wyzecar.png',
@@ -589,6 +616,7 @@ const PROJECTS_FULL = [
     built: 'Used NFC stickers, SwiftUI, FamilyControls, and the Screen Time API to bind lock/unlock behavior to places.',
     outcome: 'A shipped iOS product built around a physical-world interaction instead of another timer screen.',
     proof: 'Combines product judgment with a restricted Apple API surface and real-world interaction design.',
+    metrics: ['App Store shipped', 'NFC workflow', 'Screen Time API', 'Physical UX'],
     tech: ['iOS', 'Swift', 'SwiftUI', 'NFC', 'FamilyControls'],
     link: 'https://apps.apple.com/us/app/rot-dot/id6758902103',
     icon: '/images/rotdot-icon.png',
@@ -599,6 +627,7 @@ const PROJECTS_FULL = [
     built: 'Built recording, live transcription, and AI summary flows that extract decisions, key points, and action items.',
     outcome: 'A production AI utility that turns raw audio capture into immediately usable notes.',
     proof: 'Demonstrates a production mobile AI workflow: capture, streaming text, summary UX, and shipped App Store release.',
+    metrics: ['App Store shipped', 'Audio capture', 'AI summaries', 'Action extraction'],
     tech: ['iOS', 'Swift', 'SwiftUI', 'Speech Recognition', 'OpenAI'],
     link: 'https://apps.apple.com/app/record-transcribe/id6758643630',
     icon: '/images/recordtranscribe-icon.png',
@@ -609,6 +638,7 @@ const PROJECTS_FULL = [
     built: 'Built the custom monitoring hardware path plus iOS and web surfaces for temperature tracking and system visibility.',
     outcome: 'An embedded-to-app monitoring path for operational visibility outside the lab.',
     proof: 'Bridges embedded data collection, full-stack product work, and a practical operational monitoring use case.',
+    metrics: ['Embedded telemetry', 'Mobile dashboard', 'Web visibility', 'HVAC domain'],
     tech: ['iOS', 'Swift', 'Hardware', 'IoT', 'Embedded'],
     link: 'https://www.hatchingpoint.com/airmd',
     icon: '/images/airmd-icon.jpg',
@@ -621,7 +651,7 @@ const SECONDARY_PROJECTS = [
   { name: 'AirPods Pro 3 Tesla Mount', description: 'Custom 3D-printed holder positioning AirPods Pro 3 at the right height for Tesla wireless chargers.', tech: ['SOLIDWORKS', '3D Printing'] },
 ]
 
-const PROJECT_SUMMARY_TAGS = ['Robotics', 'Production iOS', 'AI UX', 'Embedded telemetry', 'CAD artifacts']
+const PROJECT_SUMMARY_TAGS = ['Production iOS', 'Live hardware', 'Edge AI', 'Robotics', 'Operational telemetry']
 
 export function ProjectsModalContent() {
   const palette = useFieldTheme()
@@ -641,19 +671,19 @@ export function ProjectsModalContent() {
           className="text-[9.5px] font-semibold uppercase tracking-[0.2em]"
           style={{ color: palette.mutedText }}
         >
-          Project Range
+          Case Studies
         </div>
         <div
           className="mt-1.5 text-[16px] sm:text-[18px] font-semibold leading-tight tracking-tight"
           style={{ color: isLight ? '#1c1a1c' : '#fff' }}
         >
-          Shipped apps, visible robotics, and hardware-adjacent tools.
+          Product, hardware, and autonomy work with proof behind it.
         </div>
         <p
           className="mt-2 text-[12.5px] sm:text-[13.5px] leading-snug"
           style={{ color: palette.bodyText }}
         >
-          The strongest work here shows the full loop: product judgment, implementation, release, and real-world integration.
+          The strongest projects show the full loop: decide what matters, build the system, ship the product, and keep the real-world integration observable.
         </p>
         <div className="mt-3 flex flex-wrap gap-1.5">
           {PROJECT_SUMMARY_TAGS.map((tag) => (
@@ -663,6 +693,7 @@ export function ProjectsModalContent() {
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {PROJECTS_FULL.map((p) => {
+          const externalLink = /^https?:\/\//.test(p.link)
           const details = [
             { label: 'Problem', value: p.problem },
             { label: 'Built', value: p.built },
@@ -674,8 +705,8 @@ export function ProjectsModalContent() {
             <a
               key={p.title}
               href={p.link}
-              target="_blank"
-              rel="noopener noreferrer"
+              target={externalLink ? '_blank' : undefined}
+              rel={externalLink ? 'noopener noreferrer' : undefined}
               className="group rounded-2xl p-3.5 sm:p-4 transition-all hover:scale-[1.01] flex flex-col"
               style={polishedSurfaceStyle(isLight, palette.cardBorder)}
             >
@@ -724,6 +755,21 @@ export function ProjectsModalContent() {
               </div>
 
               <div className="mt-3 grid grid-cols-1 gap-2">
+                <div className="grid grid-cols-2 gap-1.5">
+                  {p.metrics.map((metric) => (
+                    <div
+                      key={metric}
+                      className="rounded-xl px-2.5 py-2 text-[10.5px] sm:text-[11px] font-semibold leading-tight"
+                      style={{
+                        color: isLight ? '#1c1a1c' : '#fff',
+                        background: isLight ? 'rgba(0,0,0,0.035)' : 'rgba(255,255,255,0.045)',
+                        border: palette.hairline ? `1px solid ${palette.hairline}` : palette.cardBorder,
+                      }}
+                    >
+                      {metric}
+                    </div>
+                  ))}
+                </div>
                 {details.map((detail) => (
                   <div
                     key={detail.label}

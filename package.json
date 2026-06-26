@@ -19,6 +19,7 @@
     "audit:camera-transport": "node scripts/audit-camera-transport.mjs",
     "audit:camera-transport:offtailnet": "bash scripts/audit-camera-transport-offtailnet.sh",
     "audit:home-performance": "node scripts/audit-home-performance.mjs",
+    "monitor:production": "node scripts/monitor-production-health.mjs",
     "monitor:camera-playback": "node scripts/monitor-camera-playback.mjs",
     "monitor:page-stability": "node scripts/monitor-page-stability.mjs",
     "doctor": "react-doctor"

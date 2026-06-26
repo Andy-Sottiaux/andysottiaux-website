@@ -136,12 +136,22 @@ sudo journalctl -u hatchingpoint-cam2-recover.service -n 80 --no-pager
 sudo python3 /opt/hatchingpoint/cam2-recover.py --check-only
 ```
 
-The website also exposes a same-origin diagnostics endpoint:
+The website also exposes same-origin diagnostics endpoints:
 
 ```text
+/api/v3/camera/diagnostics
 /api/v3/camera2/diagnostics
 /api/v3/camera2/diagnostics?active=1
 ```
 
-The default diagnostics endpoint is read-mostly. Passing `active=1` also sends
-a safe `stop` command through the public control path to verify control writes.
+The default diagnostics endpoints are read-mostly. Cam 1 checks health, stream
+config, sanitized snapshot, training, and detections. Passing `active=1` to Cam
+2 also sends a safe `stop` command through the public control path to verify
+control writes.
+
+For a single production readiness pass across the homepage, cameras, solar, and
+fundraising surfaces:
+
+```sh
+npm run monitor:production
+```
