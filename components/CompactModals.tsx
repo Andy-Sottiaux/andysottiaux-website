@@ -19,6 +19,7 @@ import Image from 'next/image'
 import { useEffect, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import CameraIdleSurface from './CameraIdleSurface'
+import CameraIntelligencePanel from './CameraIntelligencePanel'
 import FieldHealthCard from './FieldHealthCard'
 import FieldSolarCard from './FieldSolarCard'
 import CameraSourceToggle from './CameraSourceToggle'
@@ -285,6 +286,8 @@ export function LiveModalContent({
           </div>
         ))}
       </div>
+
+      {selectedCamera === 'field' && <CameraIntelligencePanel enabled />}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div className="md:col-span-2">
@@ -568,6 +571,8 @@ type ProjectCaseStudy = {
   outcome: string
   proof: string
   metrics: string[]
+  architecture: string[]
+  validation: string[]
   tech: string[]
   link: string
   icon: string
@@ -582,6 +587,8 @@ const PROJECTS_FULL: ProjectCaseStudy[] = [
     outcome: 'A polished consumer AI app that turns scattered travel details into one practical mobile planning surface.',
     proof: 'Shows production mobile product execution across AI UX, App Store delivery, subscription-ready product design, sync patterns, and everyday utility.',
     metrics: ['App Store shipped', 'AI extraction flow', 'Calendar sync', 'Shared trip model'],
+    architecture: ['SwiftUI app shell', 'AI document extraction', 'Trip data model', 'Calendar and sharing flows'],
+    validation: ['Public App Store listing', 'End-to-end mobile UX', 'Real booking workflow', 'User-facing product polish'],
     tech: ['iOS', 'SwiftUI', 'AI', 'Travel', 'Subscriptions', 'Calendar APIs'],
     link: 'https://apps.apple.com/us/app/travel-agent-ai/id6758284691',
     icon: '/images/travelagentai-icon.png',
@@ -592,7 +599,9 @@ const PROJECTS_FULL: ProjectCaseStudy[] = [
     built: 'Integrated camera streaming, on-device RKNN inference, solar telemetry, thermal/fan health, Cloudflare relay routing, and production diagnostics.',
     outcome: 'A live hardware system that behaves like a production surface: opt-in streams, health fallbacks, quality checks, and deploy-time regression gates.',
     proof: 'Demonstrates embedded Linux services, power telemetry, camera transport, edge inference, and full-stack operational visibility in one public product.',
-    metrics: ['Live solar telemetry', 'On-device inference', 'Cloudflare relay', 'Production health monitor'],
+    metrics: ['1280x960 · 30 FPS', 'On-device RKNN', 'Training readiness gates', 'Production health monitor'],
+    architecture: ['Thingino/Linux camera board', 'go2rtc + Cloudflare relay', 'Solar and thermal telemetry', 'Next.js diagnostics APIs'],
+    validation: ['FPS and bitrate budgets', 'RKNN state and latency', 'Dataset diversity checks', 'No-idle-stream policy'],
     tech: ['Linux', 'Edge AI', 'Next.js', 'Cloudflare Tunnel', 'Telemetry', 'WebRTC'],
     link: '/#now',
     icon: '/images/hatchingpoint-mark.png',
@@ -605,6 +614,8 @@ const PROJECTS_FULL: ProjectCaseStudy[] = [
     outcome: 'A visible robotics demo that makes perception-to-control work inspectable from a browser.',
     proof: 'Shows the robotics loop end-to-end: perception, control, hardware interface, operator UI, and field iteration.',
     metrics: ['Vision loop', 'Browser controls', 'PID tuning', 'Hardware testbed'],
+    architecture: ['YOLOv8 perception', 'Camera stream pipeline', 'Browser operator controls', 'Motor-control feedback loop'],
+    validation: ['Closed-loop driving demo', 'Tunable PID response', 'Inspectable GitHub code', 'Hardware iteration path'],
     tech: ['Python', 'YOLOv8', 'ROS2', 'DART-MX95', 'ESP32'],
     link: 'https://github.com/Andy-Sottiaux/WYZECAR',
     icon: '/images/wyzecar.png',
@@ -617,6 +628,8 @@ const PROJECTS_FULL: ProjectCaseStudy[] = [
     outcome: 'A shipped iOS product built around a physical-world interaction instead of another timer screen.',
     proof: 'Combines product judgment with a restricted Apple API surface and real-world interaction design.',
     metrics: ['App Store shipped', 'NFC workflow', 'Screen Time API', 'Physical UX'],
+    architecture: ['SwiftUI app', 'NFC trigger model', 'Screen Time API controls', 'Place-based unlock flow'],
+    validation: ['Shipped App Store product', 'Restricted API integration', 'Physical interaction testing', 'Clear behavior boundary'],
     tech: ['iOS', 'Swift', 'SwiftUI', 'NFC', 'FamilyControls'],
     link: 'https://apps.apple.com/us/app/rot-dot/id6758902103',
     icon: '/images/rotdot-icon.png',
@@ -628,6 +641,8 @@ const PROJECTS_FULL: ProjectCaseStudy[] = [
     outcome: 'A production AI utility that turns raw audio capture into immediately usable notes.',
     proof: 'Demonstrates a production mobile AI workflow: capture, streaming text, summary UX, and shipped App Store release.',
     metrics: ['App Store shipped', 'Audio capture', 'AI summaries', 'Action extraction'],
+    architecture: ['iOS recording flow', 'Speech recognition', 'AI summarization', 'Action-item extraction'],
+    validation: ['Shipped mobile utility', 'Long-form capture path', 'Structured summary output', 'Useful post-meeting workflow'],
     tech: ['iOS', 'Swift', 'SwiftUI', 'Speech Recognition', 'OpenAI'],
     link: 'https://apps.apple.com/app/record-transcribe/id6758643630',
     icon: '/images/recordtranscribe-icon.png',
@@ -639,6 +654,8 @@ const PROJECTS_FULL: ProjectCaseStudy[] = [
     outcome: 'An embedded-to-app monitoring path for operational visibility outside the lab.',
     proof: 'Bridges embedded data collection, full-stack product work, and a practical operational monitoring use case.',
     metrics: ['Embedded telemetry', 'Mobile dashboard', 'Web visibility', 'HVAC domain'],
+    architecture: ['Custom sensor path', 'Device telemetry', 'Mobile dashboard', 'Web reporting surface'],
+    validation: ['Real HVAC domain problem', 'Field-style monitoring UX', 'Hardware-to-app data path', 'Operational visibility goal'],
     tech: ['iOS', 'Swift', 'Hardware', 'IoT', 'Embedded'],
     link: 'https://www.hatchingpoint.com/airmd',
     icon: '/images/airmd-icon.jpg',
@@ -795,6 +812,11 @@ export function ProjectsModalContent() {
                 ))}
               </div>
 
+              <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <ProofList title="Architecture" items={p.architecture} />
+                <ProofList title="Validation" items={p.validation} />
+              </div>
+
               <div className="mt-3 flex flex-wrap gap-1.5">
                 {p.tech.slice(3).map((t) => (
                   <Chip key={t}>{t}</Chip>
@@ -852,6 +874,40 @@ export function ProjectsModalContent() {
       >
         More iOS apps on the App Store →
       </a>
+    </div>
+  )
+}
+
+function ProofList({ title, items }: { title: string; items: string[] }) {
+  const palette = useFieldTheme()
+  const isLight = palette.mode === 'light'
+
+  return (
+    <div
+      className="rounded-xl px-2.5 py-2"
+      style={{
+        background: isLight ? 'rgba(0,0,0,0.025)' : 'rgba(255,255,255,0.035)',
+        border: palette.hairline ? `1px solid ${palette.hairline}` : palette.cardBorder,
+      }}
+    >
+      <div
+        className="text-[9px] font-semibold uppercase tracking-[0.16em]"
+        style={{ color: palette.mutedText }}
+      >
+        {title}
+      </div>
+      <ul className="mt-1.5 space-y-1.5">
+        {items.map((item) => (
+          <li key={item} className="flex gap-1.5 text-[11px] leading-snug" style={{ color: palette.bodyText }}>
+            <span
+              aria-hidden="true"
+              className="mt-[0.45em] h-1 w-1 shrink-0 rounded-full"
+              style={{ background: palette.mutedText }}
+            />
+            <span>{item}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   )
 }

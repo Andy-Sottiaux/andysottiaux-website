@@ -76,8 +76,79 @@ export async function mockPortfolioNetwork(page: Page) {
 
   await page.route('**/api/fundraising', (route) => json(route, { raised: 2756, goal: 3000 }))
   await page.route('**/api/v3/camera/quality**', (route) => json(route, { ok: true, sanitizer: { latest_clean_age_s: 1, hls_ok: true } }))
-  await page.route('**/api/v3/training/status**', (route) => json(route, { ok: true, images: 20, labels: 23, classes: 2 }))
-  await page.route('**/api/v3/detections**', (route) => json(route, { items: [] }))
+  await page.route('**/api/v3/training/status**', (route) => json(route, {
+    ok: true,
+    source: 'mock',
+    state: 'waiting_for_labels',
+    dataset_ready: false,
+    training_ready: false,
+    short_action: 'Review and promote labels before training.',
+    collection_wait: {
+      status: 'guided_stalled',
+      guided_progress: {
+        available: true,
+        status: 'complete',
+        attempts: 37,
+        kept: 1,
+        duplicates: 36,
+        duplicate_ratio: 0.973,
+        finish_reason: 'duplicate_streak',
+        session_status: 'stalled',
+      },
+    },
+    production_readiness: {
+      ok: false,
+      status: 'not_ready',
+      short_action: 'Collect more valid frames with deliberate scene changes.',
+      failures: ['images:20<50', 'classes:1<2', 'unique_images:1<20'],
+      total_images: 20,
+      labeled_images: 20,
+      total_labels: 23,
+      nonzero_classes: { package: 23 },
+      image_diversity: { unique_images: 1, labeled_unique_images: 1 },
+      collection_plan: {
+        min_new_images: 30,
+        min_new_labeled_images: 10,
+        min_new_labels: 7,
+        min_new_classes: 1,
+        min_new_unique_images: 19,
+        min_new_labeled_unique_images: 14,
+        focus: ['Move visible target objects between captures.'],
+        current_classes: { package: 23 },
+      },
+    },
+  }))
+  await page.route('**/api/v3/detections**', (route) => json(route, {
+    ok: true,
+    counts: { package: 3 },
+    recent: [],
+    window_sec: 900,
+    relay: { stale: false, cache_age_s: 0.1, type: 'board_detections' },
+  }))
+  await page.route('**/api/v3/camera/diagnostics**', (route) => json(route, {
+    ok: true,
+    camera: 'cam1',
+    relay_base: 'https://cam1.andysottiaux.com',
+    summary: {
+      resolution: '1280x960',
+      fps: 30,
+      visual_quality: 'calibrated',
+      rknn_state: 'ok',
+      rknn_fps: 0.2,
+      rknn_latency_ms: 180,
+      sanitizer_age_s: 1,
+      sanitizer_hls_ok: true,
+      training_state: 'waiting_for_labels',
+      training_ready: false,
+      training_images: 20,
+      training_labeled_images: 20,
+      training_labels: 23,
+      training_classes: 1,
+      training_unique_images: 1,
+      services_down: [],
+      services_total: 6,
+    },
+  }))
   await page.route('**/api/v3/camera/snapshot**', (route) => route.fulfill({ status: 200, contentType: 'image/jpeg', body: pixelJpeg }))
   await page.route('**/api/v3/camera2/snapshot**', (route) => route.fulfill({ status: 200, contentType: 'image/jpeg', body: pixelJpeg }))
   await page.route('**/api/v3/camera/webrtc/offer**', (route) => json(route, { error: 'mocked' }, 503))

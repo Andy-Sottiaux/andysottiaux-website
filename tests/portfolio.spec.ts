@@ -54,6 +54,24 @@ test('keeps camera feeds opt-in from spotlight tabs', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Play Cam 2 live stream' })).toBeVisible()
 })
 
+test('surfaces Cam1 AI readiness and project validation proof', async ({ page }) => {
+  await openHome(page)
+
+  await page.getByRole('button', { name: 'Open Field Live' }).click()
+  const aiPanel = page.getByLabel('Cam1 AI training readiness')
+  await expect(aiPanel).toBeVisible()
+  await expect(aiPanel).toContainText('AI Readiness')
+  await expect(aiPanel).toContainText('not training ready')
+  await expect(aiPanel).toContainText('package · 23')
+  await page.keyboard.press('Escape')
+
+  await page.getByRole('tab', { name: 'Travel' }).click()
+  await page.locator('.spotlight-slide[aria-hidden="false"]').getByRole('button', { name: /^Details$/ }).click()
+  await expect(page.locator('dialog[open]')).toContainText('Architecture')
+  await expect(page.locator('dialog[open]')).toContainText('Validation')
+  await expect(page.locator('dialog[open]')).toContainText('Dataset diversity checks')
+})
+
 test('@a11y home page has no serious automated accessibility regressions', async ({ page }) => {
   await openHome(page)
 

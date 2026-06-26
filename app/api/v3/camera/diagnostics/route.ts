@@ -54,11 +54,34 @@ type QualityPayload = {
 
 type TrainingPayload = {
   ok?: boolean
+  state?: string
+  dataset_ready?: boolean
+  training_ready?: boolean
+  short_action?: string
   images?: number
   labels?: number
   classes?: number
   unique?: number
   kept?: number
+  production_readiness?: {
+    ok?: boolean
+    status?: string
+    short_action?: string
+    total_images?: number
+    labeled_images?: number
+    total_labels?: number
+    nonzero_classes?: Record<string, number>
+    image_diversity?: {
+      unique_images?: number
+      labeled_unique_images?: number
+    }
+  }
+  label_seed?: {
+    total_images?: number
+    labeled_images?: number
+    total_labels?: number
+    classes?: Record<string, number>
+  }
 }
 
 function timeoutSignal(ms: number) {
@@ -152,6 +175,10 @@ export async function GET() {
   const media = healthData?.system?.media_graph
   const stream = media?.stream_profile
   const rknn = healthData?.system?.rknn_detector
+  const readiness = trainingData?.production_readiness
+  const trainingClasses =
+    trainingData?.classes ??
+    Object.keys(readiness?.nonzero_classes ?? trainingData?.label_seed?.classes ?? {}).length
   const resolution =
     stream?.width && stream.height
       ? `${stream.width}x${stream.height}`
@@ -206,9 +233,14 @@ export async function GET() {
       rknn_latency_ms: rknn?.duration_ms ?? null,
       sanitizer_age_s: qualityData?.sanitizer?.latest_clean_age_s ?? null,
       sanitizer_hls_ok: qualityData?.sanitizer?.hls_ok ?? null,
-      training_images: trainingData?.images ?? null,
-      training_labels: trainingData?.labels ?? null,
-      training_classes: trainingData?.classes ?? null,
+      training_state: trainingData?.state ?? readiness?.status ?? null,
+      training_ready: trainingData?.training_ready ?? trainingData?.dataset_ready ?? readiness?.ok ?? null,
+      training_action: trainingData?.short_action ?? readiness?.short_action ?? null,
+      training_images: trainingData?.images ?? readiness?.total_images ?? trainingData?.label_seed?.total_images ?? null,
+      training_labeled_images: readiness?.labeled_images ?? trainingData?.label_seed?.labeled_images ?? null,
+      training_labels: trainingData?.labels ?? readiness?.total_labels ?? trainingData?.label_seed?.total_labels ?? null,
+      training_classes: trainingClasses,
+      training_unique_images: trainingData?.unique ?? readiness?.image_diversity?.unique_images ?? null,
       services_down: healthData?.services_down ?? [],
       services_total: healthData?.service_count ?? null,
     },
