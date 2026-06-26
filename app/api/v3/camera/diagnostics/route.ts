@@ -137,7 +137,7 @@ function asObject<T>(check: CheckResult): T | null {
 }
 
 export async function GET() {
-  const base = RELAY_BASE.replace(/\/+$/, '')
+  const base = RELAY_BASE.trim().replace(/\/+$/, '')
   const [health, quality, snapshot, training, detections] = await Promise.all([
     readJsonCheck(`${base}/api/health`),
     readJsonCheck(`${base}/api/camera/quality`),

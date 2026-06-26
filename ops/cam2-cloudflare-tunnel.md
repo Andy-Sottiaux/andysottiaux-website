@@ -155,3 +155,44 @@ fundraising surfaces:
 ```sh
 npm run monitor:production
 ```
+
+## Cam 1 Runtime Notes
+
+Cam 1 is a Thingino-style field camera behind the same `cayley-relay` tunnel.
+The public browser/API path goes through Cloudflare to the relay nginx gateway,
+but the camera board should not call the public gateway or the relay API port
+for RKNN input frames.
+
+The stable RKNN frame source on the Cam 1 board is the go2rtc frame endpoint on
+the relay tailnet address:
+
+```text
+CAYLEY_RKNN_FRAME_SOURCE=relay
+CAYLEY_RKNN_FRAME_URL=http://100.88.101.23:1984/api/frame.jpeg?src=cayley-sub
+CAYLEY_RKNN_RELAY_FIELD_API=http://100.88.101.23:1984
+```
+
+This matters because `cayley-relay` binds the Python camera API at
+`127.0.0.1:8091` and the Cloudflare nginx gateway at `127.0.0.1:18083`. From
+the camera board, `100.88.101.23:8091` and `100.88.101.23:18083` are not valid
+fresh-frame sources.
+
+Cam 1's vendor `rkipc` process can rewrite `/userdata/rkipc.ini` from factory
+defaults during restart. Keep all three profile sources aligned for the current
+stream target:
+
+```text
+/tmp/rkipc-factory-config.ini
+/oem/usr/share/rkipc-mis5001-500w.ini
+/userdata/rkipc.ini
+
+Target: 1280x960, 30 fps, 5 Mbps, GOP 30
+```
+
+Useful Cam 1 verification commands:
+
+```sh
+ssh root@cayley-relay 'ffprobe -v error -rtsp_transport tcp -select_streams v:0 -show_entries stream=avg_frame_rate,r_frame_rate,width,height,codec_name,profile -of json rtsp://127.0.0.1:8554/cayley-sub'
+curl -s https://andysottiaux.com/api/v3/camera/diagnostics | jq '.summary'
+npm run monitor:production
+```

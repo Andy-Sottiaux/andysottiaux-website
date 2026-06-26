@@ -140,7 +140,7 @@ function metricsPayload(check: CheckResult): MetricsPayload | null {
 
 export async function GET(request: NextRequest) {
   const activeControl = request.nextUrl.searchParams.get('active') === '1'
-  const base = RELAY_BASE.replace(/\/+$/, '')
+  const base = RELAY_BASE.trim().replace(/\/+$/, '')
   const [status, metrics, snapshot, activeControlCheck] = await Promise.all([
     readJsonCheck(`${base}/status`),
     readJsonCheck(`${base}/metrics`),

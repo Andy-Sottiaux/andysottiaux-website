@@ -6,12 +6,14 @@ const budgets = {
   timeoutMs: Number.parseInt(process.env.PRODUCTION_HEALTH_TIMEOUT_MS || '10000', 10),
   solarMaxAgeSeconds: Number.parseInt(process.env.PRODUCTION_HEALTH_SOLAR_MAX_AGE_SECONDS || '1800', 10),
   cam1MinWidth: Number.parseInt(process.env.PRODUCTION_HEALTH_CAM1_MIN_WIDTH || '1280', 10),
-  cam1MinFps: Number.parseInt(process.env.PRODUCTION_HEALTH_CAM1_MIN_FPS || '12', 10),
+  cam1MinFps: Number.parseInt(process.env.PRODUCTION_HEALTH_CAM1_MIN_FPS || '24', 10),
   cam1TargetFps: Number.parseInt(process.env.PRODUCTION_HEALTH_CAM1_TARGET_FPS || '24', 10),
   cam2MinWidth: Number.parseInt(process.env.PRODUCTION_HEALTH_CAM2_MIN_WIDTH || '1920', 10),
   cam2MinFps: Number.parseInt(process.env.PRODUCTION_HEALTH_CAM2_MIN_FPS || '24', 10),
   cam2MinBitrate: Number.parseInt(process.env.PRODUCTION_HEALTH_CAM2_MIN_BITRATE || '8000', 10),
 }
+
+const cam1RknnHealthyStates = new Set(['running', 'ready', 'ok'])
 
 function endpoint(path) {
   return new URL(path, targetUrl).toString()
@@ -157,8 +159,7 @@ if (!cam1.ok || cam1Data?.ok !== true) {
   }
   if (
     typeof cam1Summary.rknn_state === 'string' &&
-    cam1Summary.rknn_state !== 'running' &&
-    cam1Summary.rknn_state !== 'ready'
+    !cam1RknnHealthyStates.has(cam1Summary.rknn_state)
   ) {
     pushWarning(warnings, 'cam1_rknn', 'Cam1 inference is not reporting a running state.', {
       state: cam1Summary.rknn_state,
