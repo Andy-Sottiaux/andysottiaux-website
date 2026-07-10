@@ -3,6 +3,7 @@
 import { mkdir } from 'node:fs/promises'
 import path from 'node:path'
 import { chromium } from 'playwright'
+import { activateCamera } from './lib/activate-camera.mjs'
 
 const targetUrl = process.env.CAMERA_VERIFY_URL || process.argv[2] || 'https://andysottiaux.com/?debug=1'
 const expectedMode = process.env.CAMERA_VERIFY_MODE || 'any'
@@ -185,6 +186,7 @@ try {
 
   const startedAt = Date.now()
   await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: timeoutMs })
+  await activateCamera(page, 'Cam 1')
   const timings = {
     domContentLoadedMs: Date.now() - startedAt,
     snapshotLoadedMs: null,

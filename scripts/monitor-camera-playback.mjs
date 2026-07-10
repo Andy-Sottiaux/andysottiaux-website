@@ -3,6 +3,7 @@
 import { mkdir } from 'node:fs/promises'
 import path from 'node:path'
 import { chromium } from 'playwright'
+import { activateCamera } from './lib/activate-camera.mjs'
 
 const targetUrl = process.env.CAMERA_MONITOR_URL || process.argv[2] || 'https://andysottiaux.com/?debug=1'
 const durationMs = Number.parseInt(process.env.CAMERA_MONITOR_DURATION_MS || '60000', 10)
@@ -119,6 +120,7 @@ try {
 
   const startedAt = Date.now()
   await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: startupTimeoutMs })
+  await activateCamera(page, 'Cam 1')
 
   let firstPaintMs = null
   while (Date.now() - startedAt < startupTimeoutMs) {
