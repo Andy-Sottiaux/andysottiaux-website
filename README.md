@@ -1,55 +1,49 @@
-# Andy Sottiaux - Personal Website
+# andysottiaux.com
 
-A modern, responsive personal website built with Next.js and Tailwind CSS, showcasing skills, experience, and accomplishments.
+Andy Sottiaux's portfolio and live field-system dashboard. The site combines a
+static portfolio with opt-in Cam 1/Cam 2 streams, edge-AI diagnostics, solar
+telemetry, health monitoring, and authenticated physical controls.
 
-## Tech Stack
+## Stack
 
-- **Framework**: Next.js 14
-- **Styling**: Tailwind CSS
-- **Language**: TypeScript
-- **Deployment**: Vercel
+- Next.js 15 App Router, React 18, and TypeScript
+- Tailwind CSS
+- Vercel deployment from GitHub `main`
+- Cloudflare camera gateways with same-origin Vercel fallbacks
+- Tailscale for private infrastructure management
+- Playwright, axe, React Doctor, Knip, and dependency-cruiser quality gates
 
-## Getting Started
+## Local Development
 
-1. Install dependencies:
 ```bash
-npm install
-```
-
-2. Run the development server:
-```bash
+npm ci
 npm run dev
 ```
 
-3. Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open `http://localhost:3000`.
 
-## Customization
+## Validation
 
-Update the content in the following files:
+```bash
+npm run check
+npm run monitor:production
+npm run test:camera
+```
 
-- `/components/Hero.tsx` - Update your name and tagline
-- `/components/About.tsx` - Add your personal story
-- `/components/Experience.tsx` - Add your work experience
-- `/components/Skills.tsx` - List your technical skills
-- `/components/Projects.tsx` - Showcase your projects
-- `/components/Contact.tsx` - Update contact information and links
+`npm run check` runs type checking, a production build, React Doctor, unused
+code/dependency audits, architecture rules, and desktop/mobile Playwright tests.
+GitHub Actions runs the same gate for every pull request and push to `main`.
 
-## Deployment
+## Architecture
 
-### Deploy to Vercel
+Public camera viewing remains read-only and goes directly through the camera
+gateways when available. Fan, Cam 2 pan/tilt, and persistent stream settings use
+same-origin API routes, a signed HttpOnly session, and a server-only bearer token
+shared with `cayley-relay`.
 
-1. Push your code to GitHub
-2. Import your repository on [Vercel](https://vercel.com)
-3. Vercel will automatically detect Next.js and deploy
-4. Add your custom domain (andysottiaux.com) in Vercel's domain settings
+The home page is ISR-cached and probes relay health during regeneration with a
+short timeout. A relay outage therefore cannot make every page request wait on
+the edge system; client polling updates live state after load.
 
-### Custom Domain Setup
-
-1. In Vercel, go to your project settings
-2. Navigate to "Domains"
-3. Add `andysottiaux.com` and `www.andysottiaux.com`
-4. Follow Vercel's instructions to update your Namecheap DNS settings
-
-## License
-
-© 2026 Andy Sottiaux. All rights reserved.
+See [docs/operations.md](docs/operations.md) for environment variables, control
+password rotation, deployment, and incident checks.

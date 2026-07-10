@@ -1,4 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
+import {
+  rejectUnauthorizedControlRequest,
+  relayControlAuthorizationHeader,
+} from '@/lib/server/controlAuth'
 import { requestThinginoPath } from '../proxyThingino'
 
 export const runtime = 'nodejs'
@@ -57,6 +61,9 @@ async function runMotorQuery(query: URLSearchParams) {
 }
 
 async function runRelayControl(body: unknown) {
+  const authorization = relayControlAuthorizationHeader()
+  if (!authorization) return null
+
   const ctrl = new AbortController()
   const timeoutId = setTimeout(() => ctrl.abort(), 2500)
   try {
@@ -65,6 +72,7 @@ async function runRelayControl(body: unknown) {
       cache: 'no-store',
       signal: ctrl.signal,
       headers: {
+        Authorization: authorization,
         'Content-Type': 'application/json',
         'User-Agent': 'andysottiaux.com/camera2-control-proxy',
       },
@@ -127,6 +135,9 @@ function vectorMove(body: { x?: number; y?: number; speed?: number }, params: Mo
 }
 
 export async function POST(request: NextRequest) {
+  const rejected = rejectUnauthorizedControlRequest(request)
+  if (rejected) return rejected
+
   const body = await request.json().catch(() => null) as {
     direction?: string
     command?: string

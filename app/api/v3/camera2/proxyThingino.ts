@@ -2,8 +2,8 @@ const UPSTREAM =
   process.env.V3_CAMERA_2_UPSTREAM_HOST ||
   'http://192.168.4.52'
 
-const USERNAME = process.env.V3_CAMERA_2_USERNAME || 'root'
-const PASSWORD = process.env.V3_CAMERA_2_PASSWORD || 'root'
+const USERNAME = process.env.V3_CAMERA_2_USERNAME?.trim() || ''
+const PASSWORD = process.env.V3_CAMERA_2_PASSWORD || ''
 const SESSION_TTL_MS = 5 * 60 * 1000
 
 let cachedSession: { cookie: string; expiresAt: number } | null = null
@@ -23,6 +23,8 @@ function encodeBase64(value: string) {
 }
 
 async function thinginoSessionCookie(signal: AbortSignal, forceRefresh = false): Promise<ThinginoLoginResult> {
+  if (!USERNAME || !PASSWORD) return { ok: false, error: 'auth_unavailable' }
+
   if (!forceRefresh && cachedSession && cachedSession.expiresAt > Date.now()) {
     return { ok: true, cookie: cachedSession.cookie }
   }

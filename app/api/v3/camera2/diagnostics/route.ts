@@ -1,4 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
+import {
+  rejectUnauthorizedControlRequest,
+  relayControlAuthorizationHeader,
+} from '@/lib/server/controlAuth'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -104,11 +108,16 @@ async function postStopCheck(url: string, timeoutMs = 5000): Promise<CheckResult
   const started = performance.now()
   const { controller, timeout } = timeoutSignal(timeoutMs)
   try {
+    const authorization = relayControlAuthorizationHeader()
+    if (!authorization) {
+      return { ok: false, latency_ms: elapsed(started), error: 'relay_control_auth_unconfigured' }
+    }
     const response = await fetch(url, {
       method: 'POST',
       cache: 'no-store',
       signal: controller.signal,
       headers: {
+        Authorization: authorization,
         'Content-Type': 'application/json',
         'User-Agent': 'andysottiaux.com/camera2-diagnostics',
       },
@@ -140,6 +149,10 @@ function metricsPayload(check: CheckResult): MetricsPayload | null {
 
 export async function GET(request: NextRequest) {
   const activeControl = request.nextUrl.searchParams.get('active') === '1'
+  if (activeControl) {
+    const rejected = rejectUnauthorizedControlRequest(request)
+    if (rejected) return rejected
+  }
   const base = RELAY_BASE.trim().replace(/\/+$/, '')
   const [status, metrics, snapshot, activeControlCheck] = await Promise.all([
     readJsonCheck(`${base}/status`),

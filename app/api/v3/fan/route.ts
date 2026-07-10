@@ -1,6 +1,10 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+import {
+  rejectUnauthorizedControlRequest,
+  relayControlAuthorizationHeader,
+} from '@/lib/server/controlAuth'
 
-export const runtime = 'edge'
+export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 const UPSTREAM =
@@ -53,7 +57,10 @@ export async function GET() {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const rejected = rejectUnauthorizedControlRequest(request)
+  if (rejected) return rejected
+
   let raw: unknown
   try {
     raw = await request.json()
@@ -78,6 +85,11 @@ export async function POST(request: Request) {
     }
   }
 
+  const authorization = relayControlAuthorizationHeader()
+  if (!authorization) {
+    return NextResponse.json({ ok: false, error: 'relay_control_auth_unconfigured' }, { status: 503 })
+  }
+
   try {
     const ctrl = new AbortController()
     const timeoutId = setTimeout(() => ctrl.abort(), 15000)
@@ -86,6 +98,7 @@ export async function POST(request: Request) {
       cache: 'no-store',
       signal: ctrl.signal,
       headers: {
+        Authorization: authorization,
         'Content-Type': 'application/json',
         'User-Agent': 'andysottiaux.com/fan-proxy',
       },

@@ -1,4 +1,3 @@
-import { headers } from 'next/headers'
 import CompactPortfolio from '@/components/CompactPortfolio'
 import { buildHealthDigest, healthLooksLive, type HealthLoose, type HealthPollResult } from '@/lib/fieldHealth'
 
@@ -8,19 +7,24 @@ import { buildHealthDigest, healthLooksLive, type HealthLoose, type HealthPollRe
 // device is offline see the alternate set on first paint, no flicker.
 export const revalidate = 15
 
-const HEALTH_TIMEOUT_MS = 3000
+const HEALTH_TIMEOUT_MS = 1200
+const HEALTH_UPSTREAM = (
+  process.env.V3_HEALTH_UPSTREAM_HOST ||
+  process.env.V3_UPSTREAM_HOST ||
+  'https://cayley-relay.tailc7d6b6.ts.net'
+).replace(/\/+$/, '')
 
-async function probeInitialHealth(origin: string): Promise<HealthPollResult> {
+async function probeInitialHealth(): Promise<HealthPollResult> {
   const startedAt = Date.now()
+  const ctrl = new AbortController()
+  const timeout = setTimeout(() => ctrl.abort(), HEALTH_TIMEOUT_MS)
 
   try {
-    const ctrl = new AbortController()
-    const t = setTimeout(() => ctrl.abort(), HEALTH_TIMEOUT_MS)
-    const r = await fetch(`${origin}/api/v3/health`, {
-      cache: 'no-store',
+    const r = await fetch(`${HEALTH_UPSTREAM}/api/health`, {
+      next: { revalidate },
       signal: ctrl.signal,
+      headers: { 'User-Agent': 'andysottiaux.com/initial-health' },
     })
-    clearTimeout(t)
     if (!r.ok) return { digest: null }
 
     const body = (await r.json()) as HealthLoose
@@ -32,16 +36,13 @@ async function probeInitialHealth(origin: string): Promise<HealthPollResult> {
     }
   } catch {
     return { digest: null }
+  } finally {
+    clearTimeout(timeout)
   }
 }
 
 export default async function Home() {
-  const h = await headers()
-  const host = h.get('x-forwarded-host') ?? h.get('host') ?? 'andysottiaux.com'
-  const proto = h.get('x-forwarded-proto') ?? 'https'
-  const origin = `${proto}://${host}`
-
-  const initialHealthPoll = await probeInitialHealth(origin)
+  const initialHealthPoll = await probeInitialHealth()
   const initialBoardLive = initialHealthPoll.digest?.ok === true
 
   return <CompactPortfolio initialBoardLive={initialBoardLive} initialHealthPoll={initialHealthPoll} />

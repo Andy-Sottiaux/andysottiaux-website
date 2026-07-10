@@ -1,6 +1,11 @@
+import { createHash, randomBytes } from 'node:crypto'
 import { defineConfig, devices } from '@playwright/test'
 
 const PORT = Number(process.env.PORT ?? 3100)
+const TEST_CONTROL_PASSWORD = 'test-device-control-password'
+const TEST_CONTROL_PASSWORD_HASH = createHash('sha256').update(TEST_CONTROL_PASSWORD).digest('hex')
+const TEST_CONTROL_SECRET = randomBytes(48).toString('hex')
+const TEST_RELAY_TOKEN = randomBytes(32).toString('hex')
 
 export default defineConfig({
   testDir: './tests',
@@ -21,6 +26,11 @@ export default defineConfig({
     url: `http://127.0.0.1:${PORT}`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
+    env: {
+      CONTROL_AUTH_PASSWORD_HASH: process.env.CONTROL_AUTH_PASSWORD_HASH || TEST_CONTROL_PASSWORD_HASH,
+      CONTROL_AUTH_SECRET: process.env.CONTROL_AUTH_SECRET || TEST_CONTROL_SECRET,
+      V3_DEVICE_CONTROL_RELAY_TOKEN: process.env.V3_DEVICE_CONTROL_RELAY_TOKEN || TEST_RELAY_TOKEN,
+    },
   },
   projects: [
     {

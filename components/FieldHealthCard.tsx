@@ -14,6 +14,7 @@
  * online/offline accent (emerald/red) stays constant in both themes.
  */
 
+import { LockKeyhole } from 'lucide-react'
 import { type CSSProperties, useEffect, useRef, useState } from 'react'
 import { fetchWithTimeout } from '@/lib/fetchWithTimeout'
 import {
@@ -24,6 +25,7 @@ import {
   type SystemLoose,
 } from '@/lib/fieldHealth'
 import { useFieldTheme } from './fieldTheme'
+import { useControlAuth } from './ControlAuthProvider'
 
 const HEALTH_URL = '/api/v3/health'
 const FAN_URL = '/api/v3/fan'
@@ -169,6 +171,7 @@ export default function FieldHealthCard({
   variant?: HealthCardVariant
 }) {
   const palette = useFieldTheme()
+  const { unlocked, requestUnlock, markLocked } = useControlAuth()
   const isLight = palette.mode === 'light'
   const compact = variant === 'compact'
   const [healthPoll, setHealthPoll] = useState<HealthPollResult | undefined>(initialHealthPoll)
@@ -304,12 +307,14 @@ export default function FieldHealthCard({
       ? Math.max(0, Math.ceil(fan.override_expires_at - Date.now() / 1000))
       : null
   const fanSliderValue = fanDraft ?? fanPct ?? 0
-  const fanControlDisabled = !online || fan?.available === false || fanStale || fanPending
+  const fanControlDisabled = !unlocked || !online || fan?.available === false || fanStale || fanPending
   const fanControlStatus = fanPending
     ? 'Setting'
-    : fan?.override_active
-      ? `Auto ${fanOverrideRemaining ?? FAN_OVERRIDE_TTL_SEC}s`
-      : fanError ?? 'Auto'
+    : !unlocked
+      ? 'Locked'
+      : fan?.override_active
+        ? `Auto ${fanOverrideRemaining ?? FAN_OVERRIDE_TTL_SEC}s`
+        : fanError ?? 'Auto'
   const uptimeText = digest
     ? fmtUptime(digest.uptimeSec)
     : (lastOk ? fmtUptime(lastOk.uptimeSec) : '—')
@@ -446,6 +451,10 @@ export default function FieldHealthCard({
   ]
 
   const commitFanSpeed = async (rawSpeed: number) => {
+    if (!unlocked) {
+      await requestUnlock()
+      return
+    }
     const speed = Math.max(0, Math.min(100, Math.round(rawSpeed)))
     setFanDraft(speed)
     if (fanControlDisabled && !fanPending) return
@@ -461,6 +470,7 @@ export default function FieldHealthCard({
         body: JSON.stringify({ speed, ttl_sec: FAN_OVERRIDE_TTL_SEC }),
       })
       const data = await res.json().catch(() => null) as { ok?: boolean; fan?: SystemLoose['argon_fan']; error?: string } | null
+      if (res.status === 401 || res.status === 403) markLocked()
       if (!res.ok || data?.ok === false) {
         throw new Error(data?.error || 'fan_command_failed')
       }
@@ -836,6 +846,18 @@ export default function FieldHealthCard({
             onChange={setFanDraft}
             onCommit={commitFanSpeed}
           />
+          {!unlocked && (
+            <div className="mt-2 flex justify-end">
+              <button
+                type="button"
+                onClick={() => void requestUnlock()}
+                className="flex h-8 items-center gap-1.5 rounded-[8px] border border-white/10 bg-white/5 px-2.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-white/70 transition hover:bg-white/10 hover:text-white"
+              >
+                <LockKeyhole aria-hidden="true" className="h-3.5 w-3.5" />
+                Unlock
+              </button>
+            </div>
+          )}
         </div>
       )}
 

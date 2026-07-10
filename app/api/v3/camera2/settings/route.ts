@@ -1,4 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
+import {
+  rejectUnauthorizedControlRequest,
+  relayControlAuthorizationHeader,
+} from '@/lib/server/controlAuth'
 import { requestThinginoPath } from '../proxyThingino'
 
 export const runtime = 'nodejs'
@@ -107,6 +111,9 @@ async function readJson(response: Response) {
 }
 
 async function fetchRelaySettings(init?: RequestInit, timeoutMs = 8000) {
+  const authorization = relayControlAuthorizationHeader()
+  if (init?.method === 'POST' && !authorization) return null
+
   const ctrl = new AbortController()
   const timeoutId = setTimeout(() => ctrl.abort(), timeoutMs)
   try {
@@ -115,6 +122,7 @@ async function fetchRelaySettings(init?: RequestInit, timeoutMs = 8000) {
       cache: 'no-store',
       signal: ctrl.signal,
       headers: {
+        ...(authorization ? { Authorization: authorization } : {}),
         'Content-Type': 'application/json',
         'User-Agent': 'andysottiaux.com/camera2-settings-proxy',
       },
@@ -165,6 +173,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const rejected = rejectUnauthorizedControlRequest(request)
+  if (rejected) return rejected
+
   const body = await request.json().catch(() => null) as {
     preset?: string
     stream0?: Record<string, unknown>

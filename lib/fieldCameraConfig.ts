@@ -30,12 +30,10 @@ export const CAMERA_2_GATEWAY_HOST =
   DIRECT_GATEWAY_ENABLED
     ? (process.env.NEXT_PUBLIC_V3_CAMERA_2_GATEWAY_HOST || CAMERA_GATEWAY_HOST)
     : ''
-const CAMERA_2_GATEWAY_WS_HOST = CAMERA_2_GATEWAY_HOST.replace(/^http/i, 'ws')
 const CAMERA_2_FALLBACK_GATEWAY_HOST =
   DIRECT_GATEWAY_ENABLED
     ? (process.env.NEXT_PUBLIC_V3_CAMERA_2_FALLBACK_GATEWAY_HOST || CAMERA_GATEWAY_HOST)
     : ''
-const CAMERA_2_FALLBACK_GATEWAY_WS_HOST = CAMERA_2_FALLBACK_GATEWAY_HOST.replace(/^http/i, 'ws')
 
 export const CAMERA_2_URL =
   process.env.NEXT_PUBLIC_V3_CAMERA_2_URL ||
@@ -52,24 +50,14 @@ export const CAMERA_2_SNAPSHOT_URL =
 export const CAMERA_2_STATUS_URL =
   process.env.NEXT_PUBLIC_V3_CAMERA_2_STATUS_URL ||
   (CAMERA_2_GATEWAY_HOST ? `${CAMERA_2_GATEWAY_HOST}/api/camera2/status` : '/api/v3/camera2/status')
-export const CAMERA_2_CONTROL_URL =
-  process.env.NEXT_PUBLIC_V3_CAMERA_2_CONTROL_URL ||
-  (CAMERA_2_GATEWAY_HOST ? `${CAMERA_2_GATEWAY_HOST}/api/camera2/control` : '/api/v3/camera2/control')
-export const CAMERA_2_CONTROL_FALLBACK_URL =
-  process.env.NEXT_PUBLIC_V3_CAMERA_2_CONTROL_FALLBACK_URL ||
-  (CAMERA_2_FALLBACK_GATEWAY_HOST ? `${CAMERA_2_FALLBACK_GATEWAY_HOST}/api/camera2/control` : '/api/v3/camera2/control')
-export const CAMERA_2_CONTROL_WS_URL =
-  process.env.NEXT_PUBLIC_V3_CAMERA_2_CONTROL_WS_URL ||
-  (CAMERA_2_GATEWAY_WS_HOST ? `${CAMERA_2_GATEWAY_WS_HOST}/api/camera2/control/ws` : '')
-export const CAMERA_2_CONTROL_WS_FALLBACK_URL =
-  process.env.NEXT_PUBLIC_V3_CAMERA_2_CONTROL_WS_FALLBACK_URL ||
-  (CAMERA_2_FALLBACK_GATEWAY_WS_HOST ? `${CAMERA_2_FALLBACK_GATEWAY_WS_HOST}/api/camera2/control/ws` : '')
-export const CAMERA_2_SETTINGS_URL =
-  process.env.NEXT_PUBLIC_V3_CAMERA_2_SETTINGS_URL ||
-  (CAMERA_2_GATEWAY_HOST ? `${CAMERA_2_GATEWAY_HOST}/api/camera2/settings` : '/api/v3/camera2/settings')
-export const CAMERA_2_SETTINGS_FALLBACK_URL =
-  process.env.NEXT_PUBLIC_V3_CAMERA_2_SETTINGS_FALLBACK_URL ||
-  (CAMERA_2_FALLBACK_GATEWAY_HOST ? `${CAMERA_2_FALLBACK_GATEWAY_HOST}/api/camera2/settings` : '/api/v3/camera2/settings')
+// Physical writes stay on the same origin so the browser never receives the
+// relay credential. Public camera gateways are read-only from the client.
+export const CAMERA_2_CONTROL_URL = '/api/v3/camera2/control'
+export const CAMERA_2_CONTROL_FALLBACK_URL = ''
+export const CAMERA_2_CONTROL_WS_URL = ''
+export const CAMERA_2_CONTROL_WS_FALLBACK_URL = ''
+export const CAMERA_2_SETTINGS_URL = '/api/v3/camera2/settings'
+export const CAMERA_2_SETTINGS_FALLBACK_URL = ''
 export const CAMERA_2_WEBRTC_OFFER_URL =
   process.env.NEXT_PUBLIC_V3_CAMERA_2_WEBRTC_OFFER_URL ||
   (CAMERA_2_GATEWAY_HOST ? `${CAMERA_2_GATEWAY_HOST}/api/webrtc` : '/api/v3/camera2/webrtc/offer')

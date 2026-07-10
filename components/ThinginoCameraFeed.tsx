@@ -3,18 +3,13 @@
 /* eslint-disable @next/next/no-img-element -- Live camera snapshots and MJPEG streams must bypass next/image optimization. */
 
 import Image from 'next/image'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { LockKeyhole } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   CAMERA_FALLBACK_MEDIA_ENABLED,
-  CAMERA_2_CONTROL_FALLBACK_URL,
-  CAMERA_2_CONTROL_URL,
-  CAMERA_2_CONTROL_WS_FALLBACK_URL,
-  CAMERA_2_CONTROL_WS_URL,
   CAMERA_2_MJPEG_URL,
   CAMERA_2_NATIVE_URL,
   CAMERA_2_SNAPSHOT_URL,
-  CAMERA_2_SETTINGS_FALLBACK_URL,
-  CAMERA_2_SETTINGS_URL,
   CAMERA_2_STREAM,
   CAMERA_2_STATUS_URL,
   CAMERA_2_URL,
@@ -27,43 +22,13 @@ import {
 } from '@/lib/fieldCameraConfig'
 import { useFieldTheme } from './fieldTheme'
 import Cam2Joystick from './camera/Cam2Joystick'
+import { type Cam2Settings, useCam2Control } from './camera/useCam2Control'
 
 type VideoFit = 'contain' | 'cover' | 'fill'
 type Cam2Status = {
   ok?: boolean
   error?: string
   upstream_status?: number
-  motion?: Cam2MotionState
-}
-type Cam2Settings = {
-  ok?: boolean
-  stream0?: {
-    width?: number
-    height?: number
-    fps?: number
-    bitrate?: number
-    gop?: number
-    max_gop?: number
-    format?: string
-    mode?: string
-    profile?: number
-  } | null
-  motor?: {
-    steps_pan?: number
-    steps_tilt?: number
-    accel_pan?: number
-    accel_tilt?: number
-    motion_driver?: string
-    preview_control_mode?: string
-  } | null
-}
-type Cam2Command = 'ul' | 'uc' | 'ur' | 'cl' | 'center' | 'cr' | 'dl' | 'dc' | 'dr' | 'home' | 'stop'
-type Cam2MotionState = {
-  active?: boolean
-  command?: string | null
-  vector?: { x?: number; y?: number; speed?: number }
-  interval_ms?: number
-  ttl_ms?: number
 }
 type Cam2PlaybackMetrics = {
   readyState: number
@@ -86,21 +51,6 @@ type Cam2PlaybackMetrics = {
   selectedRemoteType?: string | null
   selectedRemoteProtocol?: string | null
 }
-type ControlPayload = {
-  command?: Cam2Command
-  direction?: Cam2Command
-  action?: 'move' | 'stop' | 'hold'
-  x?: number
-  y?: number
-  speed?: number
-  step?: 'fine' | 'normal' | 'coarse'
-  hold?: boolean
-}
-type QueuedControlPayload = {
-  payload: ControlPayload
-  keepalive?: boolean
-}
-
 function cam2StatusCopy(status: Cam2Status | null) {
   if (!status) return 'Checking relay and camera status...'
   if (status.ok) return 'Relay auth works. Retrying the stream may restore the preview.'
@@ -124,6 +74,17 @@ export default function ThinginoCameraFeed({
   position?: string
 }) {
   const palette = useFieldTheme()
+  const {
+    settings,
+    controlPending,
+    controlConnected,
+    motionState,
+    sendControl,
+    sendVectorControl,
+    stopVectorControl,
+    unlocked,
+    requestUnlock,
+  } = useCam2Control()
   const isLight = palette.mode === 'light'
   const [streamVersion, setStreamVersion] = useState(0)
   const [snapshotReady, setSnapshotReady] = useState(false)
@@ -132,18 +93,8 @@ export default function ThinginoCameraFeed({
   const [streamReady, setStreamReady] = useState(false)
   const [streamFailed, setStreamFailed] = useState(false)
   const [status, setStatus] = useState<Cam2Status | null>(null)
-  const [settings, setSettings] = useState<Cam2Settings | null>(null)
-  const [controlPending, setControlPending] = useState<Cam2Command | null>(null)
-  const [controlConnected, setControlConnected] = useState(false)
-  const [motionState, setMotionState] = useState<Cam2MotionState | null>(null)
   const [playbackMetrics, setPlaybackMetrics] = useState<Cam2PlaybackMetrics | null>(null)
   const rtcVideoRef = useRef<HTMLVideoElement>(null)
-  const controlWsRef = useRef<WebSocket | null>(null)
-  const controlWsRetryRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const controlBusyRef = useRef(false)
-  const vectorHttpQueuedRef = useRef<QueuedControlPayload | null>(null)
-  const vectorHttpProcessingRef = useRef(false)
-  const vectorHttpLastSentAtRef = useRef(0)
   const mjpegUrl = `${CAMERA_2_MJPEG_URL}?v=${streamVersion}`
   const snapshotUrl = `${CAMERA_2_SNAPSHOT_URL}?v=${streamVersion}`
   const playerUrl = nativePlayerUrl(CAMERA_2_STREAM)
@@ -151,20 +102,6 @@ export default function ThinginoCameraFeed({
     withQueryParam(CAMERA_2_WEBRTC_OFFER_URL, CAMERA_2_WEBRTC_SOURCE_PARAM, CAMERA_2_STREAM),
     withQueryParam(CAMERA_2_WEBRTC_FALLBACK_OFFER_URL, CAMERA_2_WEBRTC_FALLBACK_SOURCE_PARAM, CAMERA_2_STREAM),
     withQueryParam('/api/v3/camera2/webrtc/offer', 'stream', CAMERA_2_STREAM),
-  ]), [])
-  const controlUrls = useMemo(() => uniqueUrls([
-    CAMERA_2_CONTROL_URL,
-    CAMERA_2_CONTROL_FALLBACK_URL,
-    '/api/v3/camera2/control',
-  ]), [])
-  const controlWsUrls = useMemo(() => uniqueUrls([
-    CAMERA_2_CONTROL_WS_URL,
-    CAMERA_2_CONTROL_WS_FALLBACK_URL,
-  ]), [])
-  const settingsUrls = useMemo(() => uniqueUrls([
-    CAMERA_2_SETTINGS_URL,
-    CAMERA_2_SETTINGS_FALLBACK_URL,
-    '/api/v3/camera2/settings',
   ]), [])
   const openUrl = CAMERA_2_NATIVE_URL === CAMERA_2_URL ? playerUrl : CAMERA_2_NATIVE_URL
   const statusCopy = cam2StatusCopy(status)
@@ -179,195 +116,6 @@ export default function ThinginoCameraFeed({
     setStatus(null)
     setStreamVersion(Date.now())
   }
-
-  const loadSettings = useCallback(() => {
-    fetchJsonCandidate<Cam2Settings>(settingsUrls)
-      .then((next) => setSettings(next))
-      .catch(() => setSettings({ ok: false }))
-  }, [settingsUrls])
-
-  const sendControlWs = useCallback((payload: ControlPayload) => {
-    const ws = controlWsRef.current
-    if (!ws || ws.readyState !== WebSocket.OPEN) return false
-    ws.send(JSON.stringify(payload))
-    return true
-  }, [])
-
-  const postControlPayload = useCallback(async (payload: ControlPayload, keepalive = false) => {
-    const body = JSON.stringify(payload)
-    let lastError: unknown = null
-    for (const url of controlUrls) {
-      try {
-        const res = await fetch(url, {
-          method: 'POST',
-          keepalive,
-          cache: 'no-store',
-          headers: { 'Content-Type': 'application/json' },
-          body,
-        })
-        if (res.ok) return
-        lastError = new Error(`control_${res.status}`)
-      } catch (error) {
-        lastError = error
-      }
-    }
-    if (lastError) throw lastError
-  }, [controlUrls])
-
-  const sendControlPayload = useCallback(async (payload: ControlPayload, keepalive = false) => {
-    if (sendControlWs(payload)) return
-    await postControlPayload(payload, keepalive)
-  }, [postControlPayload, sendControlWs])
-
-  const sendQueuedVectorHttp = useCallback((payload: ControlPayload, keepalive = false) => {
-    if (sendControlWs(payload)) return
-
-    vectorHttpQueuedRef.current = { payload, keepalive }
-    if (vectorHttpProcessingRef.current) return
-
-    vectorHttpProcessingRef.current = true
-    const processQueue = async () => {
-      try {
-        while (vectorHttpQueuedRef.current) {
-          const next = vectorHttpQueuedRef.current
-          vectorHttpQueuedRef.current = null
-
-          const isStop = next.payload.action === 'stop' || next.payload.command === 'stop'
-          const minSpacingMs = isStop ? 0 : 170
-          const elapsed = Date.now() - vectorHttpLastSentAtRef.current
-          if (elapsed < minSpacingMs) {
-            await new Promise((resolve) => window.setTimeout(resolve, minSpacingMs - elapsed))
-          }
-
-          vectorHttpLastSentAtRef.current = Date.now()
-          try {
-            await postControlPayload(next.payload, next.keepalive)
-          } catch {
-            // The relay TTL stops stale motion; keep the latest vector flowing.
-          }
-        }
-      } finally {
-        vectorHttpProcessingRef.current = false
-      }
-    }
-
-    void processQueue()
-  }, [postControlPayload, sendControlWs])
-
-  const sendControl = useCallback(async (
-    command: Cam2Command,
-    step: 'fine' | 'normal' | 'coarse' = 'normal',
-    trackPending = true,
-    hold = false,
-  ) => {
-    if (trackPending) {
-      if (controlBusyRef.current) return
-      controlBusyRef.current = true
-      setControlPending(command)
-    }
-    try {
-      await sendControlPayload({ command, step, ...(hold ? { hold: true } : {}) }, command === 'stop')
-    } finally {
-      if (trackPending) {
-        controlBusyRef.current = false
-        setControlPending(null)
-      }
-    }
-  }, [sendControlPayload])
-
-  const sendVectorControl = useCallback((x: number, y: number, speed: number) => {
-    const payload: ControlPayload = {
-      action: 'move',
-      x: clampUnit(x),
-      y: clampUnit(y),
-      speed: clamp01(speed),
-      step: 'fine',
-    }
-    sendQueuedVectorHttp(payload)
-  }, [sendQueuedVectorHttp])
-
-  const stopVectorControl = useCallback(() => {
-    sendQueuedVectorHttp({ command: 'stop', action: 'stop', step: 'fine' }, true)
-  }, [sendQueuedVectorHttp])
-
-  useEffect(() => {
-    loadSettings()
-    return stopVectorControl
-  }, [loadSettings, stopVectorControl])
-
-  useEffect(() => {
-    let disposed = false
-
-    const connect = (index = 0) => {
-      if (disposed || controlWsUrls.length === 0 || typeof WebSocket === 'undefined') return
-      const url = controlWsUrls[index % controlWsUrls.length]
-      try {
-        const ws = new WebSocket(url)
-        controlWsRef.current = ws
-        ws.onopen = () => {
-          if (controlWsRef.current === ws) setControlConnected(true)
-        }
-        ws.onmessage = (event) => {
-          try {
-            const payload = JSON.parse(String(event.data)) as {
-              motion?: Cam2MotionState
-              interval_ms?: number
-              ttl_ms?: number
-              mode?: string
-              command?: string
-            }
-            if (payload.motion) {
-              setMotionState(payload.motion)
-            } else if (payload.interval_ms || payload.ttl_ms || payload.mode) {
-              setMotionState((prev) => ({
-                ...prev,
-                command: payload.command ?? prev?.command ?? null,
-                interval_ms: payload.interval_ms ?? prev?.interval_ms,
-                ttl_ms: payload.ttl_ms ?? prev?.ttl_ms,
-                active: payload.mode === 'vector' || payload.mode === 'hold' ? true : payload.mode === 'stopped' ? false : prev?.active,
-              }))
-            }
-          } catch {
-            // Control ACKs are advisory; the stop fail-safe stays in the relay.
-          }
-        }
-        ws.onclose = () => {
-          if (controlWsRef.current === ws) controlWsRef.current = null
-          setControlConnected(false)
-          setMotionState((prev) => prev ? { ...prev, active: false } : prev)
-          if (!disposed) {
-            const nextIndex = (index + 1) % controlWsUrls.length
-            controlWsRetryRef.current = setTimeout(() => connect(nextIndex), index === 0 ? 350 : 1200)
-          }
-        }
-        ws.onerror = () => {
-          try {
-            ws.close()
-          } catch {
-            // Best effort only; HTTP control remains as fallback.
-          }
-        }
-      } catch {
-        if (!disposed) {
-          const nextIndex = (index + 1) % controlWsUrls.length
-          controlWsRetryRef.current = setTimeout(() => connect(nextIndex), index === 0 ? 350 : 1800)
-        }
-      }
-    }
-
-    connect()
-    return () => {
-      disposed = true
-      if (controlWsRetryRef.current) clearTimeout(controlWsRetryRef.current)
-      try {
-        controlWsRef.current?.close()
-      } catch {
-        // Best effort cleanup only.
-      }
-      controlWsRef.current = null
-      setControlConnected(false)
-    }
-  }, [controlWsUrls])
 
   useEffect(() => {
     const video = rtcVideoRef.current
@@ -694,14 +442,26 @@ export default function ThinginoCameraFeed({
         onClick={(event) => event.stopPropagation()}
         onPointerDown={(event) => event.stopPropagation()}
       >
-        <Cam2Joystick
-          connected={controlConnected}
-          motion={motionState}
-          onMove={sendVectorControl}
-          onStop={stopVectorControl}
-          onHome={() => void sendControl('home')}
-          homeDisabled={controlPending != null}
-        />
+        {unlocked ? (
+          <Cam2Joystick
+            connected={controlConnected}
+            motion={motionState}
+            onMove={sendVectorControl}
+            onStop={stopVectorControl}
+            onHome={() => void sendControl('home')}
+            homeDisabled={controlPending != null}
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => void requestUnlock()}
+            aria-label="Unlock camera controls"
+            className="flex h-[84px] w-[112px] flex-col items-center justify-center gap-2 rounded-[14px] border border-white/10 bg-black/60 text-white/80 backdrop-blur-[10px] transition hover:bg-black/70 hover:text-white"
+          >
+            <LockKeyhole aria-hidden="true" className="h-5 w-5" />
+            <span className="text-[8px] font-bold uppercase tracking-[0.12em]">Unlock</span>
+          </button>
+        )}
       </div>
 
       <a
@@ -751,16 +511,6 @@ function formatPlaybackTelemetry(metrics: Cam2PlaybackMetrics | null, settings: 
     ? `${metrics.selectedRemoteType}${metrics.selectedRemoteProtocol ? `/${metrics.selectedRemoteProtocol}` : ''}`
     : null
   return [resolution, fps, jitter, rtt, path].filter(Boolean).join(' · ')
-}
-
-function clampUnit(value: number) {
-  if (!Number.isFinite(value)) return 0
-  return Math.max(-1, Math.min(1, value))
-}
-
-function clamp01(value: number) {
-  if (!Number.isFinite(value)) return 0
-  return Math.max(0, Math.min(1, value))
 }
 
 function formatMetricNumber(value: number) {
