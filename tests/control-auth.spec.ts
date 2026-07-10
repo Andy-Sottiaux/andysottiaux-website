@@ -9,6 +9,7 @@ test('denies physical writes without a control session', async ({ request }) => 
   await expect(status.json()).resolves.toMatchObject({ configured: true, authenticated: false })
 
   const requests = [
+    request.post('/api/v3/control-auth/ticket'),
     request.post('/api/v3/fan', { data: { speed: 25, ttl_sec: 30 } }),
     request.post('/api/v3/camera2/control', { data: { command: 'stop' } }),
     request.post('/api/v3/camera2/settings', { data: { preset: 'balanced24' } }),
@@ -31,6 +32,12 @@ test('creates a signed control session after the correct password', async ({ req
 
   const status = await request.get('/api/v3/control-auth')
   await expect(status.json()).resolves.toMatchObject({ configured: true, authenticated: true })
+
+  const ticket = await request.post('/api/v3/control-auth/ticket')
+  expect(ticket.ok()).toBeTruthy()
+  const ticketBody = await ticket.json() as { ticket?: string; expiresAt?: number }
+  expect(ticketBody.ticket).toMatch(/^ws1\.\d+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/)
+  expect(ticketBody.expiresAt).toBeGreaterThan(Math.floor(Date.now() / 1000))
 })
 
 test('rejects cross-origin control authentication', async ({ request }) => {

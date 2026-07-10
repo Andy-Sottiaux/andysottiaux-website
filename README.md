@@ -39,7 +39,8 @@ GitHub Actions runs the same gate for every pull request and push to `main`.
 Public camera viewing remains read-only and goes directly through the camera
 gateways when available. Fan, Cam 2 pan/tilt, and persistent stream settings use
 same-origin API routes, a signed HttpOnly session, and a server-only bearer token
-shared with `cayley-relay`.
+shared with `cayley-relay`. An authenticated session can mint a 90-second signed
+ticket for low-latency Cam 2 WebSocket control; the permanent token stays server-side.
 
 The home page is ISR-cached and probes relay health during regeneration with a
 short timeout. A relay outage therefore cannot make every page request wait on

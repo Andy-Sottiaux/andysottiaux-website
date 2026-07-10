@@ -7,6 +7,7 @@ export const CONTROL_SESSION_COOKIE = 'cayley_control_session'
 
 const SESSION_VERSION = 'v1'
 const SESSION_TTL_SECONDS = 30 * 24 * 60 * 60
+const CONTROL_TICKET_TTL_SECONDS = 90
 
 type ControlAuthConfig = {
   passwordHash: string
@@ -131,4 +132,15 @@ export function clearControlSessionCookie(response: NextResponse) {
 export function relayControlAuthorizationHeader() {
   const token = process.env.V3_DEVICE_CONTROL_RELAY_TOKEN?.trim()
   return token ? `Bearer ${token}` : null
+}
+
+export function createRelayControlTicket() {
+  const token = process.env.V3_DEVICE_CONTROL_RELAY_TOKEN?.trim()
+  if (!token) return null
+  const expiresAt = Math.floor(Date.now() / 1000) + CONTROL_TICKET_TTL_SECONDS
+  const payload = `ws1.${expiresAt}.${randomBytes(18).toString('base64url')}`
+  const ticketSignature = createHmac('sha256', token)
+    .update(`cam2-control-ws:${payload}`, 'utf8')
+    .digest('base64url')
+  return { ticket: `${payload}.${ticketSignature}`, expiresAt }
 }

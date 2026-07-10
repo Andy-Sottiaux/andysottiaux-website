@@ -207,11 +207,22 @@ export function useCam2Control() {
   useEffect(() => {
     let disposed = false
 
-    const connect = (index = 0) => {
+    const connect = async (index = 0) => {
       if (disposed || !unlocked || controlWsUrls.length === 0 || typeof WebSocket === 'undefined') return
       const url = controlWsUrls[index % controlWsUrls.length]
       try {
-        const ws = new WebSocket(url)
+        const ticketResponse = await fetch('/api/v3/control-auth/ticket', {
+          method: 'POST',
+          cache: 'no-store',
+          credentials: 'same-origin',
+        })
+        if (ticketResponse.status === 401 || ticketResponse.status === 403) markLocked()
+        if (!ticketResponse.ok) throw new Error(`control_ticket_${ticketResponse.status}`)
+        const ticketBody = await ticketResponse.json() as { ticket?: unknown }
+        if (typeof ticketBody.ticket !== 'string' || !ticketBody.ticket) throw new Error('control_ticket_invalid')
+        if (disposed) return
+
+        const ws = new WebSocket(withQueryParam(url, 'ticket', ticketBody.ticket))
         controlWsRef.current = ws
         ws.onopen = () => {
           if (controlWsRef.current === ws) setControlConnected(true)
@@ -250,7 +261,7 @@ export function useCam2Control() {
           setMotionState((previous) => previous ? { ...previous, active: false } : previous)
           if (!disposed) {
             const nextIndex = (index + 1) % controlWsUrls.length
-            controlWsRetryRef.current = setTimeout(() => connect(nextIndex), index === 0 ? 350 : 1200)
+            controlWsRetryRef.current = setTimeout(() => void connect(nextIndex), index === 0 ? 350 : 1200)
           }
         }
         ws.onerror = () => {
@@ -263,12 +274,12 @@ export function useCam2Control() {
       } catch {
         if (!disposed) {
           const nextIndex = (index + 1) % controlWsUrls.length
-          controlWsRetryRef.current = setTimeout(() => connect(nextIndex), index === 0 ? 350 : 1800)
+          controlWsRetryRef.current = setTimeout(() => void connect(nextIndex), index === 0 ? 350 : 1800)
         }
       }
     }
 
-    connect()
+    void connect()
     return () => {
       disposed = true
       if (controlWsRetryRef.current) clearTimeout(controlWsRetryRef.current)
@@ -280,7 +291,7 @@ export function useCam2Control() {
       controlWsRef.current = null
       setControlConnected(false)
     }
-  }, [controlWsUrls, unlocked])
+  }, [controlWsUrls, markLocked, unlocked])
 
   return {
     settings,
@@ -297,6 +308,11 @@ export function useCam2Control() {
 
 function uniqueUrls(urls: Array<string | null | undefined>) {
   return Array.from(new Set(urls.filter((url): url is string => Boolean(url))))
+}
+
+function withQueryParam(url: string, key: string, value: string) {
+  const separator = url.includes('?') ? '&' : '?'
+  return `${url}${separator}${encodeURIComponent(key)}=${encodeURIComponent(value)}`
 }
 
 async function fetchJsonCandidate<T>(urls: string[]): Promise<T> {

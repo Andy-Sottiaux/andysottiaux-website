@@ -12,6 +12,9 @@ The browser must never receive `V3_DEVICE_CONTROL_RELAY_TOKEN`, camera
 credentials, or a private relay path token. Public environment variables are
 limited to read-only gateway URLs.
 
+Cam 2 WebSocket control uses a 90-second HMAC ticket issued only to an
+authenticated control session. Relay and nginx logs redact or omit that ticket.
+
 ## Control Password
 
 Generate a password hash without storing the plaintext in the repository:
