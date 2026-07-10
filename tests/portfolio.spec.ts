@@ -35,7 +35,7 @@ test('opens and closes primary modals', async ({ page }) => {
   await expect(page.locator('dialog[open]')).toHaveCount(0)
 
   await page.getByRole('tab', { name: 'Travel' }).click()
-  await page.locator('.spotlight-slide[aria-hidden="false"]').getByRole('button', { name: /^Details$/ }).click()
+  await page.locator('[data-modal-trigger="Open Travel Agent AI"]').click({ position: { x: 20, y: 20 } })
   await expect(page.locator('dialog[open] h2')).toHaveText('Projects')
   await page.keyboard.press('Escape')
   await expect(page.locator('dialog[open]')).toHaveCount(0)
@@ -65,19 +65,27 @@ test('surfaces Cam1 AI readiness and project validation proof', async ({ page })
   await expect(aiPanel).toContainText('package · 23')
   await page.keyboard.press('Escape')
 
-  await page.getByRole('tab', { name: 'Travel' }).click()
-  await page.locator('.spotlight-slide[aria-hidden="false"]').getByRole('button', { name: /^Details$/ }).click()
+  await page.locator('[data-modal-trigger="Open Projects"]').click({ position: { x: 20, y: 20 } })
   await expect(page.locator('dialog[open]')).toContainText('Architecture')
   await expect(page.locator('dialog[open]')).toContainText('Validation')
-  await expect(page.locator('dialog[open]')).toContainText('Dataset diversity checks')
+  await expect(page.locator('dialog[open]')).toContainText('FPS and bitrate budgets')
+})
+
+test('links featured projects to full case studies', async ({ page }) => {
+  await openHome(page)
+
+  const activeSpotlight = page.locator('.spotlight-slide[aria-hidden="false"]')
+  await expect(activeSpotlight.getByRole('link', { name: 'Case study' })).toHaveAttribute('href', '/work/travel-agent-ai')
+
+  await activeSpotlight.getByRole('link', { name: 'Case study' }).click()
+  await expect(page).toHaveURL(/\/work\/travel-agent-ai$/)
+  await expect(page.getByRole('heading', { level: 1, name: 'Travel Agent AI' })).toBeVisible()
 })
 
 test('@a11y home page has no serious automated accessibility regressions', async ({ page }) => {
   await openHome(page)
 
-  const results = await new AxeBuilder({ page })
-    .disableRules(['color-contrast'])
-    .analyze()
+  const results = await new AxeBuilder({ page }).analyze()
 
   expect(results.violations).toEqual([])
 })

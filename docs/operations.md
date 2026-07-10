@@ -20,7 +20,7 @@ authenticated control session. Relay and nginx logs redact or omit that ticket.
 Generate a password hash without storing the plaintext in the repository:
 
 ```bash
-printf '%s' '<password>' | shasum -a 256
+printf '%s' '<password>' | npm run control:hash
 openssl rand -base64 48
 ```
 
@@ -32,6 +32,18 @@ invalidates every existing session immediately.
 `V3_DEVICE_CONTROL_RELAY_TOKEN` must exactly match
 `DEVICE_CONTROL_RELAY_TOKEN` on `cayley-relay`. Rotate both sides before
 restarting relay services, then redeploy the website.
+
+The route-level attempt bucket is defense in depth only because Vercel can run
+multiple function instances. Configure a Vercel WAF rate-limit rule for
+`POST /api/v3/control-auth` before treating the login boundary as globally
+rate limited.
+
+## Relay Source Ownership
+
+The canonical relay runtime, installers, systemd units, and recovery utilities
+live in `https://github.com/Andy-Sottiaux/cayley-relay`. This website repository
+keeps only browser-facing configuration and operator notes; do not copy relay
+executables back into `ops/`.
 
 ## Deployment
 

@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
+import { createHmac, randomBytes, scrypt, timingSafeEqual } from 'node:crypto'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export const CONTROL_SESSION_COOKIE = 'cayley_control_session'
@@ -10,25 +10,72 @@ const SESSION_TTL_SECONDS = 30 * 24 * 60 * 60
 const CONTROL_TICKET_TTL_SECONDS = 90
 
 type ControlAuthConfig = {
-  passwordHash: string
+  password: ScryptPasswordRecord
   signingSecret: string
 }
 
+type ScryptPasswordRecord = {
+  cost: number
+  blockSize: number
+  parallelization: number
+  salt: Buffer
+  digest: Buffer
+}
+
+const SCRYPT_PREFIX = 'scrypt'
+const SCRYPT_MAX_MEMORY = 64 * 1024 * 1024
+
+function parseScryptPasswordRecord(value: string): ScryptPasswordRecord | null {
+  const [prefix, costText, blockSizeText, parallelizationText, saltText, digestText] = value.split('$')
+  if (prefix !== SCRYPT_PREFIX || !costText || !blockSizeText || !parallelizationText || !saltText || !digestText) {
+    return null
+  }
+
+  const cost = Number(costText)
+  const blockSize = Number(blockSizeText)
+  const parallelization = Number(parallelizationText)
+  if (
+    !Number.isSafeInteger(cost) || cost < 16_384 || (cost & (cost - 1)) !== 0 ||
+    !Number.isSafeInteger(blockSize) || blockSize < 8 ||
+    !Number.isSafeInteger(parallelization) || parallelization < 1
+  ) {
+    return null
+  }
+
+  try {
+    const salt = Buffer.from(saltText, 'base64url')
+    const digest = Buffer.from(digestText, 'base64url')
+    if (salt.length < 16 || digest.length < 32) return null
+    return { cost, blockSize, parallelization, salt, digest }
+  } catch {
+    return null
+  }
+}
+
 function controlAuthConfig(): ControlAuthConfig | null {
-  const passwordHash = process.env.CONTROL_AUTH_PASSWORD_HASH?.trim().toLowerCase() ?? ''
+  const passwordHash = process.env.CONTROL_AUTH_PASSWORD_HASH?.trim() ?? ''
   const signingSecret = process.env.CONTROL_AUTH_SECRET?.trim() ?? ''
-  if (!/^[a-f0-9]{64}$/.test(passwordHash) || signingSecret.length < 32) return null
-  return { passwordHash, signingSecret }
+  const password = parseScryptPasswordRecord(passwordHash)
+  if (!password || signingSecret.length < 32) return null
+  return { password, signingSecret }
 }
 
-function equalText(left: string, right: string) {
-  const leftBytes = Buffer.from(left)
-  const rightBytes = Buffer.from(right)
-  return leftBytes.length === rightBytes.length && timingSafeEqual(leftBytes, rightBytes)
+function equalBytes(left: Buffer, right: Buffer) {
+  return left.length === right.length && timingSafeEqual(left, right)
 }
 
-function passwordHash(value: string) {
-  return createHash('sha256').update(value, 'utf8').digest('hex')
+function derivePassword(value: string, record: ScryptPasswordRecord) {
+  return new Promise<Buffer>((resolve, reject) => {
+    scrypt(value, record.salt, record.digest.length, {
+      N: record.cost,
+      r: record.blockSize,
+      p: record.parallelization,
+      maxmem: SCRYPT_MAX_MEMORY,
+    }, (error, derivedKey) => {
+      if (error) reject(error)
+      else resolve(derivedKey)
+    })
+  })
 }
 
 function signature(payload: string, secret: string) {
@@ -39,10 +86,14 @@ export function controlAuthConfigured() {
   return controlAuthConfig() !== null
 }
 
-export function controlPasswordMatches(value: string) {
+export async function controlPasswordMatches(value: string) {
   const config = controlAuthConfig()
   if (!config || value.length > 512) return false
-  return equalText(passwordHash(value), config.passwordHash)
+  try {
+    return equalBytes(await derivePassword(value, config.password), config.password.digest)
+  } catch {
+    return false
+  }
 }
 
 export function createControlSession() {
@@ -64,7 +115,7 @@ export function hasValidControlSession(request: NextRequest) {
   if (!Number.isSafeInteger(expiresAt) || expiresAt <= Math.floor(Date.now() / 1000)) return false
 
   const payload = parts.slice(0, 3).join('.')
-  return equalText(parts[3], signature(payload, config.signingSecret))
+  return equalBytes(Buffer.from(parts[3]), Buffer.from(signature(payload, config.signingSecret)))
 }
 
 export function requestHasSameOrigin(request: NextRequest) {

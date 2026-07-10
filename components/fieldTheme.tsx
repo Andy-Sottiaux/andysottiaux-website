@@ -48,9 +48,9 @@ const DARK_PALETTE: FieldPalette = {
   cardBorder: '1px solid rgba(255,255,255,0.08)',
   cardShadow: '0 30px 80px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)',
   headlineGradient: 'linear-gradient(180deg, #fff 0%, #b0b0b8 100%)',
-  bodyText: 'rgba(255,255,255,0.55)',
-  mutedText: 'rgba(255,255,255,0.4)',
-  fadedText: 'rgba(255,255,255,0.3)',
+  bodyText: 'rgba(255,255,255,0.74)',
+  mutedText: 'rgba(255,255,255,0.64)',
+  fadedText: 'rgba(255,255,255,0.54)',
   trackBackground: 'rgba(255,255,255,0.06)',
   hairline: 'rgba(255,255,255,0.06)',
 }
@@ -67,9 +67,9 @@ const LIGHT_PALETTE: FieldPalette = {
   cardShadow:
     '0 20px 50px rgba(28,26,28,0.08), 0 4px 12px rgba(28,26,28,0.04), inset 0 1px 0 rgba(255,255,255,0.7)',
   headlineGradient: 'linear-gradient(180deg, #1c1a1c 0%, #4a4a52 100%)',
-  bodyText: 'rgba(0,0,0,0.62)',
-  mutedText: 'rgba(0,0,0,0.45)',
-  fadedText: 'rgba(0,0,0,0.32)',
+  bodyText: 'rgba(0,0,0,0.74)',
+  mutedText: 'rgba(0,0,0,0.64)',
+  fadedText: 'rgba(0,0,0,0.56)',
   trackBackground: 'rgba(0,0,0,0.06)',
   hairline: 'rgba(0,0,0,0.08)',
 }

@@ -1,6 +1,7 @@
 'use client'
 
 import Image from 'next/image'
+import Link from 'next/link'
 import { useFieldTheme } from '../fieldTheme'
 import { PROJECT_ITEMS } from './content'
 import Tile from './Tile'
@@ -23,11 +24,11 @@ export default function ProjectsTile({ onOpen }: { onOpen?: () => void }) {
         <div className="px-4 sm:px-5 md:px-[clamp(1rem,1.7vw,1.5rem)] pt-2 md:pt-[clamp(0.25rem,0.9dvh,0.75rem)] pb-3 md:pb-[clamp(0.5rem,1.4dvh,1.25rem)] flex-1 min-h-0 flex flex-col overflow-hidden">
           <div className="flex-1 min-h-0 flex flex-col justify-evenly gap-2 lg:gap-[clamp(0.1rem,0.45dvh,0.4rem)]">
             {PROJECT_ITEMS.map((p) => (
-              <a
+              <Link
                 key={p.name}
                 href={p.url}
-                target="_blank"
-                rel="noopener noreferrer"
+                target={p.external ? '_blank' : undefined}
+                rel={p.external ? 'noopener noreferrer' : undefined}
                 className="relative z-10 group min-h-0 flex items-center gap-2.5 md:gap-3 rounded-xl px-2.5 py-2 lg:px-[clamp(0.35rem,0.75dvh,0.55rem)] lg:py-[clamp(0.1rem,0.32dvh,0.3rem)] transition-all"
                 style={{
                   background: isLight ? 'rgba(0,0,0,0.025)' : 'rgba(255,255,255,0.035)',
@@ -73,7 +74,7 @@ export default function ProjectsTile({ onOpen }: { onOpen?: () => void }) {
               >
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
-            </a>
+            </Link>
           ))}
         </div>
           <a

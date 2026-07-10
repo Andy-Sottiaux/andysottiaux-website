@@ -4,6 +4,14 @@ Andy Sottiaux's portfolio and live field-system dashboard. The site combines a
 static portfolio with opt-in Cam 1/Cam 2 streams, edge-AI diagnostics, solar
 telemetry, health monitoring, and authenticated physical controls.
 
+## Public Surfaces
+
+- `/` — compact portfolio and project overview
+- `/work/travel-agent-ai` — shipped iOS product case study
+- `/work/field-camera` — edge camera, relay, and operations case study
+- `/work/wyzecar` — robotics and autonomy case study
+- `/lab` — full live camera, inference, health, and solar dashboard
+
 ## Stack
 
 - Next.js 15 App Router, React 18, and TypeScript
@@ -45,6 +53,11 @@ ticket for low-latency Cam 2 WebSocket control; the permanent token stays server
 The home page is ISR-cached and probes relay health during regeneration with a
 short timeout. A relay outage therefore cannot make every page request wait on
 the edge system; client polling updates live state after load.
+
+Featured project content is defined once in `content/caseStudies.ts` and reused
+by the homepage modal, route metadata, sitemap, and server-rendered case-study
+pages. The live dashboard is isolated in `components/live` so the dedicated lab
+does not load unrelated portfolio modal code.
 
 See [docs/operations.md](docs/operations.md) for environment variables, control
 password rotation, deployment, and incident checks.

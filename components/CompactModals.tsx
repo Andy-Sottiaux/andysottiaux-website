@@ -18,20 +18,9 @@ import dynamic from 'next/dynamic'
 import Image from 'next/image'
 import { useEffect, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
-import CameraIdleSurface from './CameraIdleSurface'
-import CameraIntelligencePanel from './CameraIntelligencePanel'
-import FieldHealthCard from './FieldHealthCard'
-import FieldSolarCard from './FieldSolarCard'
-import CameraSourceToggle from './CameraSourceToggle'
 import { useFieldTheme } from './fieldTheme'
-import type { FieldCameraSource } from '@/lib/fieldCameraConfig'
-import type { HealthPollResult } from '@/lib/fieldHealth'
 import { useFundraising } from '@/lib/useFundraising'
-
-const CameraFeedSwitcher = dynamic(() => import('./CameraFeedSwitcher'), {
-  ssr: false,
-  loading: () => <CameraIdleSurface mode="loading" />,
-})
+import { PROJECT_CASE_STUDIES, SECONDARY_PROJECTS, caseStudyPath } from '@/content/caseStudies'
 
 const STLViewer = dynamic(() => import('./STLViewer'), {
   ssr: false,
@@ -187,156 +176,6 @@ export function AboutModalContent() {
           />
         </div>
       </div>
-    </div>
-  )
-}
-
-/* ─────────────────── Field Live ─────────────────── */
-
-const LIVE_PROOF = [
-  { label: 'Edge stack', value: 'Linux board, 5 MP camera, on-device inference, thermal/fan health' },
-  { label: 'Power stack', value: 'Solar + LiFePO4 telemetry with graceful stale/offline behavior' },
-  { label: 'Web stack', value: 'Same-origin Next.js APIs, stream fallback, public read-only surface' },
-]
-
-const LIVE_ROLES = ['Hardware integration', 'Embedded services', 'Camera relay', 'Telemetry UI', 'Failure states']
-
-export function LiveModalContent({
-  initialHealthPoll,
-  selectedCamera = 'field',
-  onCameraChange = () => undefined,
-}: {
-  initialHealthPoll?: HealthPollResult
-  selectedCamera?: FieldCameraSource
-  onCameraChange?: (value: FieldCameraSource) => void
-}) {
-  const palette = useFieldTheme()
-  const isLight = palette.mode === 'light'
-  const changeCamera = (value: FieldCameraSource) => {
-    onCameraChange(value)
-  }
-
-  const intro = selectedCamera === 'field'
-    ? 'Live edge-AI camera and solar telemetry from a board I built end-to-end: hardware integration, Linux services, relay APIs, and the public read-only stream you are seeing.'
-    : 'HatchingPoint-branded Thingino E220 view through the tailnet proxy. The site only consumes a read-only relay; control and device credentials stay off the browser.'
-
-  return (
-    <div className="flex flex-col gap-5" data-camera-performance="true">
-      <div
-        className="rounded-2xl p-4 sm:p-5"
-        style={polishedSurfaceStyle(
-          isLight,
-          palette.cardBorder,
-          isLight ? 'rgba(10,138,168,0.055)' : 'rgba(103,232,249,0.075)'
-        )}
-      >
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0 flex-1">
-            <div
-              className="text-[9.5px] font-semibold uppercase tracking-[0.2em]"
-              style={{ color: palette.mutedText }}
-            >
-              Live System
-            </div>
-            <div
-              className="mt-1.5 text-[16px] sm:text-[18px] font-semibold leading-tight tracking-tight"
-              style={{ color: isLight ? '#1c1a1c' : '#fff' }}
-            >
-              Camera relay, telemetry, and edge-AI health in one surface.
-            </div>
-            <p className="mt-2 text-[13px] sm:text-[13.5px] leading-snug" style={{ color: palette.bodyText }}>
-              {intro}
-            </p>
-          </div>
-          <div className="shrink-0">
-            <CameraSourceToggle
-              value={selectedCamera}
-              onChange={changeCamera}
-              isLight={isLight}
-            />
-          </div>
-        </div>
-
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          {LIVE_ROLES.map((role) => (
-            <Chip key={role}>{role}</Chip>
-          ))}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-        {LIVE_PROOF.map((item) => (
-          <div
-            key={item.label}
-            className="rounded-2xl p-3.5"
-            style={polishedSurfaceStyle(isLight, palette.cardBorder)}
-          >
-            <div
-              className="text-[9.5px] font-semibold uppercase tracking-[0.18em]"
-              style={{ color: palette.mutedText }}
-            >
-              {item.label}
-            </div>
-            <div
-              className="mt-1 text-[12px] leading-snug"
-              style={{ color: palette.bodyText }}
-            >
-              {item.value}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {selectedCamera === 'field' && <CameraIntelligencePanel enabled />}
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div className="md:col-span-2">
-          <div
-            className="relative w-full overflow-hidden rounded-2xl"
-            style={{
-              aspectRatio: '16 / 9',
-              background: isLight ? '#0a0a0c' : '#000',
-              boxShadow: isLight
-                ? '0 4px 12px rgba(28,26,28,0.12)'
-                : '0 8px 24px rgba(0,0,0,0.4)',
-            }}
-          >
-            <CameraFeedSwitcher
-              selectedCamera={selectedCamera}
-              enabled
-            />
-          </div>
-        </div>
-        <div className="md:col-span-1 [&>div]:h-full">
-          <FieldHealthCard initialHealthPoll={initialHealthPoll} />
-        </div>
-        <div className="md:col-span-3 [&>div]:h-full">
-          <FieldSolarCard />
-        </div>
-      </div>
-
-      <ul
-        className="grid grid-cols-1 gap-2 pt-1 text-[12px] leading-snug sm:grid-cols-2"
-        style={{ color: palette.mutedText }}
-      >
-        {[
-          '5 MP H.265 sensor, browser-safe preview path',
-          'Linux board with on-device inference',
-          'Solar + LiFePO4 buffer, off-grid capable',
-          'Public read-only stream surface',
-        ].map((item) => (
-          <li
-            key={item}
-            className="rounded-xl px-2.5 py-2"
-            style={{
-              background: isLight ? 'rgba(0,0,0,0.025)' : 'rgba(255,255,255,0.035)',
-              border: palette.hairline ? `1px solid ${palette.hairline}` : palette.cardBorder,
-            }}
-          >
-            {item}
-          </li>
-        ))}
-      </ul>
     </div>
   )
 }
@@ -564,110 +403,6 @@ export function ExperienceModalContent() {
 
 /* ─────────────────── Projects ─────────────────── */
 
-type ProjectCaseStudy = {
-  title: string
-  problem: string
-  built: string
-  outcome: string
-  proof: string
-  metrics: string[]
-  architecture: string[]
-  validation: string[]
-  tech: string[]
-  link: string
-  icon: string
-  iconContain?: boolean
-}
-
-const PROJECTS_FULL: ProjectCaseStudy[] = [
-  {
-    title: 'Travel Agent AI',
-    problem: 'Make travel planning useful after the booking confirmation, not just during destination search.',
-    built: 'Built an iOS trip assistant for booking capture, flight tracking, packing lists, calendar sync, itinerary sharing, and trip cost tracking.',
-    outcome: 'A polished consumer AI app that turns scattered travel details into one practical mobile planning surface.',
-    proof: 'Shows production mobile product execution across AI UX, App Store delivery, subscription-ready product design, sync patterns, and everyday utility.',
-    metrics: ['App Store shipped', 'AI extraction flow', 'Calendar sync', 'Shared trip model'],
-    architecture: ['SwiftUI app shell', 'AI document extraction', 'Trip data model', 'Calendar and sharing flows'],
-    validation: ['Public App Store listing', 'End-to-end mobile UX', 'Real booking workflow', 'User-facing product polish'],
-    tech: ['iOS', 'SwiftUI', 'AI', 'Travel', 'Subscriptions', 'Calendar APIs'],
-    link: 'https://apps.apple.com/us/app/travel-agent-ai/id6758284691',
-    icon: '/images/travelagentai-icon.png',
-  },
-  {
-    title: 'Edge-AI Field Camera',
-    problem: 'Expose a real solar-powered edge system publicly without leaking private infrastructure or letting live hardware failures become invisible.',
-    built: 'Integrated camera streaming, on-device RKNN inference, solar telemetry, thermal/fan health, Cloudflare relay routing, and production diagnostics.',
-    outcome: 'A live hardware system that behaves like a production surface: opt-in streams, health fallbacks, quality checks, and deploy-time regression gates.',
-    proof: 'Demonstrates embedded Linux services, power telemetry, camera transport, edge inference, and full-stack operational visibility in one public product.',
-    metrics: ['1280x960 · 30 FPS', 'On-device RKNN', 'Training readiness gates', 'Production health monitor'],
-    architecture: ['Thingino/Linux camera board', 'go2rtc + Cloudflare relay', 'Solar and thermal telemetry', 'Next.js diagnostics APIs'],
-    validation: ['FPS and bitrate budgets', 'RKNN state and latency', 'Dataset diversity checks', 'No-idle-stream policy'],
-    tech: ['Linux', 'Edge AI', 'Next.js', 'Cloudflare Tunnel', 'Telemetry', 'WebRTC'],
-    link: '/#now',
-    icon: '/images/hatchingpoint-mark.png',
-    iconContain: true,
-  },
-  {
-    title: 'WYZECAR',
-    problem: 'Turn a small RC platform into a controllable autonomy testbed with live video and person-following behavior.',
-    built: 'Integrated YOLOv8 perception, ROS2-style control plumbing, web-based WASD control, live video, and PID motion.',
-    outcome: 'A visible robotics demo that makes perception-to-control work inspectable from a browser.',
-    proof: 'Shows the robotics loop end-to-end: perception, control, hardware interface, operator UI, and field iteration.',
-    metrics: ['Vision loop', 'Browser controls', 'PID tuning', 'Hardware testbed'],
-    architecture: ['YOLOv8 perception', 'Camera stream pipeline', 'Browser operator controls', 'Motor-control feedback loop'],
-    validation: ['Closed-loop driving demo', 'Tunable PID response', 'Inspectable GitHub code', 'Hardware iteration path'],
-    tech: ['Python', 'YOLOv8', 'ROS2', 'DART-MX95', 'ESP32'],
-    link: 'https://github.com/Andy-Sottiaux/WYZECAR',
-    icon: '/images/wyzecar.png',
-    iconContain: true,
-  },
-  {
-    title: 'Rot Dot',
-    problem: 'Create real physical friction for phone distraction without making the app feel like a punishment tool.',
-    built: 'Used NFC stickers, SwiftUI, FamilyControls, and the Screen Time API to bind lock/unlock behavior to places.',
-    outcome: 'A shipped iOS product built around a physical-world interaction instead of another timer screen.',
-    proof: 'Combines product judgment with a restricted Apple API surface and real-world interaction design.',
-    metrics: ['App Store shipped', 'NFC workflow', 'Screen Time API', 'Physical UX'],
-    architecture: ['SwiftUI app', 'NFC trigger model', 'Screen Time API controls', 'Place-based unlock flow'],
-    validation: ['Shipped App Store product', 'Restricted API integration', 'Physical interaction testing', 'Clear behavior boundary'],
-    tech: ['iOS', 'Swift', 'SwiftUI', 'NFC', 'FamilyControls'],
-    link: 'https://apps.apple.com/us/app/rot-dot/id6758902103',
-    icon: '/images/rotdot-icon.png',
-  },
-  {
-    title: 'Record + Transcribe',
-    problem: 'Make long voice notes and meetings useful immediately after capture.',
-    built: 'Built recording, live transcription, and AI summary flows that extract decisions, key points, and action items.',
-    outcome: 'A production AI utility that turns raw audio capture into immediately usable notes.',
-    proof: 'Demonstrates a production mobile AI workflow: capture, streaming text, summary UX, and shipped App Store release.',
-    metrics: ['App Store shipped', 'Audio capture', 'AI summaries', 'Action extraction'],
-    architecture: ['iOS recording flow', 'Speech recognition', 'AI summarization', 'Action-item extraction'],
-    validation: ['Shipped mobile utility', 'Long-form capture path', 'Structured summary output', 'Useful post-meeting workflow'],
-    tech: ['iOS', 'Swift', 'SwiftUI', 'Speech Recognition', 'OpenAI'],
-    link: 'https://apps.apple.com/app/record-transcribe/id6758643630',
-    icon: '/images/recordtranscribe-icon.png',
-  },
-  {
-    title: 'AirMD+',
-    problem: 'Expose HVAC behavior as live telemetry instead of intermittent technician observations.',
-    built: 'Built the custom monitoring hardware path plus iOS and web surfaces for temperature tracking and system visibility.',
-    outcome: 'An embedded-to-app monitoring path for operational visibility outside the lab.',
-    proof: 'Bridges embedded data collection, full-stack product work, and a practical operational monitoring use case.',
-    metrics: ['Embedded telemetry', 'Mobile dashboard', 'Web visibility', 'HVAC domain'],
-    architecture: ['Custom sensor path', 'Device telemetry', 'Mobile dashboard', 'Web reporting surface'],
-    validation: ['Real HVAC domain problem', 'Field-style monitoring UX', 'Hardware-to-app data path', 'Operational visibility goal'],
-    tech: ['iOS', 'Swift', 'Hardware', 'IoT', 'Embedded'],
-    link: 'https://www.hatchingpoint.com/airmd',
-    icon: '/images/airmd-icon.jpg',
-  },
-]
-
-const SECONDARY_PROJECTS = [
-  { name: 'LevelUp+', description: 'Habit and goal tracker with streaks and reminders.', tech: ['iOS', 'SwiftUI'] },
-  { name: 'Caffeine Rhythm', description: 'Caffeine half-life tracking to time your day better.', tech: ['iOS', 'SwiftUI', 'HealthKit'] },
-  { name: 'AirPods Pro 3 Tesla Mount', description: 'Custom 3D-printed holder positioning AirPods Pro 3 at the right height for Tesla wireless chargers.', tech: ['SOLIDWORKS', '3D Printing'] },
-]
-
 const PROJECT_SUMMARY_TAGS = ['Production iOS', 'Live hardware', 'Edge AI', 'Robotics', 'Operational telemetry']
 
 export function ProjectsModalContent() {
@@ -709,8 +444,9 @@ export function ProjectsModalContent() {
         </div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {PROJECTS_FULL.map((p) => {
-          const externalLink = /^https?:\/\//.test(p.link)
+        {PROJECT_CASE_STUDIES.map((p) => {
+          const href = caseStudyPath(p)
+          const externalLink = /^https?:\/\//.test(href)
           const details = [
             { label: 'Problem', value: p.problem },
             { label: 'Built', value: p.built },
@@ -721,7 +457,7 @@ export function ProjectsModalContent() {
           return (
             <a
               key={p.title}
-              href={p.link}
+              href={href}
               target={externalLink ? '_blank' : undefined}
               rel={externalLink ? 'noopener noreferrer' : undefined}
               className="group rounded-2xl p-3.5 sm:p-4 transition-all hover:scale-[1.01] flex flex-col"
@@ -822,6 +558,11 @@ export function ProjectsModalContent() {
                   <Chip key={t}>{t}</Chip>
                 ))}
               </div>
+              {p.slug && (
+                <div className="mt-3 text-[11px] font-semibold tracking-tight" style={{ color: isLight ? '#0a7188' : '#67e8f9' }}>
+                  Read case study →
+                </div>
+              )}
             </a>
           )
         })}

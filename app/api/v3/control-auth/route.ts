@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json().catch(() => null) as { password?: unknown } | null
   const password = typeof body?.password === 'string' ? body.password : ''
-  if (!controlPasswordMatches(password)) return json({ ok: false, error: 'invalid_credentials' }, 401)
+  if (!await controlPasswordMatches(password)) return json({ ok: false, error: 'invalid_credentials' }, 401)
 
   const session = createControlSession()
   if (!session) return json({ ok: false, error: 'control_auth_unconfigured' }, 503)

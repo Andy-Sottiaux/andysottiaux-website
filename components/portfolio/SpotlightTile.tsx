@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
+import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 import type { ModalKey } from '../CompactModals'
 import CameraIdleSurface from '../CameraIdleSurface'
@@ -38,11 +39,12 @@ export default function SpotlightTile({
   }))
   const interactionPausedRef = useRef(false)
   const active = SPOTLIGHT_ITEMS[activeIndex]
-  let streamEnabled = enabled && streamIntent.itemId === active.id && streamIntent.enabled
-  if (streamIntent.itemId !== active.id || (!enabled && streamIntent.enabled)) {
-    streamEnabled = false
-    setStreamIntent({ itemId: active.id, enabled: false })
-  }
+  const streamEnabled = enabled && streamIntent.itemId === active.id && streamIntent.enabled
+
+  useEffect(() => {
+    if (enabled) return
+    setStreamIntent((current) => current.enabled ? { ...current, enabled: false } : current)
+  }, [enabled])
 
   useEffect(() => {
     if (reducedMotion || modalOpen || streamEnabled) return
@@ -123,7 +125,6 @@ export default function SpotlightTile({
                   <SpotlightProjectPanel
                     item={item}
                     active={isActive}
-                    onOpen={onOpen}
                   />
                 )}
               </div>
@@ -240,11 +241,9 @@ function SpotlightCameraPanel({
 function SpotlightProjectPanel({
   item,
   active,
-  onOpen,
 }: {
   item: SpotlightItem
   active: boolean
-  onOpen: (key: ModalKey) => void
 }) {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
@@ -353,38 +352,35 @@ function SpotlightProjectPanel({
         </div>
 
         <div className="relative flex flex-wrap items-center gap-2">
+          {item.caseStudyHref ? (
+            <Link
+              href={item.caseStudyHref}
+              tabIndex={active ? undefined : -1}
+              className="rounded-[8px] px-3 py-1.5 text-[11px] font-semibold focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
+              style={{
+                color: isLight ? '#fff' : '#081012',
+                background: accent,
+              }}
+            >
+              Case study
+            </Link>
+          ) : null}
           {item.href ? (
             <a
               href={item.href}
               target="_blank"
               rel="noopener noreferrer"
               tabIndex={active ? undefined : -1}
-              className="rounded-full px-3 py-1.5 text-[11px] font-semibold tracking-tight focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
+              className="rounded-[8px] px-3 py-1.5 text-[11px] font-semibold focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
               style={{
-                color: isLight ? '#fff' : '#081012',
-                background: accent,
+                color: palette.bodyText,
+                background: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.07)',
+                border: palette.cardBorder,
               }}
             >
               {item.cta ?? 'Open'}
             </a>
           ) : null}
-          <button
-            type="button"
-            tabIndex={active ? undefined : -1}
-            onClick={(event) => {
-              event.stopPropagation()
-              haptic('open')
-              onOpen(item.modal)
-            }}
-            className="rounded-full px-3 py-1.5 text-[11px] font-semibold tracking-tight focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
-            style={{
-              color: palette.bodyText,
-              background: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.07)',
-              border: palette.cardBorder,
-            }}
-          >
-            Details
-          </button>
         </div>
       </div>
     </div>

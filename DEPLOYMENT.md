@@ -21,6 +21,17 @@ npm run test:camera
 
 The required Vercel variables are documented in `.env.example`; production
 values must remain encrypted in Vercel and must not be committed.
+`CONTROL_AUTH_PASSWORD_HASH` must use the versioned scrypt record produced by
+`npm run control:hash`; the previous unversioned SHA-256 digest is not accepted.
+
+Confirm the public pages and security headers after deployment:
+
+```bash
+curl -fsSI https://andysottiaux.com/work/travel-agent-ai
+curl -fsSI https://andysottiaux.com/lab
+curl -fsS https://andysottiaux.com/sitemap.xml
+curl -fsS https://andysottiaux.com/api/v3/control-auth
+```
 
 ## Rollback
 

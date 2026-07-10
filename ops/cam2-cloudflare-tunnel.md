@@ -113,7 +113,8 @@ together:
 /opt/cayley-relay/go2rtc.yaml
 ```
 
-`ops/cam2-recover.py` is the versioned recovery utility for that failure mode.
+`services/cam2/cam2-recover.py` in the separate `cayley-relay` repository is
+the versioned recovery utility for that failure mode.
 It first probes the currently configured host. Only if that host is broken does
 it scan `192.168.4.0/22` for a Thingino device, verify login, motor metadata,
 snapshot JPEG, and RTSP, then update both config files and restart the affected
@@ -135,6 +136,9 @@ sudo systemctl status hatchingpoint-cam2-recover.timer
 sudo journalctl -u hatchingpoint-cam2-recover.service -n 80 --no-pager
 sudo python3 /opt/hatchingpoint/cam2-recover.py --check-only
 ```
+
+Do not add a second recovery-script copy to this website repository. Relay
+deployment and verification changes must be committed in `cayley-relay`.
 
 The website also exposes same-origin diagnostics endpoints:
 

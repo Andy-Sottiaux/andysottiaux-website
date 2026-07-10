@@ -1,9 +1,17 @@
-import { createHash, randomBytes } from 'node:crypto'
+import { randomBytes, scryptSync } from 'node:crypto'
 import { defineConfig, devices } from '@playwright/test'
 
 const PORT = Number(process.env.PORT ?? 3100)
 const TEST_CONTROL_PASSWORD = 'test-device-control-password'
-const TEST_CONTROL_PASSWORD_HASH = createHash('sha256').update(TEST_CONTROL_PASSWORD).digest('hex')
+const TEST_CONTROL_SALT = randomBytes(16)
+const TEST_CONTROL_PASSWORD_HASH = [
+  'scrypt',
+  '16384',
+  '8',
+  '1',
+  TEST_CONTROL_SALT.toString('base64url'),
+  scryptSync(TEST_CONTROL_PASSWORD, TEST_CONTROL_SALT, 64, { N: 16_384, r: 8, p: 1 }).toString('base64url'),
+].join('$')
 const TEST_CONTROL_SECRET = randomBytes(48).toString('hex')
 const TEST_RELAY_TOKEN = randomBytes(32).toString('hex')
 

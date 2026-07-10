@@ -40,11 +40,11 @@ export default function BentoGrid({
     >
       {/* Spotlight spans two rows and keeps live camera streams paused until
           the visitor explicitly presses play. */}
-      <div className="order-1 col-span-12 lg:order-none lg:col-span-3 lg:col-start-1 lg:row-start-1">
+      <div id="about" className="order-1 col-span-12 lg:order-none lg:col-span-3 lg:col-start-1 lg:row-start-1">
         <IdentityTile onOpen={() => onOpen('about')} />
       </div>
 
-      <div className="order-2 col-span-12 lg:order-none lg:col-span-6 lg:col-start-4 lg:row-start-1 lg:row-span-2">
+      <div id="now" className="order-2 col-span-12 lg:order-none lg:col-span-6 lg:col-start-4 lg:row-start-1 lg:row-span-2">
         <SpotlightTile
           enabled={cameraEnabled}
           modalOpen={modalOpen}
@@ -65,16 +65,16 @@ export default function BentoGrid({
         />
       </div>
 
-      <div className="order-5 col-span-12 lg:order-none lg:col-span-5 lg:col-start-1 lg:row-start-3">
+      <div id="experience" className="order-5 col-span-12 lg:order-none lg:col-span-5 lg:col-start-1 lg:row-start-3">
         <ExperienceTile onOpen={() => onOpen('experience')} />
       </div>
-      <div className="order-4 col-span-12 lg:order-none lg:col-span-5 lg:col-start-1 lg:row-start-4">
+      <div id="projects" className="order-4 col-span-12 lg:order-none lg:col-span-5 lg:col-start-1 lg:row-start-4">
         <ProjectsTile onOpen={() => onOpen('projects')} />
       </div>
       <div className="order-8 col-span-12 lg:order-none lg:col-span-4 lg:col-start-6 lg:row-start-3 lg:row-span-2">
         <MarathonTile onOpen={() => onOpen('marathon')} />
       </div>
-      <div className="order-3 col-span-12 lg:order-none lg:col-span-3 lg:col-start-10 lg:row-start-3 lg:row-span-2">
+      <div id="contact" className="order-3 col-span-12 lg:order-none lg:col-span-3 lg:col-start-10 lg:row-start-3 lg:row-span-2">
         <ContactTile onOpen={() => onOpen('contact')} />
       </div>
     </div>

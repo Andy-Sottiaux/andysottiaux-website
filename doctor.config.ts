@@ -19,15 +19,11 @@ const scoreAcceptedRules = [
   // feedback; short loading/feedback animations were already reduced.
   'react-doctor/no-long-transition-duration',
 
-  // These are tracked as larger component-architecture work. They remain
-  // visible in local CLI output, but should not dilute the score for the
-  // current camera-heavy production surface.
-  'react-doctor/no-giant-component',
-  'react-doctor/prefer-useReducer',
-  'react-doctor/no-derived-state',
-  'react-doctor/no-cascading-set-state',
-  'react-doctor/exhaustive-deps',
-  'react-doctor/no-event-handler',
+  // `enabled` immediately gates the stream during render. The follow-up
+  // effect only clears remembered user intent so closing a modal cannot
+  // restart camera bandwidth without another explicit play action.
+  'react-doctor/no-adjust-state-on-prop-change',
+
 ]
 
 export default {

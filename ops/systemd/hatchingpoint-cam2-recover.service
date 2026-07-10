@@ -1,9 +1,0 @@
-[Unit]
-Description=Recover HatchingPoint Cam 2 relay after DHCP drift
-After=network-online.target hatchingpoint-cam2-relay.service docker.service
-Wants=network-online.target
-
-[Service]
-Type=oneshot
-ExecStart=/usr/bin/python3 /opt/hatchingpoint/cam2-recover.py --repair --quiet
-Nice=10

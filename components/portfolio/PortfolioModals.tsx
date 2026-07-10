@@ -25,7 +25,7 @@ const AboutModalContent = dynamic(() => import('../CompactModals').then((m) => m
   ssr: false,
   loading: () => <ModalLoading />,
 })
-const LiveModalContent = dynamic<LiveModalContentProps>(() => import('../CompactModals').then((m) => m.LiveModalContent), {
+const LiveModalContent = dynamic<LiveModalContentProps>(() => import('../live/LiveSystemDashboard'), {
   ssr: false,
   loading: () => <ModalLoading />,
 })

@@ -17,6 +17,7 @@ export type SpotlightItem = {
   iconContain?: boolean
   href?: string
   cta?: string
+  caseStudyHref?: string
 }
 
 type ExperienceItem = {
@@ -35,6 +36,7 @@ type ProjectItem = {
   url: string
   icon: string
   round?: boolean
+  external?: boolean
 }
 
 export type ContactIcon = 'email' | 'linkedin' | 'github' | 'hatchingpoint'
@@ -62,6 +64,7 @@ export const SPOTLIGHT_ITEMS: SpotlightItem[] = [
     icon: '/images/travelagentai-icon.png',
     href: 'https://apps.apple.com/us/app/travel-agent-ai/id6758284691',
     cta: 'App Store',
+    caseStudyHref: '/work/travel-agent-ai',
   },
   {
     id: 'cam1',
@@ -89,6 +92,7 @@ export const SPOTLIGHT_ITEMS: SpotlightItem[] = [
     iconContain: true,
     href: 'https://github.com/Andy-Sottiaux/WYZECAR',
     cta: 'GitHub',
+    caseStudyHref: '/work/wyzecar',
   },
   {
     id: 'cam2',
@@ -143,13 +147,13 @@ export const PROJECT_ITEMS: ProjectItem[] = [
   {
     name: 'Travel Agent AI',
     desc: 'AI trip-planning assistant · iOS',
-    url: 'https://apps.apple.com/us/app/travel-agent-ai/id6758284691',
+    url: '/work/travel-agent-ai',
     icon: '/images/travelagentai-icon.png',
   },
   {
     name: 'WYZECAR',
     desc: 'Vision-based autonomous RC car · YOLOv8 · ROS2',
-    url: 'https://github.com/Andy-Sottiaux/WYZECAR',
+    url: '/work/wyzecar',
     icon: '/images/wyzecar.png',
     round: true,
   },
@@ -158,6 +162,7 @@ export const PROJECT_ITEMS: ProjectItem[] = [
     desc: 'Voice notes with AI summary · iOS',
     url: 'https://apps.apple.com/app/record-transcribe/id6758643630',
     icon: '/images/recordtranscribe-icon.png',
+    external: true,
   },
 ]
 
