@@ -150,10 +150,10 @@ export async function POST(request: NextRequest) {
   } | null
 
   if (body?.action === 'move' || body?.action === 'hold' || body?.action === 'stop') {
-    const relayResponse = await runRelayControl({
-      ...body,
-      step: body.step || 'fine',
-    })
+    const relayBody = body.action === 'stop' || body.speed === 0
+      ? { ...body, command: 'stop', step: body.step || 'fine' }
+      : { ...body, action: body.action === 'hold' ? 'move' : body.action, step: body.step || 'fine' }
+    const relayResponse = await runRelayControl(relayBody)
     if (relayResponse) return relayResponse
 
     if (body.action === 'stop' || body.speed === 0) {
