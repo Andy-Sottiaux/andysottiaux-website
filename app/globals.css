@@ -142,9 +142,7 @@ html {
   }
 }
 
-/* Tap-active feedback for the whole-tile click target. The Tile button
- * sits absolutely inside each tile (z-0), so we scale + dim its parent
- * via :active. Desktop hover continues to drive the existing transform. */
+/* Tap-active feedback for interactive tiles. */
 @media (hover: none) {
   [data-peek-target="true"]:active {
     transform: scale(0.985);

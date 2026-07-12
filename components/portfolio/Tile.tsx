@@ -1,6 +1,7 @@
 'use client'
 
-import type { MouseEvent, ReactNode } from 'react'
+import { ArrowUpRight, Maximize2 } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { haptic } from '@/lib/haptics'
 import { useFieldTheme } from '../fieldTheme'
 
@@ -37,15 +38,6 @@ export default function Tile({
     : undefined
   const modalAriaLabel = modalLabel ?? (label ? `Open ${label}` : 'Open')
 
-  const openFromTileChrome = (event: MouseEvent<HTMLDivElement>) => {
-    if (!onOpen) return
-    const target = event.target as HTMLElement | null
-    const nestedInteractive = target?.closest('a, button, input, select, textarea')
-    if (nestedInteractive) return
-    haptic('open')
-    onOpen()
-  }
-
   const openFromTileButton = () => {
     if (!onOpen) return
     haptic('open')
@@ -56,9 +48,7 @@ export default function Tile({
     <div
       data-peek-target="true"
       data-card-hover={onOpen || deepLink ? 'true' : undefined}
-      data-modal-trigger={onOpen ? modalAriaLabel : undefined}
-      onClick={onOpen ? openFromTileChrome : undefined}
-      className={`group relative z-[1] rounded-2xl overflow-hidden h-full flex flex-col ${onOpen || deepLink ? 'cursor-pointer' : ''} ${className}`}
+      className={`group relative z-[1] rounded-2xl overflow-hidden h-full flex flex-col ${className}`}
       style={{
         background: palette.cardBackground,
         border: palette.cardBorder,
@@ -82,40 +72,42 @@ export default function Tile({
           type="button"
           aria-label={modalAriaLabel}
           aria-haspopup="dialog"
+          data-modal-trigger={modalAriaLabel}
+          title={modalAriaLabel}
           onClick={openFromTileButton}
-          className="absolute inset-0 z-[2] cursor-pointer"
-        />
+          className="absolute right-3 top-3 z-30 inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-[8px] transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
+          style={{
+            color: accentColor ?? palette.mutedText,
+            background: isLight ? 'rgba(255,255,255,0.82)' : 'rgba(255,255,255,0.07)',
+            border: palette.cardBorder,
+          }}
+        >
+          <Maximize2 className="h-3.5 w-3.5" aria-hidden="true" />
+        </button>
       ) : deepLink ? (
         <a
           href={deepLink}
           aria-label={label ? `Open ${label} on the full site` : 'Open on the full site'}
-          className="absolute inset-0 z-0"
-        />
+          title={label ? `Open ${label} on the full site` : 'Open on the full site'}
+          className="absolute right-3 top-3 z-30 inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-[8px] transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
+          style={{
+            color: accentColor ?? palette.mutedText,
+            background: isLight ? 'rgba(255,255,255,0.82)' : 'rgba(255,255,255,0.07)',
+            border: palette.cardBorder,
+          }}
+        >
+          <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
+        </a>
       ) : null}
       {label && (
         <div
-          className="relative z-10 px-5 md:px-[clamp(1rem,1.7vw,1.5rem)] pt-4 md:pt-[clamp(0.75rem,1.55dvh,1.25rem)] text-[10px] md:text-[clamp(8.5px,1.1dvh,10px)] font-semibold uppercase tracking-[0.22em] flex items-center justify-between pointer-events-none"
+          className="pointer-events-none relative z-10 px-5 pr-14 pt-4 text-[10px] font-semibold uppercase tracking-[0.22em] md:px-[clamp(1rem,1.7vw,1.5rem)] md:pr-14 md:pt-[clamp(0.75rem,1.55dvh,1.25rem)] md:text-[clamp(8.5px,1.1dvh,10px)]"
           style={{ color: accentColor ?? palette.mutedText }}
         >
           <span>{label}</span>
-          {(deepLink || onOpen) && (
-            <svg
-              className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-            >
-              {onOpen ? (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.4} d="M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4" />
-              ) : (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.4} d="M7 17L17 7M9 7h8v8" />
-              )}
-            </svg>
-          )}
         </div>
       )}
-      <div className="relative z-10 flex flex-1 flex-col">
+      <div className="relative flex flex-1 flex-col">
         {children}
       </div>
     </div>

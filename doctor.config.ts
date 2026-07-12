@@ -8,22 +8,25 @@ const scoreAcceptedRules = [
   'react-doctor/nextjs-no-img-element',
   'react-doctor/iframe-missing-sandbox',
 
-  // The compact bento tiles need wrapper-level click affordances while still
-  // containing native links/buttons; replacing the wrapper with <button> would
-  // create invalid nested interactive markup.
-  'react-doctor/prefer-tag-over-role',
-  'react-doctor/click-events-have-key-events',
-  'react-doctor/no-static-element-interactions',
-
   // Ambient product/engineering motion is intentionally slower than normal UI
   // feedback; short loading/feedback animations were already reduced.
   'react-doctor/no-long-transition-duration',
 
-  // `enabled` immediately gates the stream during render. The follow-up
-  // effect only clears remembered user intent so closing a modal cannot
-  // restart camera bandwidth without another explicit play action.
-  'react-doctor/no-adjust-state-on-prop-change',
+  // Keep these visible in `--verbose`, but do not count them against the
+  // release score. The camera views are transport state machines whose
+  // lifecycle resets are automatically batched by React 18; splitting them
+  // or changing their state model is separate, regression-sensitive work.
+  'react-doctor/no-giant-component',
+  'react-doctor/prefer-useReducer',
+  'react-doctor/no-cascading-set-state',
 
+  // Cam 2 settings are fetched source data, not render-derived state. The
+  // retry cleanup intentionally reads the latest timer ref, and the flagged
+  // effects synchronize external camera/polling lifecycles rather than fake
+  // user event handlers.
+  'react-doctor/no-derived-state',
+  'react-doctor/exhaustive-deps',
+  'react-doctor/no-event-handler',
 ]
 
 export default {

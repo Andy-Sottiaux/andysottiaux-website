@@ -71,7 +71,11 @@ function CompactInner({
 
   const [openModal, setOpenModal] = useState<ModalKey | null>(null)
   const [selectedCamera, setSelectedCamera] = useState<FieldCameraSource>('field')
-  const close = () => setOpenModal(null)
+  const [cameraSessionId, setCameraSessionId] = useState(0)
+  const close = () => {
+    setOpenModal(null)
+    setCameraSessionId((current) => current + 1)
+  }
   const open = (key: ModalKey) => setOpenModal(key)
 
   return (
@@ -102,6 +106,7 @@ function CompactInner({
           <BentoGrid
             boardLive={boardLive}
             cameraEnabled={openModal === null}
+            cameraSessionId={cameraSessionId}
             initialHealthPoll={initialHealthPoll}
             modalOpen={openModal !== null}
             onCameraChange={setSelectedCamera}

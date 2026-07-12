@@ -35,12 +35,12 @@ test('opens and closes primary modals', async ({ page }) => {
   await expect(page.locator('dialog[open]')).toHaveCount(0)
 
   await page.getByRole('tab', { name: 'Travel' }).click()
-  await page.locator('[data-modal-trigger="Open Travel Agent AI"]').click({ position: { x: 20, y: 20 } })
+  await page.getByRole('button', { name: 'Open Travel Agent AI' }).click()
   await expect(page.locator('dialog[open] h2')).toHaveText('Projects')
   await page.keyboard.press('Escape')
   await expect(page.locator('dialog[open]')).toHaveCount(0)
 
-  await page.locator('[data-modal-trigger="Open About"]').first().click({ position: { x: 20, y: 20 } })
+  await page.getByRole('button', { name: 'Open About' }).click()
   await expect(page.locator('dialog[open] h2')).toHaveText('About Andy')
 })
 
@@ -54,6 +54,21 @@ test('keeps camera feeds opt-in from spotlight tabs', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Play Cam 2 live stream' })).toBeVisible()
 })
 
+test('requires a new camera opt-in after closing a modal', async ({ page }) => {
+  await openHome(page)
+
+  await page.getByRole('tab', { name: 'Cam 1' }).click()
+  const play = page.getByRole('button', { name: 'Play Cam 1 live stream' })
+  await play.click()
+  await expect(play).toHaveCount(0)
+
+  await page.getByRole('button', { name: 'Open Cam 1' }).click()
+  await expect(page.locator('dialog[open]')).toBeVisible()
+  await page.keyboard.press('Escape')
+
+  await expect(page.getByRole('button', { name: 'Play Cam 1 live stream' })).toBeVisible()
+})
+
 test('surfaces Cam1 AI readiness and project validation proof', async ({ page }) => {
   await openHome(page)
 
@@ -65,7 +80,7 @@ test('surfaces Cam1 AI readiness and project validation proof', async ({ page })
   await expect(aiPanel).toContainText('package · 23')
   await page.keyboard.press('Escape')
 
-  await page.locator('[data-modal-trigger="Open Projects"]').click({ position: { x: 20, y: 20 } })
+  await page.getByRole('button', { name: 'Open Projects' }).click()
   await expect(page.locator('dialog[open]')).toContainText('Architecture')
   await expect(page.locator('dialog[open]')).toContainText('Validation')
   await expect(page.locator('dialog[open]')).toContainText('FPS and bitrate budgets')

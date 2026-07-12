@@ -19,6 +19,7 @@ import SpotlightTile from './SpotlightTile'
 export default function BentoGrid({
   boardLive,
   cameraEnabled,
+  cameraSessionId,
   initialHealthPoll,
   modalOpen,
   onCameraChange,
@@ -26,6 +27,7 @@ export default function BentoGrid({
 }: {
   boardLive: boolean
   cameraEnabled: boolean
+  cameraSessionId: number
   initialHealthPoll?: HealthPollResult
   modalOpen: boolean
   onCameraChange: (value: FieldCameraSource) => void
@@ -47,6 +49,7 @@ export default function BentoGrid({
       <div id="now" className="order-2 col-span-12 lg:order-none lg:col-span-6 lg:col-start-4 lg:row-start-1 lg:row-span-2">
         <SpotlightTile
           enabled={cameraEnabled}
+          streamSessionId={cameraSessionId}
           modalOpen={modalOpen}
           onCameraChange={onCameraChange}
           onOpen={onOpen}

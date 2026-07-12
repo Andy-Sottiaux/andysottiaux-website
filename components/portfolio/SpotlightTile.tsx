@@ -20,11 +20,13 @@ const CameraFeedSwitcher = dynamic(() => import('../CameraFeedSwitcher'), {
 
 export default function SpotlightTile({
   enabled,
+  streamSessionId,
   modalOpen,
   onCameraChange,
   onOpen,
 }: {
   enabled: boolean
+  streamSessionId: number
   modalOpen: boolean
   onCameraChange: (value: FieldCameraSource) => void
   onOpen: (key: ModalKey) => void
@@ -33,18 +35,15 @@ export default function SpotlightTile({
   const isLight = palette.mode === 'light'
   const reducedMotion = useReducedMotion()
   const [activeIndex, setActiveIndex] = useState(0)
-  const [streamIntent, setStreamIntent] = useState(() => ({
-    itemId: SPOTLIGHT_ITEMS[0]?.id ?? '',
-    enabled: false,
-  }))
+  const [streamIntent, setStreamIntent] = useState<{
+    itemId: string
+    sessionId: number
+  } | null>(null)
   const interactionPausedRef = useRef(false)
   const active = SPOTLIGHT_ITEMS[activeIndex]
-  const streamEnabled = enabled && streamIntent.itemId === active.id && streamIntent.enabled
-
-  useEffect(() => {
-    if (enabled) return
-    setStreamIntent((current) => current.enabled ? { ...current, enabled: false } : current)
-  }, [enabled])
+  const streamEnabled = enabled &&
+    streamIntent?.itemId === active.id &&
+    streamIntent.sessionId === streamSessionId
 
   useEffect(() => {
     if (reducedMotion || modalOpen || streamEnabled) return
@@ -60,7 +59,7 @@ export default function SpotlightTile({
 
   const selectSpotlight = (index: number) => {
     setActiveIndex(index)
-    setStreamIntent({ itemId: SPOTLIGHT_ITEMS[index]?.id ?? '', enabled: false })
+    setStreamIntent(null)
 
     const nextCamera = SPOTLIGHT_ITEMS[index]?.camera
     if (nextCamera) onCameraChange(nextCamera)
@@ -74,7 +73,7 @@ export default function SpotlightTile({
   const startActiveCamera = () => {
     if (!active.camera) return
     onCameraChange(active.camera)
-    setStreamIntent({ itemId: active.id, enabled: true })
+    setStreamIntent({ itemId: active.id, sessionId: streamSessionId })
   }
 
   const resumeAfterFocus = (event: React.FocusEvent<HTMLDivElement>) => {
