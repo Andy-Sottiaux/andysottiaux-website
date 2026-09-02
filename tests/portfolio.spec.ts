@@ -14,14 +14,25 @@ test('renders the bento shell and spotlight order', async ({ page }) => {
 
   await expect(page.getByRole('tab', { name: 'Travel' })).toBeVisible()
   await expect(page.getByRole('tab', { name: 'Cam 1' })).toBeVisible()
+  await expect(page.getByRole('tab', { name: 'E-Paper' })).toBeVisible()
   await expect(page.getByRole('tab', { name: 'WYZECAR' })).toBeVisible()
   await expect(page.getByRole('tab', { name: 'Cam 2' })).toBeVisible()
   await expect(page.getByRole('tablist', { name: 'Featured spotlight' }).getByRole('tab')).toHaveText([
     'Travel',
     'Cam 1',
+    'E-Paper',
     'WYZECAR',
     'Cam 2',
   ])
+})
+
+test('shows the e-paper interface preview and links to its guided case study', async ({ page }) => {
+  await openHome(page)
+
+  await page.getByRole('tab', { name: 'E-Paper' }).click()
+  const activeSpotlight = page.locator('.spotlight-slide[aria-hidden="false"]')
+  await expect(activeSpotlight.getByRole('img', { name: /four-color runner dashboard/i })).toBeVisible()
+  await expect(activeSpotlight.getByRole('link', { name: 'Explore' })).toHaveAttribute('href', '/work/epaper-dashboard')
 })
 
 test('opens and closes primary modals', async ({ page }) => {

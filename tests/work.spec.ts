@@ -6,6 +6,7 @@ const caseStudies = [
   { path: '/work/travel-agent-ai', title: 'Travel Agent AI', proof: 'Wall-clock itinerary time' },
   { path: '/work/field-camera', title: 'Edge-AI Field Camera', proof: 'Read-only public edge' },
   { path: '/work/wyzecar', title: 'WYZECAR', proof: 'Separated ROS2 responsibilities' },
+  { path: '/work/epaper-dashboard', title: "Runner's E-Paper Dashboard", proof: 'Design to the silicon' },
 ]
 
 test('renders each featured case study as an indexable page', async ({ page }) => {
@@ -17,6 +18,15 @@ test('renders each featured case study as an indexable page', async ({ page }) =
     await expect(page.getByText('Architecture', { exact: true }).last()).toBeVisible()
     await expect(page.getByText('Validation', { exact: true }).last()).toBeVisible()
   }
+})
+
+test('walks through the e-paper dashboard capabilities over the real interface', async ({ page }) => {
+  await page.goto('/work/epaper-dashboard')
+
+  await expect(page.getByRole('heading', { name: 'One screen, six purposeful layers' })).toBeVisible()
+  await expect(page.getByRole('img', { name: /complete four-color runner dashboard/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Next workout' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'E-paper lifecycle' })).toBeVisible()
 })
 
 test('renders the live lab with camera selection and case-study navigation', async ({ page }) => {
@@ -32,6 +42,14 @@ test('renders the live lab with camera selection and case-study navigation', asy
 
 test('@a11y case study has no serious automated accessibility regressions', async ({ page }) => {
   await page.goto('/work/travel-agent-ai')
+
+  const results = await new AxeBuilder({ page }).analyze()
+
+  expect(results.violations).toEqual([])
+})
+
+test('@a11y e-paper case study has no serious automated accessibility regressions', async ({ page }) => {
+  await page.goto('/work/epaper-dashboard')
 
   const results = await new AxeBuilder({ page }).analyze()
 

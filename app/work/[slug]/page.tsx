@@ -96,6 +96,8 @@ export default async function WorkPage({ params }: WorkPageProps) {
         </div>
       </section>
 
+      {project.tour ? <CapabilityTour tour={project.tour} /> : null}
+
       <section className="mx-auto grid max-w-[1180px] gap-10 px-5 py-14 sm:px-8 md:grid-cols-[0.85fr_1.4fr] md:py-20">
         <div>
           <SectionLabel>Scope</SectionLabel>
@@ -226,6 +228,29 @@ function HeroVisual({ project }: { project: NonNullable<ReturnType<typeof getCas
     )
   }
 
+  if (project.heroMode === 'epaper' && project.heroImage) {
+    return (
+      <div className="absolute inset-0 overflow-hidden bg-[#d9d2c5]">
+        <div className="absolute inset-0 opacity-50 [background-image:linear-gradient(rgba(25,22,18,.07)_1px,transparent_1px),linear-gradient(90deg,rgba(25,22,18,.07)_1px,transparent_1px)] [background-size:36px_36px]" />
+        <div className="absolute inset-x-4 top-[12%] mx-auto max-w-[1120px] sm:inset-x-8 sm:top-[13%]">
+          <div className="relative rotate-[-0.6deg] rounded-[12px] bg-[#111216] p-2 shadow-[0_32px_75px_rgba(16,14,12,0.38)] sm:rounded-[16px] sm:p-3">
+            <div className="relative aspect-[17/6] overflow-hidden rounded-[6px] bg-white sm:rounded-[8px]">
+              <Image
+                src={project.heroImage}
+                alt={project.heroImageAlt ?? ''}
+                fill
+                priority
+                sizes="(max-width: 1180px) 94vw, 1120px"
+                className="object-contain"
+              />
+            </div>
+            <div aria-hidden="true" className="absolute bottom-[3px] left-1/2 h-[2px] w-12 -translate-x-1/2 rounded-full bg-white/15 sm:bottom-1" />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   if (!project.heroImage) return <div className="absolute inset-0 bg-[#0b0d11]" />
 
   return (
@@ -239,6 +264,72 @@ function HeroVisual({ project }: { project: NonNullable<ReturnType<typeof getCas
         className={project.heroMode === 'contain' ? 'object-contain p-8 sm:p-14' : 'object-cover'}
       />
     </div>
+  )
+}
+
+function CapabilityTour({
+  tour,
+}: {
+  tour: NonNullable<NonNullable<ReturnType<typeof getCaseStudy>>['tour']>
+}) {
+  const markerColors = {
+    red: 'border-[#c21c25] bg-[#c21c25] text-white',
+    yellow: 'border-[#f4c20d] bg-[#f4c20d] text-[#17130a]',
+    black: 'border-[#17191d] bg-[#17191d] text-white',
+  }
+
+  return (
+    <section id="capability-tour" className="scroll-mt-6 border-b border-[#1a1815]/15 bg-[#eee9df] text-[#17191d]">
+      <div className="mx-auto max-w-[1180px] px-5 py-14 sm:px-8 md:py-20">
+        <div className="grid gap-5 md:grid-cols-[0.78fr_1.22fr] md:items-end">
+          <div>
+            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#b4232d]">Interface tour</div>
+            <h2 className="mt-3 max-w-xl text-3xl font-semibold leading-tight sm:text-4xl">{tour.title}</h2>
+          </div>
+          <p className="max-w-2xl text-[15px] leading-relaxed text-[#17191d]/68 md:justify-self-end">{tour.intro}</p>
+        </div>
+
+        <div className="mt-9 rounded-[14px] bg-[#111216] p-2.5 shadow-[0_26px_70px_rgba(31,27,22,0.24)] sm:p-4">
+          <div className="mb-2.5 flex items-center justify-between px-1 font-mono text-[9px] uppercase tracking-[0.13em] text-white/60 sm:mb-3">
+            <span>Native dashboard canvas</span>
+            <span>1360 × 480 · four-color e-paper</span>
+          </div>
+          <div className="relative aspect-[17/6] overflow-hidden rounded-[6px] bg-white">
+            <Image
+              src={tour.image}
+              alt={tour.imageAlt}
+              fill
+              sizes="(max-width: 1180px) 94vw, 1148px"
+              className="object-contain"
+            />
+            {tour.stops.map((stop, index) => stop.marker ? (
+              <div
+                key={stop.title}
+                aria-hidden="true"
+                className={`absolute flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-white text-[10px] font-bold shadow-[0_4px_12px_rgba(0,0,0,0.35)] sm:h-9 sm:w-9 sm:text-xs ${markerColors[stop.accent ?? 'black']}`}
+                style={{ left: `${stop.marker.x}%`, top: `${stop.marker.y}%` }}
+              >
+                {index + 1}
+              </div>
+            ) : null)}
+          </div>
+        </div>
+
+        <ol className="mt-8 grid gap-px overflow-hidden rounded-[10px] border border-[#17191d]/15 bg-[#17191d]/15 sm:grid-cols-2 lg:grid-cols-3">
+          {tour.stops.map((stop, index) => (
+            <li key={stop.title} className="bg-[#f7f3ea] p-5 sm:p-6">
+              <div className="flex items-center gap-3">
+                <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${markerColors[stop.accent ?? 'black']}`}>
+                  {index + 1}
+                </span>
+                <h3 className="text-sm font-semibold">{stop.title}</h3>
+              </div>
+              <p className="mt-4 text-[13px] leading-relaxed text-[#17191d]/65">{stop.detail}</p>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </section>
   )
 }
 

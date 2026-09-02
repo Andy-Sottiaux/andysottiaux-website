@@ -246,6 +246,11 @@ function SpotlightProjectPanel({
 }) {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
+
+  if (item.previewImage) {
+    return <SpotlightPreviewProjectPanel item={item} previewImage={item.previewImage} active={active} />
+  }
+
   const accent = isLight ? item.accent.light : item.accent.dark
   const halo = isLight ? item.halo?.light : item.halo?.dark
   const isWideMedia = !!item.iconContain
@@ -386,6 +391,86 @@ function SpotlightProjectPanel({
   )
 }
 
+function SpotlightPreviewProjectPanel({
+  item,
+  previewImage,
+  active,
+}: {
+  item: SpotlightItem
+  previewImage: string
+  active: boolean
+}) {
+  const palette = useFieldTheme()
+  const isLight = palette.mode === 'light'
+  const accent = isLight ? item.accent.light : item.accent.dark
+  const halo = isLight ? item.halo?.light : item.halo?.dark
+
+  return (
+    <div className="h-full px-3 pb-2 pt-2 md:px-[clamp(0.75rem,1.15vw,1rem)] md:pt-[clamp(0.35rem,1dvh,0.75rem)]">
+      <div
+        className="relative flex h-full min-h-0 flex-col gap-2.5 overflow-hidden rounded-[14px] p-3 sm:p-3.5"
+        style={{
+          background: isLight
+            ? 'linear-gradient(145deg, rgba(255,255,255,0.96), rgba(245,242,235,0.94))'
+            : 'linear-gradient(145deg, rgba(22,23,25,0.99), rgba(8,9,11,0.99))',
+          border: isLight ? '1px solid rgba(0,0,0,0.08)' : '1px solid rgba(255,255,255,0.09)',
+          boxShadow: isLight
+            ? '0 4px 12px rgba(28,26,28,0.1)'
+            : '0 8px 24px rgba(0,0,0,0.36)',
+        }}
+      >
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-20 -top-24 h-60 w-60 rounded-full"
+          style={{ background: `radial-gradient(circle, ${halo ?? 'rgba(255,255,255,0.12)'}, transparent 68%)` }}
+        />
+
+        <div className="relative rounded-[9px] bg-[#111216] p-[5px] shadow-[0_10px_24px_rgba(0,0,0,0.22)]">
+          <div className="relative aspect-[17/6] overflow-hidden rounded-[5px] bg-white">
+            <Image
+              src={previewImage}
+              alt={item.previewAlt ?? ''}
+              fill
+              sizes="(max-width: 640px) 88vw, 38vw"
+              className="object-contain"
+            />
+          </div>
+          <span className="absolute bottom-[2px] left-1/2 h-[2px] w-7 -translate-x-1/2 rounded-full bg-white/18" />
+        </div>
+
+        <div className="relative flex min-h-0 items-start gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="flex min-w-0 items-baseline gap-2">
+              <h3
+                className="truncate text-[17px] font-semibold leading-tight tracking-tight sm:text-[19px]"
+                style={{ color: isLight ? '#1c1a1c' : '#fff' }}
+              >
+                {item.title}
+              </h3>
+              <span className="hidden shrink-0 text-[9px] font-semibold uppercase tracking-[0.12em] sm:inline" style={{ color: accent }}>
+                {item.eyebrow}
+              </span>
+            </div>
+            <p className="mt-0.5 line-clamp-2 text-[10.5px] leading-snug sm:text-[11px]" style={{ color: palette.bodyText }}>
+              {item.description}
+            </p>
+          </div>
+          {item.caseStudyHref ? (
+            <Link
+              href={item.caseStudyHref}
+              tabIndex={active ? undefined : -1}
+              className="shrink-0 rounded-[8px] px-3 py-1.5 text-[10.5px] font-semibold focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
+              style={{ color: isLight ? '#fff' : '#13090a', background: accent }}
+            >
+              Explore
+            </Link>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function SpotlightRail({
   items,
   activeIndex,
@@ -403,7 +488,8 @@ function SpotlightRail({
 }) {
   return (
     <div
-      className="grid grid-cols-4 gap-1 sm:gap-1.5 px-3 pb-3"
+      className="grid gap-1 px-3 pb-3 sm:gap-1.5"
+      style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
       role="tablist"
       aria-label="Featured spotlight"
     >

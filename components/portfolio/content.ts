@@ -15,6 +15,8 @@ export type SpotlightItem = {
   camera?: FieldCameraSource
   icon?: string
   iconContain?: boolean
+  previewImage?: string
+  previewAlt?: string
   href?: string
   cta?: string
   caseStudyHref?: string
@@ -76,6 +78,23 @@ export const SPOTLIGHT_ITEMS: SpotlightItem[] = [
     accent: { light: '#0a8aa8', dark: 'rgba(103, 232, 249, 0.9)' },
     modal: 'live',
     camera: 'field',
+  },
+  {
+    id: 'epaper-dashboard',
+    kind: 'project',
+    eyebrow: 'Embedded display',
+    title: 'E-Paper Dashboard',
+    railLabel: 'E-Paper',
+    subtitle: 'Runner-first command center',
+    description: 'A four-color dashboard for Runna, Strava, race day, weather, and focused work—driven by a custom partial-refresh stack.',
+    accent: { light: '#b4232d', dark: 'rgba(248, 113, 113, 0.95)' },
+    halo: { light: 'rgba(244, 194, 13, 0.2)', dark: 'rgba(244, 194, 13, 0.17)' },
+    modal: 'projects',
+    icon: '/images/epaper-dashboard-frame.png',
+    iconContain: true,
+    previewImage: '/images/epaper-dashboard-frame.png',
+    previewAlt: 'Four-color runner dashboard shown on a 10.85-inch e-paper canvas',
+    caseStudyHref: '/work/epaper-dashboard',
   },
   {
     id: 'wyzecar',

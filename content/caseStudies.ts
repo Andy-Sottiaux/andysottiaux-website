@@ -3,9 +3,24 @@ type ProjectDecision = {
   detail: string
 }
 
+type ProjectTourStop = {
+  title: string
+  detail: string
+  marker?: { x: number; y: number }
+  accent?: 'red' | 'yellow' | 'black'
+}
+
+type ProjectTour = {
+  title: string
+  intro: string
+  image: string
+  imageAlt: string
+  stops: ProjectTourStop[]
+}
+
 export type ProjectCaseStudy = {
   title: string
-  slug?: 'field-camera' | 'travel-agent-ai' | 'wyzecar'
+  slug?: 'field-camera' | 'travel-agent-ai' | 'wyzecar' | 'epaper-dashboard'
   eyebrow?: string
   subtitle?: string
   role?: string
@@ -18,6 +33,7 @@ export type ProjectCaseStudy = {
   validation: string[]
   constraints?: string[]
   decisions?: ProjectDecision[]
+  tour?: ProjectTour
   tech: string[]
   link: string
   linkLabel?: string
@@ -26,10 +42,104 @@ export type ProjectCaseStudy = {
   heroImage?: string
   heroImageAlt?: string
   heroGallery?: string[]
-  heroMode?: 'cover' | 'contain' | 'gallery' | 'system'
+  heroMode?: 'cover' | 'contain' | 'gallery' | 'system' | 'epaper'
 }
 
 export const PROJECT_CASE_STUDIES: ProjectCaseStudy[] = [
+  {
+    title: "Runner's E-Paper Dashboard",
+    slug: 'epaper-dashboard',
+    eyebrow: 'Custom embedded system',
+    subtitle: 'A four-color, always-ready training command center built for one useful glance—not another screen demanding attention.',
+    role: 'Product design, interface architecture, Raspberry Pi integration, display-driver engineering, data integrations, and reliability testing.',
+    problem: 'Put the training plan, current conditions, race motivation, and daily context in view without opening a phone or accepting the visual noise of a conventional monitor.',
+    built: 'Designed a native 1360 × 480 interface around Runna, Strava, the New York City Marathon, weather, time progress, and Claude Code usage, then built a safe partial-refresh driver for the panel\'s two-controller architecture.',
+    outcome: 'A calm, runner-first surface that stays useful throughout the day, updates only the regions that changed, and powers the display hardware down overnight while the last image remains visible.',
+    proof: 'The finished system combines a physical product, a purpose-built interface, live service integrations, custom display control, and verified on-glass behavior.',
+    metrics: ['1360 × 480 canvas', 'Native four-color UI', 'Dual-controller partial refresh', '7 AM–10:30 PM active window'],
+    architecture: [
+      'Raspberry Pi Zero 2 W service with isolated collectors for training, weather, fundraising, and developer-tool data',
+      'Zone-local Pillow renderer constrained to the panel\'s black, white, yellow, and red palette',
+      'Seam-aware JD79665AA driver coordinating independent master and slave controller windows',
+      'Persistent refresh ledger, health endpoint, startup checks, and USB recovery path',
+    ],
+    validation: [
+      '14-stage hardware probe passed on the physical four-color panel',
+      '171 hardware-free runtime and driver tests',
+      'Palette, clipping, controller-seam, and refresh-policy assertions',
+      'Three-hour de-ghosting refresh plus deterministic quiet-hours behavior',
+    ],
+    constraints: [
+      'The 10.85-inch glass is one visual canvas driven by two controller dies split exactly at x=680.',
+      'Four-color particles need a deliberate waveform; localized updates reduce disruption but do not turn e-paper into an LCD.',
+      'Personal API credentials must stay off the display, out of the repository, and recover cleanly when a service is unavailable.',
+    ],
+    decisions: [
+      {
+        title: 'Runner first',
+        detail: 'Runna owns the largest region, with the next prescription and Monday–Sunday mileage visible before secondary system information.',
+      },
+      {
+        title: 'Design to the silicon',
+        detail: 'Every widget is clipped to a controller-safe zone, so frequent updates never straddle the physical x=680 seam.',
+      },
+      {
+        title: 'Conserve the panel',
+        detail: 'Localized updates handle the day, a full refresh clears accumulated ghosting every three hours, and one static night summary precedes hardware power-off.',
+      },
+    ],
+    tour: {
+      title: 'One screen, six purposeful layers',
+      intro: 'The hierarchy follows the decisions a training day actually asks you to make—from the next workout to the conditions outside, then the quieter signals that keep the day on track.',
+      image: '/images/epaper-dashboard-frame.png',
+      imageAlt: 'The complete four-color runner dashboard with Runna, Strava, marathon, weather, time, and Claude Code widgets',
+      stops: [
+        {
+          title: 'Next workout',
+          detail: 'Runna surfaces the prescription, duration, best or scheduled weather window, and actual-versus-planned weekly mileage.',
+          marker: { x: 25, y: 25 },
+          accent: 'red',
+        },
+        {
+          title: 'Training load',
+          detail: 'Monday–Sunday Strava progress shows completed runs, sessions still ahead, and current-year running mileage—all in miles.',
+          marker: { x: 12.5, y: 79 },
+          accent: 'yellow',
+        },
+        {
+          title: 'Race-day motivation',
+          detail: 'The TCS New York City Marathon countdown sits beside live Team for Kids fundraising progress.',
+          marker: { x: 37.5, y: 79 },
+          accent: 'red',
+        },
+        {
+          title: 'Conditions now',
+          detail: 'A large 12-hour clock and current weather cover temperature, rain, wind, humidity, UV, and air quality.',
+          marker: { x: 75, y: 28 },
+          accent: 'black',
+        },
+        {
+          title: 'Time and tools',
+          detail: 'Day, month, and year progress share the lower rail with Claude Code\'s five-hour and seven-day usage windows.',
+          marker: { x: 82, y: 82 },
+          accent: 'yellow',
+        },
+        {
+          title: 'E-paper lifecycle',
+          detail: 'Seam-safe partial updates, three-hour de-ghosting, offline fallbacks, and a 10:30 PM–7:00 AM powered-down quiet period keep it dependable.',
+          accent: 'black',
+        },
+      ],
+    },
+    tech: ['Python', 'Raspberry Pi', 'Pillow', 'SPI', 'E-Paper', 'systemd', 'REST APIs'],
+    link: '#capability-tour',
+    linkLabel: 'Tour the interface',
+    icon: '/images/epaper-dashboard-frame.png',
+    iconContain: true,
+    heroImage: '/images/epaper-dashboard-frame.png',
+    heroImageAlt: 'Runner-focused interface rendered for a 10.85-inch four-color e-paper display',
+    heroMode: 'epaper',
+  },
   {
     title: 'Travel Agent AI',
     slug: 'travel-agent-ai',
