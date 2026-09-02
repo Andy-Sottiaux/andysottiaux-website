@@ -44,6 +44,28 @@ test('shows the e-paper interface preview and links to its guided case study', a
   await expect(activeSpotlight.getByRole('link', { name: 'Explore' })).toHaveAttribute('href', '/work/epaper-dashboard')
 })
 
+test('uses the tall spotlight space for the e-paper product dossier', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop')
+  await page.setViewportSize({ width: 1526, height: 1259 })
+  await openHome(page)
+
+  const activeSpotlight = page.locator('.spotlight-slide[aria-hidden="false"]')
+  const productPoster = activeSpotlight.locator('[data-epaper-product-poster="true"]')
+  const posterBox = await productPoster.boundingBox()
+  const cardSizing = await productPoster.evaluate((poster) => ({
+    clientHeight: poster.parentElement?.clientHeight ?? 0,
+    scrollHeight: poster.parentElement?.scrollHeight ?? 0,
+  }))
+
+  expect(posterBox).not.toBeNull()
+  expect((posterBox?.width ?? 0) / (posterBox?.height ?? 1)).toBeCloseTo(2, 1)
+  expect(cardSizing.scrollHeight).toBe(cardSizing.clientHeight)
+  await expect(activeSpotlight.getByText('Runner-first command center')).toBeVisible()
+  await expect(activeSpotlight.getByLabel('E-paper dashboard specifications')).toContainText('10.85″')
+  await expect(activeSpotlight.getByLabel('E-paper dashboard specifications')).toContainText('1360 × 480')
+  await expect(activeSpotlight.getByLabel('E-paper dashboard specifications')).toContainText('4-color')
+})
+
 test('opens and closes primary modals', async ({ page }) => {
   await openHome(page)
   await page.waitForLoadState('networkidle')

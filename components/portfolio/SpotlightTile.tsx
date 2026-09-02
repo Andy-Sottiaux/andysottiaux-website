@@ -429,7 +429,7 @@ function SpotlightPreviewProjectPanel({
           <div
             data-epaper-product-viewer="true"
             data-epaper-product-poster="true"
-            className="relative aspect-[17/7.4] overflow-hidden rounded-[13px] bg-[#b4ab9d] ring-1 ring-inset ring-white/20 shadow-[0_18px_42px_rgba(0,0,0,0.34)]"
+            className="relative aspect-[17/7.4] shrink overflow-hidden rounded-[13px] bg-[#b4ab9d] ring-1 ring-inset ring-white/20 shadow-[0_18px_42px_rgba(0,0,0,0.34)] min-[1024px]:[@media(min-height:1180px)]:aspect-[2/1] min-[1024px]:[@media(min-height:1180px)]:shrink-0"
           >
             <Image
               src="/images/epaper-dashboard-studio.webp"
@@ -456,11 +456,13 @@ function SpotlightPreviewProjectPanel({
           </div>
         )}
 
-        <div className="relative flex min-h-0 items-start gap-3">
+        <div className={`relative flex min-h-0 gap-3 ${item.id === 'epaper-dashboard' ? 'grow items-center' : 'items-start'}`}>
           <div className="min-w-0 flex-1">
             <div className="flex min-w-0 items-baseline gap-2">
               <div
-                className="truncate text-[17px] font-semibold leading-tight tracking-tight sm:text-[19px]"
+                className={`truncate font-semibold leading-tight tracking-tight ${item.id === 'epaper-dashboard'
+                  ? 'text-[17px] sm:text-[19px] min-[1024px]:[@media(min-height:1180px)]:text-[24px]'
+                  : 'text-[17px] sm:text-[19px]'}`}
                 style={{ color: isLight ? '#1c1a1c' : '#fff' }}
               >
                 {item.title}
@@ -469,6 +471,14 @@ function SpotlightPreviewProjectPanel({
                 {item.eyebrow}
               </span>
             </div>
+            {item.id === 'epaper-dashboard' ? (
+              <p
+                className="mt-1 hidden text-[12px] font-semibold leading-tight min-[1024px]:[@media(min-height:1180px)]:block"
+                style={{ color: accent }}
+              >
+                {item.subtitle}
+              </p>
+            ) : null}
             <p className="mt-0.5 line-clamp-2 text-[10.5px] leading-snug sm:text-[11px]" style={{ color: palette.bodyText }}>
               {item.description}
             </p>
@@ -484,6 +494,36 @@ function SpotlightPreviewProjectPanel({
             </Link>
           ) : null}
         </div>
+
+        {item.id === 'epaper-dashboard' ? (
+          <dl
+            aria-label="E-paper dashboard specifications"
+            className="relative hidden shrink-0 grid-cols-3 overflow-hidden rounded-[10px] min-[1024px]:[@media(min-height:1180px)]:grid"
+            style={{
+              color: isLight ? '#1c1a1c' : '#fff',
+              background: isLight ? 'rgba(0,0,0,0.035)' : 'rgba(255,255,255,0.035)',
+              border: palette.cardBorder,
+            }}
+          >
+            {[
+              { label: 'Display', value: '10.85″', color: '#f87171' },
+              { label: 'Canvas', value: '1360 × 480', color: '#67e8f9' },
+              { label: 'E-paper', value: '4-color', color: '#facc15' },
+            ].map((spec, index) => (
+              <div
+                key={spec.label}
+                className="min-w-0 px-3 py-2.5"
+                style={{ borderLeft: index ? palette.cardBorder : undefined }}
+              >
+                <dt className="flex items-center gap-1.5 text-[8px] font-semibold uppercase tracking-[0.16em]" style={{ color: palette.mutedText }}>
+                  <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: spec.color }} />
+                  {spec.label}
+                </dt>
+                <dd className="mt-1 truncate text-[13px] font-semibold tracking-tight">{spec.value}</dd>
+              </div>
+            ))}
+          </dl>
+        ) : null}
       </div>
     </div>
   )
