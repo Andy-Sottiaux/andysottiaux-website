@@ -3,6 +3,7 @@ import { expect, test } from '@playwright/test'
 import { mockPortfolioNetwork } from './support/mockPortfolioNetwork'
 
 async function openHome(page: import('@playwright/test').Page) {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
   await mockPortfolioNetwork(page)
   await page.goto('/')
   await expect(page.getByText('Andy Sottiaux').first()).toBeVisible()
@@ -18,18 +19,18 @@ test('renders the bento shell and spotlight order', async ({ page }) => {
   await expect(page.getByRole('tab', { name: 'WYZECAR' })).toBeVisible()
   await expect(page.getByRole('tab', { name: 'Cam 2' })).toBeVisible()
   await expect(page.getByRole('tablist', { name: 'Featured spotlight' }).getByRole('tab')).toHaveText([
+    'E-Paper',
     'Travel',
     'Cam 1',
-    'E-Paper',
     'WYZECAR',
     'Cam 2',
   ])
+  await expect(page.getByRole('tab', { name: 'E-Paper' })).toHaveAttribute('aria-selected', 'true')
 })
 
 test('shows the e-paper interface preview and links to its guided case study', async ({ page }) => {
   await openHome(page)
 
-  await page.getByRole('tab', { name: 'E-Paper' }).click()
   const activeSpotlight = page.locator('.spotlight-slide[aria-hidden="false"]')
   await expect(activeSpotlight.getByRole('img', { name: /four-color runner dashboard/i })).toBeVisible()
   await expect(activeSpotlight.getByRole('link', { name: 'Explore' })).toHaveAttribute('href', '/work/epaper-dashboard')
@@ -100,6 +101,7 @@ test('surfaces Cam1 AI readiness and project validation proof', async ({ page })
 test('links featured projects to full case studies', async ({ page }) => {
   await openHome(page)
 
+  await page.getByRole('tab', { name: 'Travel' }).click()
   const activeSpotlight = page.locator('.spotlight-slide[aria-hidden="false"]')
   await expect(activeSpotlight.getByRole('link', { name: 'Case study' })).toHaveAttribute('href', '/work/travel-agent-ai')
 

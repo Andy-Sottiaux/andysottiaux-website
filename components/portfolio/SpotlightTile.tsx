@@ -441,12 +441,12 @@ function SpotlightPreviewProjectPanel({
         <div className="relative flex min-h-0 items-start gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex min-w-0 items-baseline gap-2">
-              <h3
+              <div
                 className="truncate text-[17px] font-semibold leading-tight tracking-tight sm:text-[19px]"
                 style={{ color: isLight ? '#1c1a1c' : '#fff' }}
               >
                 {item.title}
-              </h3>
+              </div>
               <span className="hidden shrink-0 text-[9px] font-semibold uppercase tracking-[0.12em] sm:inline" style={{ color: accent }}>
                 {item.eyebrow}
               </span>
