@@ -37,7 +37,9 @@ test('shows the e-paper interface preview and links to its guided case study', a
   await openHome(page)
 
   const activeSpotlight = page.locator('.spotlight-slide[aria-hidden="false"]')
-  await expect(activeSpotlight.locator('[data-epaper-product-viewer="true"]')).toBeVisible()
+  const productPoster = activeSpotlight.locator('[data-epaper-product-poster="true"]')
+  await expect(productPoster).toBeVisible()
+  await expect(productPoster.locator('canvas')).toHaveCount(0)
   await expect(activeSpotlight.getByRole('img', { name: /four-color runner dashboard/i })).toBeVisible()
   await expect(activeSpotlight.getByRole('link', { name: 'Explore' })).toHaveAttribute('href', '/work/epaper-dashboard')
 })

@@ -6,7 +6,6 @@ import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 import type { ModalKey } from '../CompactModals'
 import CameraIdleSurface from '../CameraIdleSurface'
-import EpaperProductViewer from '../EpaperProductViewer'
 import { useFieldTheme } from '../fieldTheme'
 import { haptic } from '@/lib/haptics'
 import type { FieldCameraSource } from '@/lib/fieldCameraConfig'
@@ -427,12 +426,19 @@ function SpotlightPreviewProjectPanel({
         />
 
         {item.id === 'epaper-dashboard' ? (
-          <div className="relative aspect-[17/7.4] overflow-hidden rounded-[13px] ring-1 ring-inset ring-white/20 shadow-[0_18px_42px_rgba(0,0,0,0.34)]">
-            <EpaperProductViewer
-              active={active}
-              compact
-              dashboardSrc={previewImage}
-              dashboardAlt={item.previewAlt ?? ''}
+          <div
+            data-epaper-product-viewer="true"
+            data-epaper-product-poster="true"
+            className="relative aspect-[17/7.4] overflow-hidden rounded-[13px] bg-[#b4ab9d] ring-1 ring-inset ring-white/20 shadow-[0_18px_42px_rgba(0,0,0,0.34)]"
+          >
+            <Image
+              src="/images/epaper-dashboard-studio.webp"
+              alt={item.previewAlt ?? ''}
+              fill
+              priority
+              unoptimized
+              sizes="(max-width: 640px) 88vw, 42vw"
+              className="object-cover"
             />
           </div>
         ) : (
