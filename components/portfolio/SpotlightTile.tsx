@@ -427,7 +427,7 @@ function SpotlightPreviewProjectPanel({
         />
 
         {item.id === 'epaper-dashboard' ? (
-          <div className="relative aspect-[17/7.4] overflow-hidden rounded-[9px] shadow-[0_10px_24px_rgba(0,0,0,0.22)]">
+          <div className="relative aspect-[17/7.4] overflow-hidden rounded-[13px] ring-1 ring-inset ring-white/20 shadow-[0_18px_42px_rgba(0,0,0,0.34)]">
             <EpaperProductViewer
               active={active}
               compact

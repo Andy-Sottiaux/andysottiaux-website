@@ -60,7 +60,7 @@ export default function EpaperProductViewer({
       const height = Math.max(host.clientHeight, 1)
       const scene = new THREE.Scene()
       const camera = new THREE.PerspectiveCamera(compact ? 28 : 31, width / height, 0.1, 100)
-      camera.position.set(compact ? 7 : 8.5, compact ? 3.2 : 4.2, compact ? 14.8 : 15.5)
+      camera.position.set(compact ? 5.2 : 8.5, compact ? 2.8 : 4.2, compact ? 13.8 : 15.5)
 
       try {
         renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
@@ -70,7 +70,7 @@ export default function EpaperProductViewer({
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, compact ? 1.5 : 2))
       renderer.setSize(width, height)
       renderer.outputColorSpace = THREE.SRGBColorSpace
-      renderer.shadowMap.enabled = !compact
+      renderer.shadowMap.enabled = true
       renderer.shadowMap.type = THREE.PCFSoftShadowMap
       renderer.domElement.setAttribute('role', 'img')
       renderer.domElement.setAttribute('aria-label', dashboardAlt)
@@ -79,7 +79,7 @@ export default function EpaperProductViewer({
       host.appendChild(renderer.domElement)
 
       const product = new THREE.Group()
-      product.rotation.y = -0.12
+      product.rotation.y = compact ? -0.06 : -0.12
       // Lift the full-size product above the case-study copy so the enclosure
       // reads as a distinct object instead of becoming a flat background.
       product.position.y = compact ? 0.15 : 1.1
@@ -184,7 +184,7 @@ export default function EpaperProductViewer({
 
       const floor = new THREE.Mesh(
         new THREE.PlaneGeometry(38, 24),
-        new THREE.ShadowMaterial({ color: 0x1d1812, opacity: compact ? 0.08 : 0.17 }),
+        new THREE.ShadowMaterial({ color: 0x1d1812, opacity: compact ? 0.18 : 0.17 }),
       )
       floor.rotation.x = -Math.PI / 2
       floor.position.y = product.position.y - 2.93
@@ -194,8 +194,14 @@ export default function EpaperProductViewer({
       scene.add(new THREE.HemisphereLight(0xfffdf8, 0x68625b, compact ? 2.2 : 1.8))
       const key = new THREE.DirectionalLight(0xffffff, compact ? 2.4 : 2.8)
       key.position.set(-6, 11, 12)
-      key.castShadow = !compact
-      key.shadow.mapSize.set(1024, 1024)
+      key.castShadow = true
+      key.shadow.mapSize.set(compact ? 512 : 1024, compact ? 512 : 1024)
+      key.shadow.camera.left = -10
+      key.shadow.camera.right = 10
+      key.shadow.camera.top = 7
+      key.shadow.camera.bottom = -7
+      key.shadow.camera.far = 40
+      key.shadow.bias = -0.0004
       scene.add(key)
       const rim = new THREE.DirectionalLight(0xffe5bd, 1.15)
       rim.position.set(10, 3, -9)
@@ -219,13 +225,16 @@ export default function EpaperProductViewer({
       renderer.domElement.style.touchAction = 'pan-y'
 
       const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-      controls.autoRotate = activeRef.current && !reducedMotion
+      controls.autoRotate = !compact && activeRef.current && !reducedMotion
       controls.autoRotateSpeed = compact ? 0.28 : 0.38
 
       renderFrame = () => {
         if (visible && renderer) renderer.render(scene, camera)
       }
-      if (reducedMotion) {
+      // The homepage card is deliberately composed like a product photograph:
+      // a stable angle is more legible and polished than a randomly rotating
+      // thumbnail. The full case-study viewer remains interactive.
+      if (compact || reducedMotion) {
         controls.addEventListener('change', renderFrame)
         controls.update()
         renderFrame()
@@ -242,7 +251,7 @@ export default function EpaperProductViewer({
           const delta = clock.getDelta()
           if (!renderer || time - lastPaint < 32) return
           lastPaint = time
-          if (controls) controls.autoRotate = true
+          if (controls) controls.autoRotate = !compact
           controls?.update(delta)
           renderer.render(scene, camera)
         }
@@ -309,9 +318,24 @@ export default function EpaperProductViewer({
     <div
       ref={hostRef}
       data-epaper-product-viewer="true"
-      className="relative h-full w-full overflow-hidden bg-[#d9d2c5]"
+      className={`relative h-full w-full overflow-hidden ${compact ? 'bg-[#b4ab9d]' : 'bg-[#d9d2c5]'}`}
     >
-      <div aria-hidden="true" className="absolute inset-0 opacity-45 [background-image:linear-gradient(rgba(25,22,18,.07)_1px,transparent_1px),linear-gradient(90deg,rgba(25,22,18,.07)_1px,transparent_1px)] [background-size:32px_32px]" />
+      {compact ? (
+        <>
+          <div
+            aria-hidden="true"
+            className="absolute inset-0"
+            style={{
+              background: 'radial-gradient(ellipse at 50% 38%, #f4f0e8 0%, #ded7ca 50%, #b4ab9d 100%)',
+            }}
+          />
+          <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-[45%] bg-gradient-to-t from-[#6f685f]/35 to-transparent" />
+          <div aria-hidden="true" className="absolute inset-x-[12%] bottom-[7%] h-[16%] rounded-[100%] bg-[#342f2a]/25 blur-xl" />
+          <div aria-hidden="true" className="absolute inset-0 shadow-[inset_0_1px_0_rgba(255,255,255,0.65),inset_0_0_42px_rgba(58,51,43,0.16)]" />
+        </>
+      ) : (
+        <div aria-hidden="true" className="absolute inset-0 opacity-45 [background-image:linear-gradient(rgba(25,22,18,.07)_1px,transparent_1px),linear-gradient(90deg,rgba(25,22,18,.07)_1px,transparent_1px)] [background-size:32px_32px]" />
+      )}
       <div
         aria-hidden={webglReady}
         className={`absolute inset-0 flex items-center justify-center transition-opacity duration-500 ${webglReady ? 'opacity-0' : 'opacity-100'}`}
