@@ -23,6 +23,7 @@ test('renders each featured case study as an indexable page', async ({ page }) =
 test('walks through the e-paper dashboard capabilities over the real interface', async ({ page }) => {
   await page.goto('/work/epaper-dashboard')
 
+  await expect(page.locator('[data-epaper-product-viewer="true"]')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'One screen, six purposeful layers' })).toBeVisible()
   await expect(page.getByRole('img', { name: /complete four-color runner dashboard/i })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Next workout' })).toBeVisible()

@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 import type { ModalKey } from '../CompactModals'
 import CameraIdleSurface from '../CameraIdleSurface'
+import EpaperProductViewer from '../EpaperProductViewer'
 import { useFieldTheme } from '../fieldTheme'
 import { haptic } from '@/lib/haptics'
 import type { FieldCameraSource } from '@/lib/fieldCameraConfig'
@@ -425,18 +426,29 @@ function SpotlightPreviewProjectPanel({
           style={{ background: `radial-gradient(circle, ${halo ?? 'rgba(255,255,255,0.12)'}, transparent 68%)` }}
         />
 
-        <div className="relative rounded-[9px] bg-[#111216] p-[5px] shadow-[0_10px_24px_rgba(0,0,0,0.22)]">
-          <div className="relative aspect-[17/6] overflow-hidden rounded-[5px] bg-white">
-            <Image
-              src={previewImage}
-              alt={item.previewAlt ?? ''}
-              fill
-              sizes="(max-width: 640px) 88vw, 38vw"
-              className="object-contain"
+        {item.id === 'epaper-dashboard' ? (
+          <div className="relative aspect-[17/7.4] overflow-hidden rounded-[9px] shadow-[0_10px_24px_rgba(0,0,0,0.22)]">
+            <EpaperProductViewer
+              active={active}
+              compact
+              dashboardSrc={previewImage}
+              dashboardAlt={item.previewAlt ?? ''}
             />
           </div>
-          <span className="absolute bottom-[2px] left-1/2 h-[2px] w-7 -translate-x-1/2 rounded-full bg-white/18" />
-        </div>
+        ) : (
+          <div className="relative rounded-[9px] bg-[#111216] p-[5px] shadow-[0_10px_24px_rgba(0,0,0,0.22)]">
+            <div className="relative aspect-[17/6] overflow-hidden rounded-[5px] bg-white">
+              <Image
+                src={previewImage}
+                alt={item.previewAlt ?? ''}
+                fill
+                sizes="(max-width: 640px) 88vw, 38vw"
+                className="object-contain"
+              />
+            </div>
+            <span className="absolute bottom-[2px] left-1/2 h-[2px] w-7 -translate-x-1/2 rounded-full bg-white/18" />
+          </div>
+        )}
 
         <div className="relative flex min-h-0 items-start gap-3">
           <div className="min-w-0 flex-1">

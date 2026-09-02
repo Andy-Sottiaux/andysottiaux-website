@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ArrowLeft, ArrowUpRight, CheckCircle2, CircleDot, Radio } from 'lucide-react'
 import { FEATURED_CASE_STUDIES, getCaseStudy } from '@/content/caseStudies'
+import EpaperProductViewer from '@/components/EpaperProductViewer'
 
 const FIELD_SYSTEM_NODES = ['Edge camera', 'Private relay', 'Public gateway', 'Portfolio UI']
 
@@ -58,7 +59,7 @@ export default async function WorkPage({ params }: WorkPageProps) {
 
       <section className="relative flex min-h-[72svh] items-end overflow-hidden border-b border-white/10">
         <HeroVisual project={project} />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#07080b] via-[#07080b]/55 to-black/20" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#07080b] via-[#07080b]/55 to-black/20" />
         <div className="relative z-20 mx-auto w-full max-w-[1180px] px-5 pb-12 pt-28 sm:px-8 sm:pb-16">
           <div className="max-w-3xl">
             <p className="text-xs font-semibold uppercase text-cyan-300">{project.eyebrow}</p>
@@ -230,23 +231,8 @@ function HeroVisual({ project }: { project: NonNullable<ReturnType<typeof getCas
 
   if (project.heroMode === 'epaper' && project.heroImage) {
     return (
-      <div className="absolute inset-0 overflow-hidden bg-[#d9d2c5]">
-        <div className="absolute inset-0 opacity-50 [background-image:linear-gradient(rgba(25,22,18,.07)_1px,transparent_1px),linear-gradient(90deg,rgba(25,22,18,.07)_1px,transparent_1px)] [background-size:36px_36px]" />
-        <div className="absolute inset-x-4 top-[12%] mx-auto max-w-[1120px] sm:inset-x-8 sm:top-[13%]">
-          <div className="relative rotate-[-0.6deg] rounded-[12px] bg-[#111216] p-2 shadow-[0_32px_75px_rgba(16,14,12,0.38)] sm:rounded-[16px] sm:p-3">
-            <div className="relative aspect-[17/6] overflow-hidden rounded-[6px] bg-white sm:rounded-[8px]">
-              <Image
-                src={project.heroImage}
-                alt={project.heroImageAlt ?? ''}
-                fill
-                priority
-                sizes="(max-width: 1180px) 94vw, 1120px"
-                className="object-contain"
-              />
-            </div>
-            <div aria-hidden="true" className="absolute bottom-[3px] left-1/2 h-[2px] w-12 -translate-x-1/2 rounded-full bg-white/15 sm:bottom-1" />
-          </div>
-        </div>
+      <div className="absolute inset-0">
+        <EpaperProductViewer dashboardSrc={project.heroImage} dashboardAlt={project.heroImageAlt ?? ''} />
       </div>
     )
   }
