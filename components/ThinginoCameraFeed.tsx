@@ -8,17 +8,11 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   CAMERA_FALLBACK_MEDIA_ENABLED,
   CAMERA_2_MJPEG_URL,
-  CAMERA_2_NATIVE_URL,
   CAMERA_2_SNAPSHOT_URL,
   CAMERA_2_STREAM,
   CAMERA_2_STATUS_URL,
-  CAMERA_2_URL,
-  CAMERA_2_WEBRTC_FALLBACK_OFFER_URL,
-  CAMERA_2_WEBRTC_FALLBACK_SOURCE_PARAM,
   CAMERA_2_WEBRTC_OFFER_URL,
   CAMERA_2_WEBRTC_SOURCE_PARAM,
-  CAMERA_HOST,
-  PLAYER_MODE,
 } from '@/lib/fieldCameraConfig'
 import { useFieldTheme } from './fieldTheme'
 import Cam2Joystick from './camera/Cam2Joystick'
@@ -97,13 +91,9 @@ export default function ThinginoCameraFeed({
   const rtcVideoRef = useRef<HTMLVideoElement>(null)
   const mjpegUrl = `${CAMERA_2_MJPEG_URL}?v=${streamVersion}`
   const snapshotUrl = `${CAMERA_2_SNAPSHOT_URL}?v=${streamVersion}`
-  const playerUrl = nativePlayerUrl(CAMERA_2_STREAM)
-  const webrtcOfferUrls = useMemo(() => uniqueUrls([
+  const webrtcOfferUrls = useMemo(() => [
     withQueryParam(CAMERA_2_WEBRTC_OFFER_URL, CAMERA_2_WEBRTC_SOURCE_PARAM, CAMERA_2_STREAM),
-    withQueryParam(CAMERA_2_WEBRTC_FALLBACK_OFFER_URL, CAMERA_2_WEBRTC_FALLBACK_SOURCE_PARAM, CAMERA_2_STREAM),
-    withQueryParam('/api/v3/camera2/webrtc/offer', 'stream', CAMERA_2_STREAM),
-  ]), [])
-  const openUrl = CAMERA_2_NATIVE_URL === CAMERA_2_URL ? playerUrl : CAMERA_2_NATIVE_URL
+  ], [])
   const statusCopy = cam2StatusCopy(status)
   const fallbackExhausted = playerFailed && (!CAMERA_FALLBACK_MEDIA_ENABLED || streamFailed) && !streamReady
 
@@ -464,21 +454,6 @@ export default function ThinginoCameraFeed({
         )}
       </div>
 
-      <a
-        href={openUrl}
-        target="_blank"
-        rel="noreferrer"
-        className="absolute bottom-3 right-3 z-30 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase opacity-70 transition-opacity hover:opacity-100"
-        style={{
-          background: 'rgba(0,0,0,0.58)',
-          color: '#fff',
-          backdropFilter: 'blur(8px)',
-          WebkitBackdropFilter: 'blur(8px)',
-        }}
-      >
-        open
-      </a>
-
       <style>{`
         @keyframes thinginoShimmer {
           0% { background-position: -200% 0; }
@@ -516,27 +491,6 @@ function formatPlaybackTelemetry(metrics: Cam2PlaybackMetrics | null, settings: 
 function formatMetricNumber(value: number) {
   if (!Number.isFinite(value)) return '0'
   return Math.abs(value - Math.round(value)) < 0.05 ? String(Math.round(value)) : value.toFixed(1)
-}
-
-function nativePlayerUrl(stream: string): string {
-  const params = new URLSearchParams({
-    src: stream,
-    mode: PLAYER_MODE,
-    background: 'false',
-    width: '100%',
-  })
-  return `${CAMERA_HOST}/stream.html?${params.toString()}`
-}
-
-function uniqueUrls(urls: Array<string | null | undefined>): string[] {
-  const seen = new Set<string>()
-  const next: string[] = []
-  for (const url of urls) {
-    if (!url || seen.has(url)) continue
-    seen.add(url)
-    next.push(url)
-  }
-  return next
 }
 
 function withQueryParam(url: string, key: string, value: string): string {

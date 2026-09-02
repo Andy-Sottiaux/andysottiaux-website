@@ -22,6 +22,57 @@ test('denies physical writes without a control session', async ({ request }) => 
   }
 })
 
+test('denies every camera read path without an access session', async ({ request }) => {
+  test.setTimeout(60_000)
+  const reads = [
+    '/api/v3/camera/snapshot',
+    '/api/v3/camera/sanitized',
+    '/api/v3/camera/mjpeg',
+    '/api/v3/camera/hls/clean.m3u8',
+    '/api/v3/camera/quality',
+    '/api/v3/camera/diagnostics',
+    '/api/v3/camera2/snapshot',
+    '/api/v3/camera2/mjpeg',
+    '/api/v3/camera2/status',
+    '/api/v3/camera2/settings',
+    '/api/v3/camera2/diagnostics',
+    '/api/v3/detections',
+    '/api/v3/training/status',
+  ]
+
+  const readResponses = await Promise.all(reads.map(async (path) => ({
+    path,
+    response: await request.get(path),
+  })))
+  for (const { path, response } of readResponses) {
+    expect(response.status(), path).toBe(401)
+    await expect(response.json()).resolves.toMatchObject({ ok: false, error: 'camera_auth_required' })
+  }
+
+  const offerResponses = await Promise.all(
+    ['/api/v3/camera/webrtc/offer', '/api/v3/camera2/webrtc/offer'].map(async (path) => ({
+      path,
+      response: await request.post(path, {
+        headers: { 'Content-Type': 'application/sdp' },
+        data: 'invalid offer',
+      }),
+    })),
+  )
+  for (const { path, response } of offerResponses) {
+    expect(response.status(), path).toBe(401)
+  }
+
+  const headResponses = await Promise.all(
+    ['/api/v3/camera/snapshot', '/api/v3/camera2/snapshot'].map(async (path) => ({
+      path,
+      response: await request.head(path),
+    })),
+  )
+  for (const { path, response } of headResponses) {
+    expect(response.status(), `HEAD ${path}`).toBe(401)
+  }
+})
+
 test('creates a signed control session after the correct password', async ({ request }) => {
   const denied = await request.post('/api/v3/control-auth', { data: { password: 'incorrect' } })
   expect(denied.status()).toBe(401)
@@ -38,6 +89,27 @@ test('creates a signed control session after the correct password', async ({ req
   const ticketBody = await ticket.json() as { ticket?: string; expiresAt?: number }
   expect(ticketBody.ticket).toMatch(/^ws1\.\d+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/)
   expect(ticketBody.expiresAt).toBeGreaterThan(Math.floor(Date.now() / 1000))
+  expect(ticketBody.expiresAt).toBeLessThanOrEqual(Math.floor(Date.now() / 1000) + 31)
+
+  const crossOriginRead = await request.get('/api/v3/camera/snapshot', {
+    headers: { Origin: 'https://example.net' },
+  })
+  expect(crossOriginRead.status()).toBe(403)
+
+  const crossOriginOffer = await request.post('/api/v3/camera/webrtc/offer', {
+    headers: {
+      'Content-Type': 'application/sdp',
+      Origin: 'https://example.net',
+    },
+    data: 'v=0\r\nm=video 9 UDP/TLS/RTP/SAVPF 96',
+  })
+  expect(crossOriginOffer.status()).toBe(403)
+
+  const gatedOffer = await request.post('/api/v3/camera/webrtc/offer', {
+    headers: { 'Content-Type': 'application/sdp' },
+    data: 'invalid offer',
+  })
+  expect(gatedOffer.status()).toBe(400)
 })
 
 test('rejects cross-origin control authentication', async ({ request }) => {
@@ -52,12 +124,57 @@ test('unlocks controls from the Field Live dialog', async ({ page }) => {
   await mockPortfolioNetwork(page)
   await page.goto('/')
   await page.getByRole('button', { name: 'Open Field Live' }).click()
-  await page.getByRole('button', { name: 'Unlock' }).click()
+  await page.getByRole('button', { name: 'Unlock', exact: true }).click()
 
-  const authDialog = page.getByRole('dialog', { name: 'Device controls' })
+  const authDialog = page.getByRole('dialog', { name: 'Camera & device access' })
   await expect(authDialog).toBeVisible()
-  await authDialog.getByLabel('Control password').fill(TEST_PASSWORD)
+  await authDialog.getByLabel('Access password').fill(TEST_PASSWORD)
   await authDialog.getByRole('button', { name: 'Unlock' }).click()
   await expect(authDialog).toHaveCount(0)
   await expect(page.getByRole('slider', { name: 'Fan speed override' })).toBeEnabled()
+
+  await page.getByRole('button', { name: 'Lock camera access' }).click()
+  await expect(page.getByRole('slider', { name: 'Fan speed override' })).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Unlock Cam 1 live stream' })).toBeVisible()
+  await expect.poll(async () => {
+    const response = await page.request.get('/api/v3/control-auth')
+    return (await response.json() as { authenticated?: boolean }).authenticated
+  }).toBe(false)
+})
+
+test('does not request camera media until the viewer unlocks it', async ({ page }) => {
+  const mediaRequests: string[] = []
+  page.on('request', (request) => {
+    if (/\/api\/v3\/(?:camera|camera2)\/(?:snapshot|mjpeg|hls|webrtc)/.test(request.url())) {
+      mediaRequests.push(request.url())
+    }
+  })
+  await mockPortfolioNetwork(page)
+  await page.goto('/')
+  await page.getByRole('tab', { name: 'Cam 1' }).click()
+
+  await expect(page.getByRole('button', { name: 'Unlock Cam 1 live stream' })).toBeVisible()
+  expect(mediaRequests).toEqual([])
+  await page.getByRole('button', { name: 'Unlock Cam 1 live stream' }).click()
+
+  const authDialog = page.getByRole('dialog', { name: 'Camera & device access' })
+  await authDialog.getByLabel('Access password').fill(TEST_PASSWORD)
+  await authDialog.getByRole('button', { name: 'Unlock', exact: true }).click()
+  await expect(authDialog).toHaveCount(0)
+  await expect.poll(() => mediaRequests.length).toBeGreaterThan(0)
+  expect(mediaRequests.every((url) => new URL(url).origin === new URL(page.url()).origin)).toBeTruthy()
+})
+
+test('keeps the live lab locked until the viewer authenticates', async ({ page }) => {
+  const protectedRequests: string[] = []
+  page.on('request', (request) => {
+    if (/\/api\/v3\/(?:camera|camera2|detections|training)/.test(request.url())) {
+      protectedRequests.push(request.url())
+    }
+  })
+  await mockPortfolioNetwork(page)
+  await page.goto('/lab')
+
+  await expect(page.getByRole('button', { name: 'Unlock Cam 1 live stream' })).toBeVisible()
+  expect(protectedRequests).toEqual([])
 })

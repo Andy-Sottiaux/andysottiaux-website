@@ -7,6 +7,7 @@ import {
   type ReactNode,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
 } from 'react'
@@ -18,10 +19,27 @@ type ControlAuthContextValue = {
   status: ControlAuthStatus
   unlocked: boolean
   requestUnlock: () => Promise<boolean>
+  lockAccess: () => Promise<boolean>
   markLocked: () => void
 }
 
 const ControlAuthContext = createContext<ControlAuthContextValue | null>(null)
+const AUTH_EVENT_KEY = 'cayley-private-access-event'
+const AUTH_CHANNEL = 'cayley-private-access'
+
+function broadcastLocked() {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(AUTH_EVENT_KEY, JSON.stringify({ state: 'locked', at: Date.now() }))
+  } catch {
+    // BroadcastChannel remains available in browsers that deny localStorage.
+  }
+  if (typeof BroadcastChannel !== 'undefined') {
+    const channel = new BroadcastChannel(AUTH_CHANNEL)
+    channel.postMessage({ state: 'locked' })
+    channel.close()
+  }
+}
 
 export default function ControlAuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<ControlAuthStatus>('unknown')
@@ -53,12 +71,12 @@ export default function ControlAuthProvider({ children }: { children: ReactNode 
         return true
       }
       setStatus('locked')
-      setError(body?.configured === false ? 'Controls are not configured.' : null)
+      setError(body?.configured === false ? 'Private access is not configured.' : null)
       setOpen(true)
       return false
     } catch {
       setStatus('locked')
-      setError('Controls are temporarily unavailable.')
+      setError('Private access is temporarily unavailable.')
       setOpen(true)
       return false
     } finally {
@@ -66,10 +84,73 @@ export default function ControlAuthProvider({ children }: { children: ReactNode 
     }
   }, [status])
 
-  const markLocked = useCallback(() => {
+  const applyLocked = useCallback(() => {
     setStatus('locked')
     setPassword('')
   }, [])
+
+  const markLocked = useCallback(() => {
+    applyLocked()
+    broadcastLocked()
+  }, [applyLocked])
+
+  const lockAccess = useCallback(async () => {
+    try {
+      const response = await fetch('/api/v3/control-auth', {
+        method: 'DELETE',
+        cache: 'no-store',
+        credentials: 'same-origin',
+      })
+      if (!response.ok) return false
+      setOpen(false)
+      setError(null)
+      markLocked()
+      return true
+    } catch {
+      return false
+    }
+  }, [markLocked])
+
+  useEffect(() => {
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === AUTH_EVENT_KEY) applyLocked()
+    }
+    window.addEventListener('storage', onStorage)
+    const channel = typeof BroadcastChannel !== 'undefined'
+      ? new BroadcastChannel(AUTH_CHANNEL)
+      : null
+    if (channel) channel.onmessage = () => applyLocked()
+    return () => {
+      window.removeEventListener('storage', onStorage)
+      channel?.close()
+    }
+  }, [applyLocked])
+
+  useEffect(() => {
+    if (status !== 'unlocked') return
+    let disposed = false
+    const validate = async () => {
+      try {
+        const response = await fetch('/api/v3/control-auth', {
+          cache: 'no-store',
+          credentials: 'same-origin',
+        })
+        const body = await response.json().catch(() => null) as { authenticated?: boolean } | null
+        if (!disposed && (!response.ok || body?.authenticated !== true)) markLocked()
+      } catch {
+        // A transient health check must not interrupt an active stream. Media
+        // requests remain independently protected by the server-side cookie.
+      }
+    }
+    const interval = window.setInterval(() => void validate(), 5 * 60 * 1000)
+    const onFocus = () => void validate()
+    window.addEventListener('focus', onFocus)
+    return () => {
+      disposed = true
+      window.clearInterval(interval)
+      window.removeEventListener('focus', onFocus)
+    }
+  }, [markLocked, status])
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -93,7 +174,7 @@ export default function ControlAuthProvider({ children }: { children: ReactNode 
       setPassword('')
       setOpen(false)
     } catch {
-      setError('Controls are temporarily unavailable.')
+      setError('Private access is temporarily unavailable.')
     } finally {
       setSubmitting(false)
     }
@@ -103,20 +184,21 @@ export default function ControlAuthProvider({ children }: { children: ReactNode 
     status,
     unlocked: status === 'unlocked',
     requestUnlock,
+    lockAccess,
     markLocked,
-  }), [markLocked, requestUnlock, status])
+  }), [lockAccess, markLocked, requestUnlock, status])
 
   return (
     <ControlAuthContext.Provider value={value}>
       {children}
-      <Modal open={open} onClose={() => setOpen(false)} title="Device controls" eyebrow="Authorized access">
+      <Modal open={open} onClose={() => setOpen(false)} title="Camera & device access" eyebrow="Private system">
         <form onSubmit={submit} className="mx-auto flex max-w-sm flex-col gap-4">
           <div className="flex items-center gap-3 text-white/80">
             <span className="flex h-9 w-9 flex-none items-center justify-center rounded-[8px] bg-white/10">
               <LockKeyhole aria-hidden="true" className="h-4 w-4" />
             </span>
             <label htmlFor="device-control-password" className="text-[11px] font-semibold uppercase tracking-[0.16em]">
-              Control password
+              Access password
             </label>
           </div>
           <input
@@ -145,7 +227,7 @@ export default function ControlAuthProvider({ children }: { children: ReactNode 
         </form>
       </Modal>
       <span className="sr-only" aria-live="polite">
-        {checking ? 'Checking device control access' : status === 'unlocked' ? 'Device controls unlocked' : ''}
+        {checking ? 'Checking private access' : status === 'unlocked' ? 'Camera and device access unlocked' : ''}
       </span>
     </ControlAuthContext.Provider>
   )

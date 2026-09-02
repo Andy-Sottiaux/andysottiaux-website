@@ -25,7 +25,7 @@ function compactEvent(event) {
   }
 }
 
-function evaluateCameraState(state, frameState) {
+function evaluateCameraState(state) {
   const hlsOk = state.hlsVideo &&
     state.hlsVideo.readyState >= 2 &&
     state.hlsVideo.videoWidth >= 1280 &&
@@ -35,11 +35,6 @@ function evaluateCameraState(state, frameState) {
       /\/api\/v3\/camera\/hls\/clean\.m3u8/.test(state.hlsVideo.src) ||
       (state.hlsVideo.src.startsWith('blob:') && state.cameraMetrics?.mode === 'hls')
     )
-  const rtcOk = frameState?.mode === 'RTC' &&
-    frameState.video?.readyState >= 2 &&
-    frameState.video?.videoWidth >= 1280 &&
-    frameState.video?.videoHeight >= 720 &&
-    frameState.video?.hasSrcObject
   const embeddedRtcOk = state.rtcVideo &&
     state.rtcVideo.readyState >= 2 &&
     state.rtcVideo.videoWidth >= 1280 &&
@@ -51,26 +46,24 @@ function evaluateCameraState(state, frameState) {
 
   return {
     hlsOk: Boolean(hlsOk),
-    rtcOk: Boolean(rtcOk),
     embeddedRtcOk: Boolean(embeddedRtcOk),
     expectedOk: expectedMode === 'rtc'
-      ? Boolean(rtcOk || embeddedRtcOk)
+      ? Boolean(embeddedRtcOk)
       : expectedMode === 'hls'
         ? Boolean(hlsOk)
-        : Boolean(hlsOk || rtcOk || embeddedRtcOk),
+        : Boolean(hlsOk || embeddedRtcOk),
   }
 }
 
 async function readCameraState(page) {
   const state = await page.evaluate(() => {
-    const iframe = document.querySelector('iframe.cayley-go2rtc-player')
     const rtcVideo = document.querySelector('video[aria-label="Cayley field camera WebRTC live preview"]')
     const hlsVideo = document.querySelector('video[aria-label="Cayley field camera clean live preview"]')
     const mjpeg = document.querySelector('img[aria-label="Cayley field camera clean live preview"]')
     const snapshot = document.querySelector('img[aria-hidden="true"]')
     const rtcStyle = rtcVideo ? getComputedStyle(rtcVideo) : null
     const videoStyle = hlsVideo ? getComputedStyle(hlsVideo) : null
-    const rect = iframe?.getBoundingClientRect() || rtcVideo?.getBoundingClientRect() || hlsVideo?.getBoundingClientRect() || mjpeg?.getBoundingClientRect() || null
+    const rect = rtcVideo?.getBoundingClientRect() || hlsVideo?.getBoundingClientRect() || mjpeg?.getBoundingClientRect() || null
     const timeRanges = (ranges) => Array.from(
       { length: ranges?.length || 0 },
       (_, i) => [Number(ranges.start(i).toFixed(3)), Number(ranges.end(i).toFixed(3))]
@@ -85,10 +78,6 @@ async function readCameraState(page) {
       url: location.href,
       cameraTextVisible: /CAMERA/.test(document.body.innerText),
       liveTextVisible: /LIVE/.test(document.body.innerText),
-      iframe: iframe ? {
-        src: iframe.getAttribute('src'),
-        opacity: getComputedStyle(iframe).opacity,
-      } : null,
       rtcVideo: rtcVideo ? {
         readyState: rtcVideo.readyState,
         networkState: rtcVideo.networkState,
@@ -132,29 +121,7 @@ async function readCameraState(page) {
     }
   })
 
-  const rtcFrame = page.frames().find((frame) => frame.url().includes('cayley-relay.tailc7d6b6.ts.net/stream.html'))
-  const frameState = rtcFrame
-    ? await rtcFrame.evaluate(() => {
-        const player = document.querySelector('video-stream')
-        const video = player?.querySelector('video') || document.querySelector('video')
-        return {
-          mode: document.querySelector('.mode')?.textContent || null,
-          status: document.querySelector('.status')?.textContent || null,
-          video: video ? {
-            readyState: video.readyState,
-            networkState: video.networkState,
-            paused: video.paused,
-            currentTime: Number(video.currentTime.toFixed(3)),
-            videoWidth: video.videoWidth,
-            videoHeight: video.videoHeight,
-            hasSrcObject: !!video.srcObject,
-            src: video.currentSrc || video.src || '',
-          } : null,
-        }
-      }).catch((error) => ({ error: error.message }))
-    : null
-
-  return { state, frameState }
+  return state
 }
 
 await mkdir(path.dirname(screenshotPath), { recursive: true })
@@ -195,18 +162,17 @@ try {
     expectedPaintedMs: null,
   }
   let state = null
-  let frameState = null
-  let checks = { hlsOk: false, rtcOk: false, embeddedRtcOk: false, expectedOk: false }
+  let checks = { hlsOk: false, embeddedRtcOk: false, expectedOk: false }
   const deadline = Date.now() + timeoutMs
 
   while (Date.now() < deadline) {
-    ;({ state, frameState } = await readCameraState(page))
-    checks = evaluateCameraState(state, frameState)
+    state = await readCameraState(page)
+    checks = evaluateCameraState(state)
     const elapsedMs = Date.now() - startedAt
 
     if (state.snapshotLoaded && timings.snapshotLoadedMs === null) timings.snapshotLoadedMs = elapsedMs
     if (checks.hlsOk && timings.hlsPaintedMs === null) timings.hlsPaintedMs = elapsedMs
-    if ((checks.rtcOk || checks.embeddedRtcOk) && timings.rtcPaintedMs === null) timings.rtcPaintedMs = elapsedMs
+    if (checks.embeddedRtcOk && timings.rtcPaintedMs === null) timings.rtcPaintedMs = elapsedMs
     if (checks.expectedOk) {
       timings.expectedPaintedMs = timings.expectedPaintedMs ?? elapsedMs
       break
@@ -217,8 +183,8 @@ try {
 
   if (settleMs > 0 && checks.expectedOk) {
     await page.waitForTimeout(settleMs)
-    ;({ state, frameState } = await readCameraState(page))
-    checks = evaluateCameraState(state, frameState)
+    state = await readCameraState(page)
+    checks = evaluateCameraState(state)
   }
 
   await page.screenshot({ path: screenshotPath, fullPage: false })
@@ -230,7 +196,6 @@ try {
       timings,
       checks,
       state,
-      frameState,
       blockedEvents,
       events: events.slice(-25),
       screenshotPath,
@@ -263,12 +228,11 @@ try {
 
   console.log(JSON.stringify({
     ok: true,
-    mode: state.cameraMetrics?.mode || (checks.embeddedRtcOk || checks.rtcOk ? 'rtc' : checks.hlsOk ? 'hls' : expectedMode),
+    mode: state.cameraMetrics?.mode || (checks.embeddedRtcOk ? 'rtc' : checks.hlsOk ? 'hls' : expectedMode),
     expectedMode,
     timings,
     checks,
     state,
-    frameState,
     events: events.slice(-10),
     screenshotPath,
   }, null, 2))

@@ -2,11 +2,12 @@
 
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
-import { ArrowUpRight } from 'lucide-react'
-import type { CSSProperties, ReactNode } from 'react'
+import { ArrowUpRight, LockKeyhole } from 'lucide-react'
+import { useState, type CSSProperties, type ReactNode } from 'react'
 import CameraIdleSurface from '../CameraIdleSurface'
 import CameraIntelligencePanel from '../CameraIntelligencePanel'
 import CameraSourceToggle from '../CameraSourceToggle'
+import { useControlAuth } from '../ControlAuthProvider'
 import FieldHealthCard from '../FieldHealthCard'
 import FieldSolarCard from '../FieldSolarCard'
 import { useFieldTheme } from '../fieldTheme'
@@ -21,7 +22,7 @@ const CameraFeedSwitcher = dynamic(() => import('../CameraFeedSwitcher'), {
 const LIVE_PROOF = [
   { label: 'Edge stack', value: 'Linux board, 5 MP camera, on-device inference, thermal/fan health' },
   { label: 'Power stack', value: 'Solar + LiFePO4 telemetry with graceful stale/offline behavior' },
-  { label: 'Web stack', value: 'Same-origin Next.js APIs, stream fallback, public read-only surface' },
+  { label: 'Web stack', value: 'Same-origin Next.js APIs, signed access session, protected stream fallback' },
 ]
 
 const LIVE_ROLES = ['Hardware integration', 'Embedded services', 'Camera relay', 'Telemetry UI', 'Failure states']
@@ -38,10 +39,13 @@ export default function LiveSystemDashboard({
   showCaseStudyLink?: boolean
 }) {
   const palette = useFieldTheme()
+  const { unlocked, lockAccess } = useControlAuth()
+  const [locking, setLocking] = useState(false)
+  const [lockError, setLockError] = useState(false)
   const isLight = palette.mode === 'light'
   const intro = selectedCamera === 'field'
-    ? 'Live edge-AI camera and solar telemetry from a board I built end-to-end: hardware integration, Linux services, relay APIs, and the public read-only stream you are seeing.'
-    : 'HatchingPoint-branded Thingino E220 view through the tailnet proxy. The site only consumes a read-only relay; control and device credentials stay off the browser.'
+    ? 'Live edge-AI camera and solar telemetry from a board I built end-to-end: hardware integration, Linux services, protected relay APIs, and authenticated playback.'
+    : 'HatchingPoint-branded Thingino E220 view through the protected relay. Camera, control, and device credentials stay off the browser.'
 
   return (
     <div className="flex flex-col gap-5" data-camera-performance="true">
@@ -88,6 +92,34 @@ export default function LiveSystemDashboard({
               <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
             </Link>
           )}
+          {unlocked && (
+            <button
+              type="button"
+              disabled={locking}
+              onClick={() => {
+                setLocking(true)
+                setLockError(false)
+                void lockAccess().then((locked) => {
+                  setLockError(!locked)
+                  setLocking(false)
+                })
+              }}
+              aria-label="Lock camera access"
+              className="inline-flex min-h-8 items-center gap-1.5 rounded-[6px] px-2.5 py-1 text-[10.5px] font-semibold focus:outline-none focus:ring-2 focus:ring-cyan-300/70 disabled:opacity-50"
+              style={{
+                background: isLight ? 'rgba(28,26,28,0.06)' : 'rgba(255,255,255,0.08)',
+                color: palette.mutedText,
+              }}
+            >
+              <LockKeyhole className="h-3.5 w-3.5" aria-hidden="true" />
+              {locking ? 'Locking' : 'Lock access'}
+            </button>
+          )}
+          {lockError && (
+            <span role="alert" className="text-[10.5px] font-semibold text-amber-400">
+              Lock failed. Try again.
+            </span>
+          )}
         </div>
       </div>
 
@@ -104,7 +136,7 @@ export default function LiveSystemDashboard({
         ))}
       </div>
 
-      {selectedCamera === 'field' && <CameraIntelligencePanel enabled />}
+      {selectedCamera === 'field' && <CameraIntelligencePanel enabled={unlocked} />}
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
         <div className="md:col-span-2">
@@ -135,7 +167,7 @@ export default function LiveSystemDashboard({
           '5 MP H.265 sensor, browser-safe preview path',
           'Linux board with on-device inference',
           'Solar + LiFePO4 buffer, off-grid capable',
-          'Public read-only stream surface',
+          'Password-protected stream surface',
         ].map((item) => (
           <li
             key={item}

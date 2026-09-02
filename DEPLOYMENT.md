@@ -16,7 +16,7 @@ After GitHub Actions and Vercel complete, verify:
 
 ```bash
 npm run monitor:production
-npm run test:camera
+CAMERA_ACCESS_PASSWORD='<password>' npm run test:camera
 ```
 
 The required Vercel variables are documented in `.env.example`; production

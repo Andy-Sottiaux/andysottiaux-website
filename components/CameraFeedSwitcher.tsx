@@ -2,6 +2,7 @@
 
 import type { FieldCameraSource } from '@/lib/fieldCameraConfig'
 import CameraIdleSurface from './CameraIdleSurface'
+import { useControlAuth } from './ControlAuthProvider'
 import FieldCameraFeed from './FieldCameraFeed'
 import ThinginoCameraFeed from './ThinginoCameraFeed'
 
@@ -20,8 +21,21 @@ export default function CameraFeedSwitcher({
   position?: string
   onStart?: () => void
 }) {
-  if (!enabled) {
-    return <CameraIdleSurface selectedCamera={selectedCamera} onStart={onStart} />
+  const { unlocked, requestUnlock } = useControlAuth()
+
+  if (!enabled || !unlocked) {
+    const canStart = enabled || Boolean(onStart)
+    const start = () => {
+      onStart?.()
+      if (!unlocked) void requestUnlock()
+    }
+    return (
+      <CameraIdleSurface
+        selectedCamera={selectedCamera}
+        mode={unlocked ? 'play' : 'locked'}
+        onStart={canStart ? start : undefined}
+      />
+    )
   }
 
   if (selectedCamera === 'thingino') {

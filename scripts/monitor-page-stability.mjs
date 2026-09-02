@@ -3,6 +3,7 @@
 import { mkdir } from 'node:fs/promises'
 import path from 'node:path'
 import { chromium } from 'playwright'
+import { activateCamera } from './lib/activate-camera.mjs'
 
 const targetUrl = process.env.PAGE_STABILITY_URL || process.argv[2] || 'https://andysottiaux.com/?debug=1'
 const durationMs = Number.parseInt(process.env.PAGE_STABILITY_DURATION_MS || '30000', 10)
@@ -95,6 +96,7 @@ try {
 
   const startedAt = Date.now()
   await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: startupTimeoutMs })
+  await activateCamera(page, 'Cam 1')
 
   const samples = []
   const deadline = Date.now() + durationMs
@@ -103,9 +105,8 @@ try {
       const shell = document.querySelector('.bento-shell')
       const cameraRoot = document.querySelector('[aria-label="Cayley field camera WebRTC live preview"]')?.parentElement ||
         document.querySelector('[aria-label="Cayley field camera clean live preview"]')?.parentElement ||
-        document.querySelector('.cayley-go2rtc-player')?.parentElement ||
         null
-      const media = Array.from(document.querySelectorAll('video, iframe.cayley-go2rtc-player, img[aria-label*="live preview"]'))
+      const media = Array.from(document.querySelectorAll('video, img[aria-label*="live preview"]'))
         .map((node) => {
           const el = node
           const style = window.getComputedStyle(el)

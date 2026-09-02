@@ -5,9 +5,12 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 export const CONTROL_SESSION_COOKIE = 'cayley_control_session'
 
-const SESSION_VERSION = 'v1'
-const SESSION_TTL_SECONDS = 30 * 24 * 60 * 60
-const CONTROL_TICKET_TTL_SECONDS = 90
+// Camera access should not remain silently unlocked for a month on a shared
+// browser. Bumping the version revokes any sessions minted before camera reads
+// were added to this boundary.
+const SESSION_VERSION = 'v2'
+const SESSION_TTL_SECONDS = 12 * 60 * 60
+const CONTROL_TICKET_TTL_SECONDS = 30
 
 type ControlAuthConfig = {
   password: ScryptPasswordRecord
@@ -149,6 +152,28 @@ export function rejectUnauthorizedControlRequest(request: NextRequest) {
   }
   if (!hasValidControlSession(request)) {
     return NextResponse.json({ ok: false, error: 'control_auth_required' }, {
+      status: 401,
+      headers: { 'Cache-Control': 'no-store' },
+    })
+  }
+  return null
+}
+
+export function rejectUnauthorizedCameraRequest(request: NextRequest) {
+  if (!requestHasSameOrigin(request)) {
+    return NextResponse.json({ ok: false, error: 'invalid_origin' }, {
+      status: 403,
+      headers: { 'Cache-Control': 'no-store' },
+    })
+  }
+  if (!controlAuthConfigured()) {
+    return NextResponse.json({ ok: false, error: 'camera_auth_unconfigured' }, {
+      status: 503,
+      headers: { 'Cache-Control': 'no-store' },
+    })
+  }
+  if (!hasValidControlSession(request)) {
+    return NextResponse.json({ ok: false, error: 'camera_auth_required' }, {
       status: 401,
       headers: { 'Cache-Control': 'no-store' },
     })

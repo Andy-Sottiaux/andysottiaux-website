@@ -18,7 +18,7 @@ telemetry, health monitoring, and authenticated physical controls.
 - Next.js 15 App Router, React 18, and TypeScript
 - Tailwind CSS
 - Vercel deployment from GitHub `main`
-- Cloudflare camera gateways with same-origin Vercel fallbacks
+- Authenticated same-origin media APIs backed by Cloudflare relay ingress
 - Tailscale for private infrastructure management
 - Playwright, axe, React Doctor, Knip, and dependency-cruiser quality gates
 
@@ -36,7 +36,7 @@ Open `http://localhost:3000`.
 ```bash
 npm run check
 npm run monitor:production
-npm run test:camera
+CAMERA_ACCESS_PASSWORD='<password>' npm run test:camera
 ```
 
 `npm run check` runs type checking, a production build, React Doctor, unused
@@ -45,11 +45,12 @@ GitHub Actions runs the same gate for every pull request and push to `main`.
 
 ## Architecture
 
-Public camera viewing remains read-only and goes directly through the camera
-gateways when available. Fan, Cam 2 pan/tilt, and persistent stream settings use
-same-origin API routes, a signed HttpOnly session, and a server-only bearer token
-shared with `cayley-relay`. An authenticated session can mint a 90-second signed
-ticket for low-latency Cam 2 WebSocket control; the permanent token stays server-side.
+Cam 1 and Cam 2 viewing is private. The browser authenticates once through a
+signed HttpOnly session and all media crosses same-origin API routes. Those
+server routes authenticate to `cayley-relay` with a bearer token that never
+reaches the browser. Fan, Cam 2 pan/tilt, and persistent settings use the same
+access boundary; low-latency Cam 2 WebSocket control receives only a 30-second
+signed ticket.
 
 The home page is ISR-cached and probes relay health during regeneration with a
 short timeout. A relay outage therefore cannot make every page request wait on

@@ -11,6 +11,7 @@ const iceGatherTimeoutMs = Number.parseInt(process.env.CAMERA_TRANSPORT_ICE_GATH
 const connectTimeoutMs = Number.parseInt(process.env.CAMERA_TRANSPORT_CONNECT_TIMEOUT_MS || '9000', 10)
 const browserChannel = process.env.CAMERA_TRANSPORT_BROWSER_CHANNEL || ''
 const requireMediaConnected = process.env.CAMERA_TRANSPORT_REQUIRE_CONNECTED === '1'
+const accessPassword = process.env.CAMERA_ACCESS_PASSWORD || ''
 
 function classifyIp(address) {
   if (!address) return 'unknown'
@@ -70,6 +71,15 @@ const browser = await chromium.launch({
 try {
   const page = await browser.newPage()
   await page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: timeoutMs })
+  if (!accessPassword) {
+    throw new Error('CAMERA_ACCESS_PASSWORD is required for private camera transport auditing')
+  }
+  const authResponse = await page.request.post(new URL('/api/v3/control-auth', baseUrl).toString(), {
+    data: { password: accessPassword },
+  })
+  if (!authResponse.ok()) {
+    throw new Error(`camera access authentication failed (${authResponse.status()})`)
+  }
   const result = await page.evaluate(
     async ({ stream, offerUrl, sourceParam, timeoutMs, iceGatherTimeoutMs, connectTimeoutMs }) => {
       const startedAt = performance.now()

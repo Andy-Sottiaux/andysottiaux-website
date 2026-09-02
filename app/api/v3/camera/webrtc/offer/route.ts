@@ -1,10 +1,15 @@
+import { type NextRequest } from 'next/server'
+import {
+  rejectUnauthorizedCameraRequest,
+  relayControlAuthorizationHeader,
+} from '@/lib/server/controlAuth'
+
 const UPSTREAM =
   process.env.V3_CAMERA_UPSTREAM_HOST ||
   process.env.V3_UPSTREAM_HOST ||
   'https://cayley-relay.tailc7d6b6.ts.net'
 
 const DEFAULT_STREAM = process.env.V3_CAMERA_WEBRTC_STREAM || 'cayley-sub'
-const STREAM_RE = /^[A-Za-z0-9_.:-]+$/
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -20,10 +25,13 @@ export async function OPTIONS() {
   })
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const rejected = rejectUnauthorizedCameraRequest(request)
+  if (rejected) return rejected
+
   const url = new URL(request.url)
   const stream = url.searchParams.get('stream') || DEFAULT_STREAM
-  if (!STREAM_RE.test(stream)) {
+  if (stream !== DEFAULT_STREAM) {
     return new Response('bad webrtc stream', {
       status: 400,
       headers: { 'Cache-Control': 'no-store' },
@@ -38,6 +46,14 @@ export async function POST(request: Request) {
     })
   }
 
+  const authorization = relayControlAuthorizationHeader()
+  if (!authorization) {
+    return new Response('camera relay auth unavailable', {
+      status: 503,
+      headers: { 'Cache-Control': 'no-store' },
+    })
+  }
+
   let timeoutId: ReturnType<typeof setTimeout> | null = null
   try {
     const ctrl = new AbortController()
@@ -48,6 +64,7 @@ export async function POST(request: Request) {
       cache: 'no-store',
       signal: ctrl.signal,
       headers: {
+        Authorization: authorization,
         'Content-Type': 'application/sdp',
         'User-Agent': 'andysottiaux.com/camera-webrtc-proxy',
       },

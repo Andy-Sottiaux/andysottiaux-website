@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const targetUrl = process.env.PRODUCTION_HEALTH_URL || process.argv[2] || 'https://andysottiaux.com'
+const cameraCookie = process.env.PRODUCTION_HEALTH_CAMERA_COOKIE?.trim() || ''
 
 const budgets = {
   timeoutMs: Number.parseInt(process.env.PRODUCTION_HEALTH_TIMEOUT_MS || '10000', 10),
@@ -23,15 +24,20 @@ function elapsed(start) {
   return Math.round(performance.now() - start)
 }
 
-async function readText(path, timeoutMs = budgets.timeoutMs) {
+async function readText(path, timeoutMs = budgets.timeoutMs, extraHeaders = {}, requestInit = {}) {
   const started = performance.now()
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), timeoutMs)
   try {
     const response = await fetch(endpoint(path), {
+      ...requestInit,
       cache: 'no-store',
       signal: controller.signal,
-      headers: { 'User-Agent': 'andysottiaux.com-production-health-monitor' },
+      headers: {
+        'User-Agent': 'andysottiaux.com-production-health-monitor',
+        ...extraHeaders,
+        ...(requestInit.headers || {}),
+      },
     })
     const body = await response.text()
     return {
@@ -53,7 +59,7 @@ async function readText(path, timeoutMs = budgets.timeoutMs) {
   }
 }
 
-async function readJson(path, timeoutMs = budgets.timeoutMs) {
+async function readJson(path, timeoutMs = budgets.timeoutMs, extraHeaders = {}) {
   const started = performance.now()
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), timeoutMs)
@@ -61,7 +67,10 @@ async function readJson(path, timeoutMs = budgets.timeoutMs) {
     const response = await fetch(endpoint(path), {
       cache: 'no-store',
       signal: controller.signal,
-      headers: { 'User-Agent': 'andysottiaux.com-production-health-monitor' },
+      headers: {
+        'User-Agent': 'andysottiaux.com-production-health-monitor',
+        ...extraHeaders,
+      },
     })
     const body = await response.json().catch(() => null)
     return {
@@ -111,10 +120,50 @@ function pushWarning(warnings, check, message, details = {}) {
   warnings.push({ check, message, ...details })
 }
 
-const [home, cam1, cam2, solar, solarHistory, fundraising] = await Promise.all([
+const cameraHeaders = cameraCookie ? { Cookie: cameraCookie } : {}
+const [
+  home,
+  cam1,
+  cam2,
+  cam1Snapshot,
+  cam2Snapshot,
+  cam1Mjpeg,
+  cam2Mjpeg,
+  cam1Hls,
+  cam1Quality,
+  cam2Status,
+  cam2Settings,
+  detections,
+  training,
+  cam1Webrtc,
+  cam2Webrtc,
+  solar,
+  solarHistory,
+  fundraising,
+] = await Promise.all([
   readText('/'),
-  readJson('/api/v3/camera/diagnostics'),
-  readJson('/api/v3/camera2/diagnostics'),
+  readJson('/api/v3/camera/diagnostics', budgets.timeoutMs, cameraHeaders),
+  readJson('/api/v3/camera2/diagnostics', budgets.timeoutMs, cameraHeaders),
+  readText('/api/v3/camera/snapshot', budgets.timeoutMs, cameraHeaders),
+  readText('/api/v3/camera2/snapshot', budgets.timeoutMs, cameraHeaders),
+  readText('/api/v3/camera/mjpeg', budgets.timeoutMs, cameraHeaders, { method: 'HEAD' }),
+  readText('/api/v3/camera2/mjpeg', budgets.timeoutMs, cameraHeaders, { method: 'HEAD' }),
+  readText('/api/v3/camera/hls/clean.m3u8', budgets.timeoutMs, cameraHeaders),
+  readJson('/api/v3/camera/quality', budgets.timeoutMs, cameraHeaders),
+  readJson('/api/v3/camera2/status', budgets.timeoutMs, cameraHeaders),
+  readJson('/api/v3/camera2/settings', budgets.timeoutMs, cameraHeaders),
+  readJson('/api/v3/detections', budgets.timeoutMs, cameraHeaders),
+  readJson('/api/v3/training/status', budgets.timeoutMs, cameraHeaders),
+  readText('/api/v3/camera/webrtc/offer', budgets.timeoutMs, cameraHeaders, {
+    method: 'POST',
+    body: 'invalid offer',
+    headers: { 'Content-Type': 'application/sdp' },
+  }),
+  readText('/api/v3/camera2/webrtc/offer', budgets.timeoutMs, cameraHeaders, {
+    method: 'POST',
+    body: 'invalid offer',
+    headers: { 'Content-Type': 'application/sdp' },
+  }),
   readJson('/api/v3/solar'),
   readJson('/api/v3/solar/history?points=72'),
   readJson('/api/fundraising'),
@@ -122,6 +171,23 @@ const [home, cam1, cam2, solar, solarHistory, fundraising] = await Promise.all([
 
 const failures = []
 const warnings = []
+const publicCameraChecks = [
+  ['cam1_diagnostics', cam1],
+  ['cam2_diagnostics', cam2],
+  ['cam1_snapshot', cam1Snapshot],
+  ['cam2_snapshot', cam2Snapshot],
+  ['cam1_mjpeg', cam1Mjpeg],
+  ['cam2_mjpeg', cam2Mjpeg],
+  ['cam1_hls', cam1Hls],
+  ['cam1_quality', cam1Quality],
+  ['cam2_status', cam2Status],
+  ['cam2_settings', cam2Settings],
+  ['detections', detections],
+  ['training', training],
+  ['cam1_webrtc', cam1Webrtc],
+  ['cam2_webrtc', cam2Webrtc],
+]
+const camerasAreProtected = !cameraCookie && publicCameraChecks.every(([, check]) => check.status === 401)
 
 if (!home.ok || !home.body.includes('Andy Sottiaux')) {
   pushFailure(failures, 'homepage', 'Homepage did not load the expected portfolio shell.', {
@@ -130,10 +196,24 @@ if (!home.ok || !home.body.includes('Andy Sottiaux')) {
   })
 }
 
+if (!cameraCookie) {
+  for (const [name, check] of publicCameraChecks) {
+    if (check.status !== 401) {
+      pushFailure(failures, `camera_privacy_${name}`, 'A camera endpoint did not enforce an access session.', {
+        status: check.status,
+        error: check.error,
+      })
+    }
+  }
+}
+
 const cam1Data = cam1.data
 const cam1Summary = cam1Data?.summary ?? {}
 const cam1Resolution = parseResolution(cam1Summary.resolution)
-if (!cam1.ok || cam1Data?.ok !== true) {
+if (camerasAreProtected) {
+  // Public monitoring verifies the privacy boundary. Supply a short-lived
+  // signed session cookie only when detailed private camera health is needed.
+} else if (!cam1.ok || cam1Data?.ok !== true) {
   pushFailure(failures, 'cam1', 'Cam1 diagnostics are not fully healthy.', {
     status: cam1.status,
     summary: cam1Summary,
@@ -176,7 +256,9 @@ if (!cam1.ok || cam1Data?.ok !== true) {
 const cam2Data = cam2.data
 const cam2Summary = cam2Data?.summary ?? {}
 const cam2Resolution = parseResolution(cam2Summary.resolution)
-if (!cam2.ok || cam2Data?.ok !== true) {
+if (camerasAreProtected) {
+  // See Cam1 above: a 401 is the healthy public state.
+} else if (!cam2.ok || cam2Data?.ok !== true) {
   pushFailure(failures, 'cam2', 'Cam2 diagnostics are not fully healthy.', {
     status: cam2.status,
     summary: cam2Summary,
@@ -265,13 +347,15 @@ const result = {
     cam1: {
       status: cam1.status,
       latency_ms: cam1.latency_ms,
-      ok: cam1Data?.ok === true,
+      protected: camerasAreProtected,
+      ok: camerasAreProtected || cam1Data?.ok === true,
       summary: cam1Summary,
     },
     cam2: {
       status: cam2.status,
       latency_ms: cam2.latency_ms,
-      ok: cam2Data?.ok === true,
+      protected: camerasAreProtected,
+      ok: camerasAreProtected || cam2Data?.ok === true,
       summary: cam2Summary,
     },
     solar: {

@@ -189,14 +189,14 @@ export const PROJECT_CASE_STUDIES: ProjectCaseStudy[] = [
     title: 'Edge-AI Field Camera',
     slug: 'field-camera',
     eyebrow: 'Live hardware system',
-    subtitle: 'Solar power, embedded inference, resilient camera transport, and public operational proof.',
+    subtitle: 'Solar power, embedded inference, resilient camera transport, and protected operational proof.',
     role: 'Hardware integration, embedded services, relay architecture, telemetry UI, security boundary, and operations.',
     problem: 'Expose a real solar-powered edge system publicly without leaking private infrastructure or letting live hardware failures become invisible.',
     built: 'Integrated camera streaming, on-device RKNN inference, solar telemetry, thermal and fan health, Cloudflare relay routing, and production diagnostics.',
     outcome: 'A live hardware system that behaves like a maintained product: opt-in streams, health fallbacks, quality checks, recovery paths, and deploy-time regression gates.',
     proof: 'Demonstrates embedded Linux services, power telemetry, camera transport, edge inference, and full-stack operational visibility in one public system.',
-    metrics: ['1280x960 at 30 FPS', 'On-device RKNN', 'Six monitored services', 'Opt-in public stream'],
-    architecture: ['Linux camera and inference node', 'go2rtc media and recovery services', 'Cloudflare read-only public boundary', 'Next.js diagnostics and telemetry UI'],
+    metrics: ['1280x960 at 30 FPS', 'On-device RKNN', 'Six monitored services', 'Password-protected stream'],
+    architecture: ['Linux camera and inference node', 'go2rtc media and recovery services', 'Authenticated Cloudflare media boundary', 'Next.js diagnostics and telemetry UI'],
     validation: ['FPS and bitrate budgets', 'RKNN state and latency checks', 'Solar freshness monitoring', 'No-idle-stream policy'],
     constraints: [
       'The field node must tolerate intermittent power, address changes, and upstream service restarts.',
@@ -205,8 +205,8 @@ export const PROJECT_CASE_STUDIES: ProjectCaseStudy[] = [
     ],
     decisions: [
       {
-        title: 'Read-only public edge',
-        detail: 'Media and health can traverse the public gateway; physical writes stay behind signed sessions and server-held relay credentials.',
+        title: 'Private media edge',
+        detail: 'Camera media and physical writes require signed access sessions; server-held relay credentials never reach the browser.',
       },
       {
         title: 'Always-on relay ownership',

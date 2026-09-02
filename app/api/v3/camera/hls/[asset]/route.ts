@@ -1,3 +1,8 @@
+import { type NextRequest } from 'next/server'
+import {
+  rejectUnauthorizedCameraRequest,
+  relayControlAuthorizationHeader,
+} from '@/lib/server/controlAuth'
 import { fallbackMediaResponse } from '../../fallbackMedia'
 
 const UPSTREAM =
@@ -33,9 +38,20 @@ type HlsAssetContext = {
   params: Promise<{ asset: string }>
 }
 
-export async function GET(_request: Request, { params }: HlsAssetContext) {
+export async function GET(request: NextRequest, { params }: HlsAssetContext) {
+  const rejected = rejectUnauthorizedCameraRequest(request)
+  if (rejected) return rejected
+
   const blocked = fallbackMediaResponse('camera hls fallback')
   if (blocked) return blocked
+
+  const authorization = relayControlAuthorizationHeader()
+  if (!authorization) {
+    return new Response('camera relay auth unavailable', {
+      status: 503,
+      headers: { 'Cache-Control': 'no-store' },
+    })
+  }
 
   const resolvedParams = await params
   const asset = resolvedParams.asset
@@ -54,7 +70,10 @@ export async function GET(_request: Request, { params }: HlsAssetContext) {
       const upstream = await fetch(upstreamUrl, {
         cache: 'no-store',
         signal: ctrl.signal,
-        headers: { 'User-Agent': 'andysottiaux.com/camera-hls-proxy' },
+        headers: {
+          Authorization: authorization,
+          'User-Agent': 'andysottiaux.com/camera-hls-proxy',
+        },
       })
       clearTimeout(timeoutId)
       timeoutId = null

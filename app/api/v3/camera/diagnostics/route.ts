@@ -1,11 +1,14 @@
-import { NextResponse } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
+import {
+  rejectUnauthorizedCameraRequest,
+  relayControlAuthorizationHeader,
+} from '@/lib/server/controlAuth'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 const RELAY_BASE =
   process.env.V3_CAMERA_PUBLIC_RELAY_BASE ||
-  process.env.NEXT_PUBLIC_V3_CAMERA_GATEWAY_HOST ||
   'https://cam1.andysottiaux.com'
 
 type CheckResult = {
@@ -94,14 +97,17 @@ function elapsed(start: number) {
   return Math.round(performance.now() - start)
 }
 
-async function readJsonCheck(url: string, timeoutMs = 6000): Promise<CheckResult> {
+async function readJsonCheck(url: string, authorization: string, timeoutMs = 6000): Promise<CheckResult> {
   const started = performance.now()
   const { controller, timeout } = timeoutSignal(timeoutMs)
   try {
     const response = await fetch(url, {
       cache: 'no-store',
       signal: controller.signal,
-      headers: { 'User-Agent': 'andysottiaux.com/camera-diagnostics' },
+      headers: {
+        Authorization: authorization,
+        'User-Agent': 'andysottiaux.com/camera-diagnostics',
+      },
     })
     const data = await response.json().catch(() => null)
     return {
@@ -121,14 +127,17 @@ async function readJsonCheck(url: string, timeoutMs = 6000): Promise<CheckResult
   }
 }
 
-async function readImageCheck(url: string, timeoutMs = 8000): Promise<CheckResult> {
+async function readImageCheck(url: string, authorization: string, timeoutMs = 8000): Promise<CheckResult> {
   const started = performance.now()
   const { controller, timeout } = timeoutSignal(timeoutMs)
   try {
     const response = await fetch(url, {
       cache: 'no-store',
       signal: controller.signal,
-      headers: { 'User-Agent': 'andysottiaux.com/camera-diagnostics' },
+      headers: {
+        Authorization: authorization,
+        'User-Agent': 'andysottiaux.com/camera-diagnostics',
+      },
     })
     const contentType = response.headers.get('content-type') || ''
     const bytes = new Uint8Array(await response.arrayBuffer())
@@ -159,14 +168,25 @@ function asObject<T>(check: CheckResult): T | null {
   return check.data as T
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const rejected = rejectUnauthorizedCameraRequest(request)
+  if (rejected) return rejected
+
+  const authorization = relayControlAuthorizationHeader()
+  if (!authorization) {
+    return NextResponse.json({ ok: false, error: 'camera_relay_auth_unavailable' }, {
+      status: 503,
+      headers: { 'Cache-Control': 'no-store' },
+    })
+  }
+
   const base = RELAY_BASE.trim().replace(/\/+$/, '')
   const [health, quality, snapshot, training, detections] = await Promise.all([
-    readJsonCheck(`${base}/api/health`),
-    readJsonCheck(`${base}/api/camera/quality`),
-    readImageCheck(`${base}/api/camera/sanitized.jpeg`),
-    readJsonCheck(`${base}/api/training/status`),
-    readJsonCheck(`${base}/api/detections`),
+    readJsonCheck(`${base}/api/health`, authorization),
+    readJsonCheck(`${base}/api/camera/quality`, authorization),
+    readImageCheck(`${base}/api/camera/sanitized.jpeg`, authorization),
+    readJsonCheck(`${base}/api/training/status`, authorization),
+    readJsonCheck(`${base}/api/detections`, authorization),
   ])
 
   const healthData = asObject<HealthPayload>(health)

@@ -1,9 +1,19 @@
+import { relayControlAuthorizationHeader } from '@/lib/server/controlAuth'
+
 const UPSTREAM =
   process.env.V3_CAMERA_UPSTREAM_HOST ||
   process.env.V3_UPSTREAM_HOST ||
   'https://cayley-relay.tailc7d6b6.ts.net'
 
 export async function proxyCameraFrame(path: string, contentType: string, timeoutMs = 5000) {
+  const authorization = relayControlAuthorizationHeader()
+  if (!authorization) {
+    return new Response('camera relay auth unavailable', {
+      status: 503,
+      headers: { 'Cache-Control': 'no-store' },
+    })
+  }
+
   let timeoutId: ReturnType<typeof setTimeout> | null = null
   try {
     const ctrl = new AbortController()
@@ -11,7 +21,10 @@ export async function proxyCameraFrame(path: string, contentType: string, timeou
     const upstream = await fetch(`${UPSTREAM}${path}`, {
       cache: 'no-store',
       signal: ctrl.signal,
-      headers: { 'User-Agent': 'andysottiaux.com/camera-frame-proxy' },
+      headers: {
+        Authorization: authorization,
+        'User-Agent': 'andysottiaux.com/camera-frame-proxy',
+      },
     })
     clearTimeout(timeoutId)
     timeoutId = null

@@ -1,7 +1,8 @@
 # Camera Cloudflare Tunnel
 
-Cam 1 and Cam 2 are exposed through a named Cloudflare Tunnel so browser
-media/control traffic can bypass Vercel's serverless request path.
+Cam 1 and Cam 2 use a named Cloudflare Tunnel as the authenticated server-side
+relay ingress. Camera media is not public: browser playback first crosses the
+website's signed session and same-origin API.
 
 Public gateways:
 
@@ -31,7 +32,8 @@ routes:
 /api/webrtc    -> http://127.0.0.1:1985
 ```
 
-The Vercel production build must include:
+The Vercel production build may include these public hostnames for the
+short-lived-ticket Cam 2 control socket; media code ignores them:
 
 ```text
 NEXT_PUBLIC_V3_CAMERA_GATEWAY_HOST=https://cam1.andysottiaux.com
@@ -97,8 +99,9 @@ Validate after relay changes with:
 ```sh
 CAMERA_TRANSPORT_AUDIT_URL=https://andysottiaux.com \
 CAMERA_TRANSPORT_STREAM=cam2 \
-CAMERA_TRANSPORT_OFFER_URL=https://cam2.andysottiaux.com/api/webrtc \
-CAMERA_TRANSPORT_SOURCE_PARAM=src \
+CAMERA_ACCESS_PASSWORD='<password>' \
+CAMERA_TRANSPORT_OFFER_URL=/api/v3/camera2/webrtc/offer \
+CAMERA_TRANSPORT_SOURCE_PARAM=stream \
 node scripts/audit-camera-transport.mjs
 ```
 
@@ -145,13 +148,11 @@ The website also exposes same-origin diagnostics endpoints:
 ```text
 /api/v3/camera/diagnostics
 /api/v3/camera2/diagnostics
-/api/v3/camera2/diagnostics?active=1
 ```
 
-The default diagnostics endpoints are read-mostly. Cam 1 checks health, stream
-config, sanitized snapshot, training, and detections. Passing `active=1` to Cam
-2 also sends a safe `stop` command through the public control path to verify
-control writes.
+The diagnostics endpoints are read-only. Cam 1 checks health, stream config,
+sanitized snapshot, training, and detections. Cam 2 checks relay status, stream
+configuration, and snapshot delivery without moving the camera.
 
 For a single production readiness pass across the homepage, cameras, solar, and
 fundraising surfaces:
@@ -163,9 +164,9 @@ npm run monitor:production
 ## Cam 1 Runtime Notes
 
 Cam 1 is a Thingino-style field camera behind the same `cayley-relay` tunnel.
-The public browser/API path goes through Cloudflare to the relay nginx gateway,
-but the camera board should not call the public gateway or the relay API port
-for RKNN input frames.
+The authenticated browser/API path goes through the website and Cloudflare to
+the relay nginx gateway, but the camera board should not call the public
+gateway or the relay API port for RKNN input frames.
 
 The stable RKNN frame source on the Cam 1 board is the go2rtc frame endpoint on
 the relay tailnet address:
@@ -197,6 +198,6 @@ Useful Cam 1 verification commands:
 
 ```sh
 ssh root@cayley-relay 'ffprobe -v error -rtsp_transport tcp -select_streams v:0 -show_entries stream=avg_frame_rate,r_frame_rate,width,height,codec_name,profile -of json rtsp://127.0.0.1:8554/cayley-sub'
-curl -s https://andysottiaux.com/api/v3/camera/diagnostics | jq '.summary'
+CAMERA_ACCESS_PASSWORD='<password>' npm run test:camera
 npm run monitor:production
 ```

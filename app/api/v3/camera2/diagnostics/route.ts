@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import {
-  rejectUnauthorizedControlRequest,
+  rejectUnauthorizedCameraRequest,
   relayControlAuthorizationHeader,
 } from '@/lib/server/controlAuth'
 
@@ -44,14 +44,17 @@ function elapsed(start: number) {
   return Math.round(performance.now() - start)
 }
 
-async function readJsonCheck(url: string, timeoutMs = 6000): Promise<CheckResult> {
+async function readJsonCheck(url: string, authorization: string, timeoutMs = 6000): Promise<CheckResult> {
   const started = performance.now()
   const { controller, timeout } = timeoutSignal(timeoutMs)
   try {
     const response = await fetch(url, {
       cache: 'no-store',
       signal: controller.signal,
-      headers: { 'User-Agent': 'andysottiaux.com/camera2-diagnostics' },
+      headers: {
+        Authorization: authorization,
+        'User-Agent': 'andysottiaux.com/camera2-diagnostics',
+      },
     })
     const data = await response.json().catch(() => null)
     return {
@@ -71,14 +74,17 @@ async function readJsonCheck(url: string, timeoutMs = 6000): Promise<CheckResult
   }
 }
 
-async function readSnapshotCheck(url: string, timeoutMs = 8000): Promise<CheckResult> {
+async function readSnapshotCheck(url: string, authorization: string, timeoutMs = 8000): Promise<CheckResult> {
   const started = performance.now()
   const { controller, timeout } = timeoutSignal(timeoutMs)
   try {
     const response = await fetch(url, {
       cache: 'no-store',
       signal: controller.signal,
-      headers: { 'User-Agent': 'andysottiaux.com/camera2-diagnostics' },
+      headers: {
+        Authorization: authorization,
+        'User-Agent': 'andysottiaux.com/camera2-diagnostics',
+      },
     })
     const contentType = response.headers.get('content-type') || ''
     const bytes = new Uint8Array(await response.arrayBuffer())
@@ -104,43 +110,6 @@ async function readSnapshotCheck(url: string, timeoutMs = 8000): Promise<CheckRe
   }
 }
 
-async function postStopCheck(url: string, timeoutMs = 5000): Promise<CheckResult> {
-  const started = performance.now()
-  const { controller, timeout } = timeoutSignal(timeoutMs)
-  try {
-    const authorization = relayControlAuthorizationHeader()
-    if (!authorization) {
-      return { ok: false, latency_ms: elapsed(started), error: 'relay_control_auth_unconfigured' }
-    }
-    const response = await fetch(url, {
-      method: 'POST',
-      cache: 'no-store',
-      signal: controller.signal,
-      headers: {
-        Authorization: authorization,
-        'Content-Type': 'application/json',
-        'User-Agent': 'andysottiaux.com/camera2-diagnostics',
-      },
-      body: JSON.stringify({ command: 'stop' }),
-    })
-    const data = await response.json().catch(() => null)
-    return {
-      ok: response.ok && typeof data === 'object' && data !== null && (data as { ok?: unknown }).ok === true,
-      status: response.status,
-      latency_ms: elapsed(started),
-      data,
-    }
-  } catch (error) {
-    return {
-      ok: false,
-      latency_ms: elapsed(started),
-      error: error instanceof Error ? error.message : String(error),
-    }
-  } finally {
-    clearTimeout(timeout)
-  }
-}
-
 function metricsPayload(check: CheckResult): MetricsPayload | null {
   const data = check.data
   if (!data || typeof data !== 'object') return null
@@ -148,23 +117,21 @@ function metricsPayload(check: CheckResult): MetricsPayload | null {
 }
 
 export async function GET(request: NextRequest) {
-  const activeControl = request.nextUrl.searchParams.get('active') === '1'
-  if (activeControl) {
-    const rejected = rejectUnauthorizedControlRequest(request)
-    if (rejected) return rejected
+  const rejected = rejectUnauthorizedCameraRequest(request)
+  if (rejected) return rejected
+
+  const authorization = relayControlAuthorizationHeader()
+  if (!authorization) {
+    return NextResponse.json({ ok: false, error: 'camera_relay_auth_unavailable' }, {
+      status: 503,
+      headers: { 'Cache-Control': 'no-store' },
+    })
   }
   const base = RELAY_BASE.trim().replace(/\/+$/, '')
-  const [status, metrics, snapshot, activeControlCheck] = await Promise.all([
-    readJsonCheck(`${base}/status`),
-    readJsonCheck(`${base}/metrics`),
-    readSnapshotCheck(`${base}/snapshot`),
-    activeControl
-      ? postStopCheck(`${base}/control`)
-      : Promise.resolve<CheckResult>({
-        ok: true,
-        latency_ms: 0,
-        data: { skipped: true, reason: 'pass active=1 to send a stop command' },
-      }),
+  const [status, metrics, snapshot] = await Promise.all([
+    readJsonCheck(`${base}/status`, authorization),
+    readJsonCheck(`${base}/metrics`, authorization),
+    readSnapshotCheck(`${base}/snapshot`, authorization),
   ])
 
   const metricsData = metricsPayload(metrics)
@@ -184,7 +151,11 @@ export async function GET(request: NextRequest) {
       data: stream ?? null,
     },
     snapshot,
-    control: activeControlCheck,
+    control: {
+      ok: true,
+      latency_ms: 0,
+      data: { skipped: true, reason: 'diagnostics are read-only' },
+    },
     rtsp: {
       ok: null,
       latency_ms: 0,
@@ -194,7 +165,7 @@ export async function GET(request: NextRequest) {
       },
     },
   }
-  const ok = checks.relay.ok && status.ok && checks.stream_config.ok && snapshot.ok && activeControlCheck.ok
+  const ok = checks.relay.ok && status.ok && checks.stream_config.ok && snapshot.ok
 
   return NextResponse.json({
     ok,

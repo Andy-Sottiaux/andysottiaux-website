@@ -9,20 +9,17 @@
  * Same-origin sanitized HLS is the default embedded path because browsers block
  * public pages from directly embedding the Tailscale Funnel media origin as a
  * local/private-network subresource. go2rtc WebRTC/MSE stays available as an
- * opt-in/native player path.
+ * authenticated same-origin player path.
  */
 
 import { type CSSProperties, type RefObject, useEffect, useReducer, useRef, useState } from 'react'
 import {
   CAMERA_FALLBACK_MEDIA_ENABLED,
-  CAMERA_HOST,
   DETECTIONS_URL as DETECTIONS_BASE_URL,
-  FAST_PLAYER_ENABLED,
   HEALTH_URL,
   HLS_URL,
   HTTP_RTC_ENABLED,
   MJPEG_URL,
-  PLAYER_MODE,
   PRIMARY_FEED_STREAM,
   QUALITY_URL,
   SNAPSHOT_URL,
@@ -37,7 +34,6 @@ const DETECTION_WINDOW_SEC = 60
 const DETECTIONS_POLL_URL = withQueryParams(DETECTIONS_BASE_URL, { window_sec: DETECTION_WINDOW_SEC })
 const SNAPSHOT_REFRESH_MS = 15_000
 const STREAM_START_TIMEOUT_MS = 20_000
-const FAST_PLAYER_START_TIMEOUT_MS = 8_000
 const HTTP_RTC_START_TIMEOUT_MS = 4_000
 const HTTP_RTC_ICE_GATHER_TIMEOUT_MS = 1_500
 const HTTP_RTC_HEALTH_GRACE_MS = 5_000
@@ -178,8 +174,6 @@ type CameraPlaybackState = {
   streamNonce: number
   snapshotReady: boolean
   streamReady: boolean
-  fastPlayerReady: boolean
-  fastPlayerFailed: boolean
   httpRtcReady: boolean
   httpRtcFailed: boolean
   hlsReady: boolean
@@ -193,8 +187,6 @@ type CameraPlaybackAction =
   | { type: 'reload'; now: number }
   | { type: 'start-timeout' }
   | { type: 'refresh-snapshot'; now: number }
-  | { type: 'fast-player-failed' }
-  | { type: 'fast-player-live' }
   | { type: 'http-rtc-unsupported' }
   | { type: 'http-rtc-live' }
   | { type: 'http-rtc-failed'; hlsPainted: boolean }
@@ -330,8 +322,6 @@ function resetPlaybackState(
     streamNonce: active ? (previous?.streamNonce ?? 0) + 1 : (previous?.streamNonce ?? 0),
     snapshotReady: false,
     streamReady: false,
-    fastPlayerReady: false,
-    fastPlayerFailed: !FAST_PLAYER_ENABLED,
     httpRtcReady: false,
     httpRtcFailed: !HTTP_RTC_ENABLED,
     hlsReady: false,
@@ -363,23 +353,6 @@ function cameraPlaybackReducer(
       return state.phase === 'connecting' ? { ...state, phase: 'offline' } : state
     case 'refresh-snapshot':
       return { ...state, snapshotNonce: action.now }
-    case 'fast-player-failed':
-      return {
-        ...state,
-        fastPlayerReady: false,
-        fastPlayerFailed: true,
-        streamReady: false,
-        phase: transitionAfterTransportFailure(state.phase, false),
-      }
-    case 'fast-player-live':
-      return {
-        ...state,
-        fastPlayerReady: true,
-        snapshotReady: true,
-        streamReady: true,
-        hlsRetryCount: 0,
-        phase: 'live',
-      }
     case 'http-rtc-unsupported':
       return { ...state, httpRtcFailed: true }
     case 'http-rtc-live':
@@ -491,8 +464,6 @@ export default function FieldCameraFeed({
     streamNonce,
     snapshotReady,
     streamReady,
-    fastPlayerReady,
-    fastPlayerFailed,
     httpRtcReady,
     httpRtcFailed,
     hlsReady,
@@ -515,13 +486,11 @@ export default function FieldCameraFeed({
     [WEBRTC_SOURCE_PARAM]: PRIMARY_FEED_STREAM,
     v: streamNonce,
   })
-  const fastPlayerUrl = nativePlayerUrl(PRIMARY_FEED_STREAM)
   const mediaHealthBad = isConfirmedCameraBad(quality)
   const showStream = active && !mediaHealthBad
-  const showFastPlayer = FAST_PLAYER_ENABLED && showStream && !fastPlayerFailed
-  const showHttpRtc = HTTP_RTC_ENABLED && showStream && fastPlayerFailed && !httpRtcFailed
-  const showHls = CAMERA_FALLBACK_MEDIA_ENABLED && showStream && fastPlayerFailed && httpRtcFailed && !hlsFailed
-  const hasPaintedTransport = streamReady || fastPlayerReady || httpRtcReady || hlsReady
+  const showHttpRtc = HTTP_RTC_ENABLED && showStream && !httpRtcFailed
+  const showHls = CAMERA_FALLBACK_MEDIA_ENABLED && showStream && httpRtcFailed && !hlsFailed
+  const hasPaintedTransport = streamReady || httpRtcReady || hlsReady
 
   useEffect(() => {
     const el = containerRef.current
@@ -574,21 +543,6 @@ export default function FieldCameraFeed({
     }, SNAPSHOT_REFRESH_MS)
     return () => window.clearInterval(refresh)
   }, [active, hasPaintedTransport])
-
-  useEffect(() => {
-    if (!showFastPlayer || fastPlayerReady) return
-
-    let cancelled = false
-    const startTimeout = window.setTimeout(() => {
-      if (cancelled) return
-      dispatchPlayback({ type: 'fast-player-failed' })
-    }, FAST_PLAYER_START_TIMEOUT_MS)
-
-    return () => {
-      cancelled = true
-      window.clearTimeout(startTimeout)
-    }
-  }, [fastPlayerReady, showFastPlayer, streamNonce])
 
   useEffect(() => {
     if (!showHttpRtc) return
@@ -1112,12 +1066,12 @@ export default function FieldCameraFeed({
   }, [hlsUrl, showHls])
 
   useEffect(() => {
-    if (!CAMERA_FALLBACK_MEDIA_ENABLED || !showStream || !fastPlayerFailed || !hlsFailed || httpRtcReady) return
+    if (!CAMERA_FALLBACK_MEDIA_ENABLED || !showStream || !hlsFailed || httpRtcReady) return
     const retry = window.setTimeout(() => {
       dispatchPlayback({ type: 'retry-hls' })
     }, Math.min(30_000, HLS_RETRY_MS * Math.max(1, hlsRetryCount)))
     return () => window.clearTimeout(retry)
-  }, [fastPlayerFailed, hlsFailed, hlsRetryCount, httpRtcReady, showStream])
+  }, [hlsFailed, hlsRetryCount, httpRtcReady, showStream])
 
   useEffect(() => {
     if (!active) return
@@ -1168,30 +1122,6 @@ export default function FieldCameraFeed({
         }}
       />
 
-      {showFastPlayer && (
-        <iframe
-          key={streamNonce}
-          src={fastPlayerUrl}
-          title="Cayley field camera low-latency live preview"
-          aria-label="Cayley field camera low-latency live preview"
-          allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
-          sandbox="allow-forms allow-popups allow-presentation allow-same-origin allow-scripts"
-          referrerPolicy="no-referrer"
-          allowFullScreen
-          className="cayley-go2rtc-player absolute inset-0 h-full w-full"
-          onLoad={() => {
-            dispatchPlayback({ type: 'fast-player-live' })
-          }}
-          onError={() => {
-            dispatchPlayback({ type: 'fast-player-failed' })
-          }}
-          style={{
-            opacity: streamActive && fastPlayerReady ? 1 : 0,
-            transition: 'none',
-          }}
-        />
-      )}
-
       {showHttpRtc && (
         <video
           ref={rtcVideoRef}
@@ -1226,7 +1156,7 @@ export default function FieldCameraFeed({
         />
       )}
 
-      {CAMERA_FALLBACK_MEDIA_ENABLED && showStream && fastPlayerFailed && hlsFailed && !httpRtcReady && (
+      {CAMERA_FALLBACK_MEDIA_ENABLED && showStream && hlsFailed && !httpRtcReady && (
         <img
           key={streamNonce}
           src={mjpegUrl}
@@ -1258,21 +1188,6 @@ export default function FieldCameraFeed({
       {(phase === 'preview' || phase === 'live') && <TrainingStatusPill data={training} />}
       {debugMode && <DevHUD phase={phase} quality={quality} />}
 
-      <a
-        href={nativePlayerUrl(PRIMARY_FEED_STREAM)}
-        target="_blank"
-        rel="noreferrer"
-        className="absolute bottom-3 right-3 px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-widest opacity-70 hover:opacity-100 transition-opacity"
-        style={{
-          background: 'rgba(0,0,0,0.58)',
-          color: '#fff',
-          backdropFilter: 'blur(8px)',
-          WebkitBackdropFilter: 'blur(8px)',
-        }}
-      >
-        native
-      </a>
-
       <style>{`
         @keyframes fldLivePulse {
           0%, 100% { opacity: 1; }
@@ -1285,11 +1200,6 @@ export default function FieldCameraFeed({
         @keyframes fldPlaceholderPulse {
           0%, 100% { opacity: 0.45; transform: scale(1); }
           50%      { opacity: 0.85; transform: scale(1.04); }
-        }
-        .cayley-go2rtc-player {
-          display: block;
-          border: 0;
-          background: #000;
         }
         .field-detection-box {
           border-color: #34d399;
@@ -2276,16 +2186,6 @@ function formatFps(value: number): string {
 function formatDetectionAge(seconds: number): string {
   if (seconds < 60) return `${Math.round(seconds)}s`
   return `${Math.round(seconds / 60)}m`
-}
-
-function nativePlayerUrl(stream: string): string {
-  const params = new URLSearchParams({
-    src: stream,
-    mode: PLAYER_MODE,
-    background: 'false',
-    width: '100%',
-  })
-  return `${CAMERA_HOST}/stream.html?${params.toString()}`
 }
 
 function waitForIceGatheringComplete(pc: RTCPeerConnection, timeoutMs: number): Promise<void> {

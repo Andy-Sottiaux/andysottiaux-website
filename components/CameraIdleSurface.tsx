@@ -1,8 +1,9 @@
 'use client'
 
+import { LockKeyhole } from 'lucide-react'
 import type { FieldCameraSource } from '@/lib/fieldCameraConfig'
 
-type CameraIdleMode = 'play' | 'loading'
+type CameraIdleMode = 'play' | 'locked' | 'loading'
 
 export default function CameraIdleSurface({
   selectedCamera = 'field',
@@ -14,7 +15,8 @@ export default function CameraIdleSurface({
   onStart?: () => void
 }) {
   const cameraLabel = selectedCamera === 'thingino' ? 'Cam 2' : 'Cam 1'
-  const isPlayable = mode === 'play' && onStart
+  const isPlayable = mode !== 'loading' && onStart
+  const locked = mode === 'locked'
 
   return (
     <div className="absolute inset-0 flex items-center justify-center bg-black">
@@ -36,7 +38,7 @@ export default function CameraIdleSurface({
       {isPlayable ? (
         <button
           type="button"
-          aria-label={`Play ${cameraLabel} live stream`}
+          aria-label={`${locked ? 'Unlock' : 'Play'} ${cameraLabel} live stream`}
           onClick={(event) => {
             event.stopPropagation()
             onStart()
@@ -50,15 +52,19 @@ export default function CameraIdleSurface({
             WebkitBackdropFilter: 'blur(8px)',
           }}
         >
-          <span
-            aria-hidden="true"
-            className="ml-0.5 block h-0 w-0"
-            style={{
-              borderTop: '10px solid transparent',
-              borderBottom: '10px solid transparent',
-              borderLeft: '15px solid currentColor',
-            }}
-          />
+          {locked ? (
+            <LockKeyhole aria-hidden="true" className="h-5 w-5" />
+          ) : (
+            <span
+              aria-hidden="true"
+              className="ml-0.5 block h-0 w-0"
+              style={{
+                borderTop: '10px solid transparent',
+                borderBottom: '10px solid transparent',
+                borderLeft: '15px solid currentColor',
+              }}
+            />
+          )}
         </button>
       ) : (
         <div
@@ -87,7 +93,7 @@ export default function CameraIdleSurface({
             }}
           />
         )}
-        {mode === 'loading' ? 'Camera loading' : `${cameraLabel} paused`}
+        {mode === 'loading' ? 'Camera loading' : locked ? `${cameraLabel} locked` : `${cameraLabel} paused`}
       </div>
 
       <style>{`
