@@ -93,7 +93,7 @@ const jsonLd = {
   name: 'Andy Sottiaux',
   alternateName: 'Andrew Sottiaux',
   url: siteUrl,
-  image: `${siteUrl}/images/profile.jpg`,
+  image: `${siteUrl}/images/andy-headshot-2026.webp`,
   jobTitle: 'Hardware/Software Engineer',
   description: 'Engineer building UAV systems, edge-AI camera telemetry, embedded dashboards, CAD artifacts, and production iOS/web products.',
   email: 'andrewsottiaux@gmail.com',

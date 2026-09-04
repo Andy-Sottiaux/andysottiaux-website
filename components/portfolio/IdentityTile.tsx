@@ -29,7 +29,7 @@ export default function IdentityTile({ onOpen }: { onOpen?: () => void }) {
             }}
           >
             <Image
-              src="/images/profile.jpg"
+              src="/images/andy-headshot-2026.webp"
               alt="Andy Sottiaux"
               fill
               sizes="(max-width: 639px) 112px, (max-width: 767px) 124px, 116px"
