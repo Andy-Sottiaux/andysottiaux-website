@@ -9,7 +9,7 @@ const caseStudies = [
   { path: '/work/epaper-dashboard', title: "Runner's E-Paper Dashboard", proof: 'Design to the silicon' },
 ]
 
-test('renders each featured case study as an indexable page', async ({ page }) => {
+test('renders each featured case study as an indexable page', async ({ page }, testInfo) => {
   for (const study of caseStudies) {
     await page.goto(study.path)
     await expect(page.getByRole('heading', { level: 1, name: study.title })).toBeVisible()
@@ -17,6 +17,10 @@ test('renders each featured case study as an indexable page', async ({ page }) =
     await expect(page.getByRole('heading', { name: 'What I owned' })).toBeVisible()
     await expect(page.getByText('Architecture', { exact: true }).last()).toBeVisible()
     await expect(page.getByText('Validation', { exact: true }).last()).toBeVisible()
+
+    const screenshotPath = testInfo.outputPath(`${study.path.split('/').pop()}-hero.png`)
+    await page.screenshot({ path: screenshotPath, fullPage: false, animations: 'disabled' })
+    await testInfo.attach(`${study.title} hero`, { path: screenshotPath, contentType: 'image/png' })
   }
 })
 

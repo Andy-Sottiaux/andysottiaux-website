@@ -6,12 +6,13 @@ telemetry, health monitoring, and authenticated physical controls.
 
 ## Public Surfaces
 
-- `/` — compact portfolio and project overview
+- `/` — editorial portfolio, selected projects, background, and contact
 - `/work/travel-agent-ai` — shipped iOS product case study
 - `/work/field-camera` — edge camera, relay, and operations case study
 - `/work/wyzecar` — robotics and autonomy case study
 - `/work/epaper-dashboard` — runner-first embedded display and partial-refresh case study
 - `/lab` — full live camera, inference, health, and solar dashboard
+- `/lab/dashboard` — compact portfolio and live-system dashboard
 
 ## Stack
 
@@ -43,6 +44,20 @@ CAMERA_ACCESS_PASSWORD='<password>' npm run test:camera
 code/dependency audits, architecture rules, and desktop/mobile Playwright tests.
 GitHub Actions runs the same gate for every pull request and push to `main`.
 
+Playwright tests run against the production build using `next start`. When
+running browser tests separately, build first:
+
+```bash
+npm run build
+npm run test:e2e
+```
+
+The same build prerequisite applies to `npm run test:e2e:ui` and
+`npm run audit:a11y`. Rebuild after source changes, and finish any development
+server using the same `.next` directory before building or testing to avoid
+overlapping development and production output. Playwright uses port 3100 by
+default; an existing server on that port must be the production test server.
+
 ## Architecture
 
 Cam 1 and Cam 2 viewing is private. The browser authenticates once through a
@@ -52,12 +67,13 @@ reaches the browser. Fan, Cam 2 pan/tilt, and persistent settings use the same
 access boundary; low-latency Cam 2 WebSocket control receives only a 30-second
 signed ticket.
 
-The home page is ISR-cached and probes relay health during regeneration with a
-short timeout. A relay outage therefore cannot make every page request wait on
-the edge system; client polling updates live state after load.
+The public homepage is static and makes no device API requests. Camera access
+state is scoped to the lab routes. The compact dashboard at `/lab/dashboard`
+is ISR-cached and probes relay health during regeneration with a short timeout;
+client polling updates live state after load.
 
 Featured project content is defined once in `content/caseStudies.ts` and reused
-by the homepage modal, route metadata, sitemap, and server-rendered case-study
+by the compact dashboard modal, route metadata, sitemap, and server-rendered case-study
 pages. The live dashboard is isolated in `components/live` so the dedicated lab
 does not load unrelated portfolio modal code.
 

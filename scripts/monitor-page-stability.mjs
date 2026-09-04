@@ -5,7 +5,7 @@ import path from 'node:path'
 import { chromium } from 'playwright'
 import { activateCamera } from './lib/activate-camera.mjs'
 
-const targetUrl = process.env.PAGE_STABILITY_URL || process.argv[2] || 'https://andysottiaux.com/?debug=1'
+const targetUrl = process.env.PAGE_STABILITY_URL || process.argv[2] || 'https://andysottiaux.com/lab/dashboard?debug=1'
 const durationMs = Number.parseInt(process.env.PAGE_STABILITY_DURATION_MS || '30000', 10)
 const intervalMs = Number.parseInt(process.env.PAGE_STABILITY_INTERVAL_MS || '500', 10)
 const startupTimeoutMs = Number.parseInt(process.env.PAGE_STABILITY_STARTUP_TIMEOUT_MS || '45000', 10)

@@ -1,6 +1,7 @@
 'use client'
 
 import type { CSSProperties } from 'react'
+import Link from 'next/link'
 import { useFieldTheme } from '../fieldTheme'
 import { CONTACT_LINKS, COPYRIGHT_YEAR, type ContactIcon as ContactIconName } from './content'
 import Tile from './Tile'
@@ -86,7 +87,8 @@ export default function ContactTile({ onOpen }: { onOpen?: () => void }) {
           className="mt-2 md:mt-[clamp(0.3rem,0.9dvh,0.5rem)] text-[9px] md:text-[clamp(7.5px,0.9dvh,9px)] tracking-wide text-center"
           style={{ color: palette.fadedText }}
         >
-          © {COPYRIGHT_YEAR} Andy Sottiaux
+          <Link href="/" className="relative z-10 inline-flex min-h-6 items-center gap-1 hover:underline" aria-label="Back to portfolio">← Portfolio</Link>
+          <span aria-hidden="true"> · </span>© {COPYRIGHT_YEAR} Andy Sottiaux
         </div>
       </div>
     </Tile>

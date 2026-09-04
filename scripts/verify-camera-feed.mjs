@@ -5,7 +5,7 @@ import path from 'node:path'
 import { chromium } from 'playwright'
 import { activateCamera } from './lib/activate-camera.mjs'
 
-const targetUrl = process.env.CAMERA_VERIFY_URL || process.argv[2] || 'https://andysottiaux.com/?debug=1'
+const targetUrl = process.env.CAMERA_VERIFY_URL || process.argv[2] || 'https://andysottiaux.com/lab/dashboard?debug=1'
 const expectedMode = process.env.CAMERA_VERIFY_MODE || 'any'
 const screenshotPath = process.env.CAMERA_VERIFY_SCREENSHOT ||
   path.join(process.cwd(), 'tmp', 'camera-feed-smoke.png')

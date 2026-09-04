@@ -5,7 +5,7 @@ import { mockPortfolioNetwork } from './support/mockPortfolioNetwork'
 
 const TEST_PASSWORD = 'test-device-control-password'
 
-async function openHome(
+async function openDashboard(
   page: import('@playwright/test').Page,
   reducedMotion: 'reduce' | 'no-preference' = 'reduce',
 ) {
@@ -14,13 +14,13 @@ async function openHome(
     'x-forwarded-for': `203.0.113.${Math.floor(Math.random() * 250) + 1}`,
   })
   await mockPortfolioNetwork(page)
-  await page.goto('/')
+  await page.goto('/lab/dashboard')
   await expect(page.getByText('Andy Sottiaux').first()).toBeVisible()
   await expect(page.getByText('Spotlight').first()).toBeVisible()
 }
 
 test('renders the bento shell and spotlight order', async ({ page }) => {
-  await openHome(page)
+  await openDashboard(page)
 
   await expect(page.getByRole('tab', { name: 'Travel' })).toBeVisible()
   await expect(page.getByRole('tab', { name: 'Cam 1' })).toBeVisible()
@@ -38,37 +38,56 @@ test('renders the bento shell and spotlight order', async ({ page }) => {
 })
 
 test('uses polished directional motion between spotlight items', async ({ page }) => {
-  await openHome(page, 'no-preference')
+  await openDashboard(page, 'no-preference')
 
   await page.getByRole('tab', { name: 'Travel' }).click()
   const forwardSlide = page.locator('.spotlight-slide[aria-hidden="false"]')
   const forwardMotion = await forwardSlide.evaluate((slide) => {
     const content = slide.querySelector<HTMLElement>('.spotlight-slide-content')
     const style = content ? window.getComputedStyle(content) : null
+    const leaving = document.querySelectorAll('.spotlight-slide[data-spotlight-state="leaving"]')
+    const leavingContent = leaving[0]?.querySelector<HTMLElement>('.spotlight-slide-content')
     return {
-      animationName: style?.animationName,
-      animationDuration: style?.animationDuration,
-      direction: slide.getAttribute('data-spotlight-direction'),
-      state: slide.getAttribute('data-spotlight-state'),
+      entering: {
+        animationName: style?.animationName,
+        animationDuration: style?.animationDuration,
+        direction: slide.getAttribute('data-spotlight-direction'),
+        state: slide.getAttribute('data-spotlight-state'),
+      },
+      leaving: {
+        count: leaving.length,
+        animationName: leavingContent ? window.getComputedStyle(leavingContent).animationName : null,
+      },
     }
   })
 
-  expect(forwardMotion).toEqual({
+  expect(forwardMotion.entering).toEqual({
     animationName: 'spotlight-enter-forward',
     animationDuration: expect.stringMatching(/^0\.[5-8]\d?s$/),
     direction: 'forward',
     state: 'active',
   })
+  expect(forwardMotion.leaving).toEqual({
+    count: 1,
+    animationName: 'spotlight-leave-forward',
+  })
   const leavingSlide = page.locator('.spotlight-slide[data-spotlight-state="leaving"]')
-  await expect(leavingSlide).toHaveCount(1)
-  await expect(leavingSlide.locator('.spotlight-slide-content')).toHaveCSS('animation-name', 'spotlight-leave-forward')
   await expect(leavingSlide).toHaveCount(0, { timeout: 1_500 })
   await expect(forwardSlide).toHaveAttribute('data-spotlight-animate', 'false')
 
   await page.getByRole('tab', { name: 'E-Paper' }).click()
   const backwardSlide = page.locator('.spotlight-slide[aria-hidden="false"]')
-  await expect(backwardSlide).toHaveAttribute('data-spotlight-direction', 'backward')
-  await expect(backwardSlide.locator('.spotlight-slide-content')).toHaveCSS('animation-name', 'spotlight-enter-backward')
+  const backwardMotion = await backwardSlide.evaluate((slide) => {
+    const content = slide.querySelector<HTMLElement>('.spotlight-slide-content')
+    return {
+      direction: slide.getAttribute('data-spotlight-direction'),
+      animationName: content ? window.getComputedStyle(content).animationName : null,
+    }
+  })
+  expect(backwardMotion).toEqual({
+    direction: 'backward',
+    animationName: 'spotlight-enter-backward',
+  })
 
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.getByRole('tab', { name: 'WYZECAR' }).click()
@@ -78,7 +97,7 @@ test('uses polished directional motion between spotlight items', async ({ page }
 })
 
 test('supports keyboard navigation across the spotlight rail', async ({ page }) => {
-  await openHome(page)
+  await openDashboard(page)
 
   const ePaper = page.getByRole('tab', { name: 'E-Paper' })
   const travel = page.getByRole('tab', { name: 'Travel' })
@@ -100,7 +119,7 @@ test('supports keyboard navigation across the spotlight rail', async ({ page }) 
 
 test('lets visitors pause and resume spotlight rotation', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium-desktop')
-  await openHome(page, 'no-preference')
+  await openDashboard(page, 'no-preference')
 
   const pause = page.getByRole('button', { name: 'Pause spotlight rotation' })
   await pause.click()
@@ -118,7 +137,7 @@ test('lets visitors pause and resume spotlight rotation', async ({ page }, testI
 
 test('keeps an outgoing camera active until its spotlight transition settles', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium-desktop')
-  await openHome(page, 'no-preference')
+  await openDashboard(page, 'no-preference')
 
   await page.getByRole('tab', { name: 'Cam 1' }).click()
   await page.getByRole('button', { name: 'Unlock Cam 1 live stream' }).click()
@@ -140,7 +159,7 @@ test('keeps an outgoing camera active until its spotlight transition settles', a
 test('gives the profile portrait room without overflowing the identity tile', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium-desktop')
   await page.setViewportSize({ width: 1024, height: 768 })
-  await openHome(page)
+  await openDashboard(page)
 
   for (const viewport of [
     { width: 1024, height: 768, minimumPortrait: 90 },
@@ -216,7 +235,7 @@ test('gives the profile portrait room without overflowing the identity tile', as
 })
 
 test('shows the e-paper interface preview and links to its guided case study', async ({ page }) => {
-  await openHome(page)
+  await openDashboard(page)
 
   const activeSpotlight = page.locator('.spotlight-slide[aria-hidden="false"]')
   const productPoster = activeSpotlight.locator('[data-epaper-product-poster="true"]')
@@ -229,7 +248,7 @@ test('shows the e-paper interface preview and links to its guided case study', a
 test('uses the tall spotlight space for the e-paper product dossier', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium-desktop')
   await page.setViewportSize({ width: 1526, height: 1259 })
-  await openHome(page)
+  await openDashboard(page)
 
   const activeSpotlight = page.locator('.spotlight-slide[aria-hidden="false"]')
   const productPoster = activeSpotlight.locator('[data-epaper-product-poster="true"]')
@@ -249,7 +268,7 @@ test('uses the tall spotlight space for the e-paper product dossier', async ({ p
 })
 
 test('opens and closes primary modals', async ({ page }) => {
-  await openHome(page)
+  await openDashboard(page)
   await page.waitForLoadState('networkidle')
 
   await page.getByRole('button', { name: 'Open Field Live' }).click()
@@ -269,7 +288,7 @@ test('opens and closes primary modals', async ({ page }) => {
 })
 
 test('keeps camera feeds opt-in from spotlight tabs', async ({ page }) => {
-  await openHome(page)
+  await openDashboard(page)
 
   await page.getByRole('tab', { name: 'Cam 1' }).click()
   await expect(page.getByRole('button', { name: 'Unlock Cam 1 live stream' })).toBeVisible()
@@ -279,7 +298,7 @@ test('keeps camera feeds opt-in from spotlight tabs', async ({ page }) => {
 })
 
 test('requires a new camera opt-in after closing a modal', async ({ page }) => {
-  await openHome(page)
+  await openDashboard(page)
 
   await page.getByRole('tab', { name: 'Cam 1' }).click()
   const unlock = page.getByRole('button', { name: 'Unlock Cam 1 live stream' })
@@ -298,7 +317,7 @@ test('requires a new camera opt-in after closing a modal', async ({ page }) => {
 })
 
 test('surfaces Cam1 AI readiness and project validation proof', async ({ page }) => {
-  await openHome(page)
+  await openDashboard(page)
 
   await page.getByRole('button', { name: 'Open Field Live' }).click()
   await page.getByRole('button', { name: 'Unlock Cam 1 live stream' }).click()
@@ -320,7 +339,7 @@ test('surfaces Cam1 AI readiness and project validation proof', async ({ page })
 })
 
 test('links featured projects to full case studies', async ({ page }) => {
-  await openHome(page)
+  await openDashboard(page)
 
   await page.getByRole('tab', { name: 'Travel' }).click()
   const activeSpotlight = page.locator('.spotlight-slide[aria-hidden="false"]')
@@ -334,8 +353,8 @@ test('links featured projects to full case studies', async ({ page }) => {
   await expect(page.getByRole('heading', { level: 1, name: 'Travel Agent AI' })).toBeVisible()
 })
 
-test('@a11y home page has no serious automated accessibility regressions', async ({ page }) => {
-  await openHome(page)
+test('@a11y dashboard has no serious automated accessibility regressions', async ({ page }) => {
+  await openDashboard(page)
 
   const results = await new AxeBuilder({ page }).analyze()
 

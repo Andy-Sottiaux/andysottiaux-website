@@ -38,8 +38,8 @@ function LiveLabInner() {
               <ArrowLeft className="h-4 w-4" aria-hidden="true" />
             </Link>
             <div className="min-w-0">
-              <div className="text-[10px] font-semibold uppercase text-cyan-300">Live lab</div>
-              <h1 className="truncate text-lg font-semibold sm:text-xl">Field systems and operational telemetry</h1>
+              <div className="text-[10px] font-semibold uppercase tracking-widest text-[#f49a6c]">Live lab</div>
+              <h1 className="text-base font-semibold leading-snug sm:text-xl">Field systems and operational telemetry</h1>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -66,6 +66,10 @@ function LiveLabInner() {
       </header>
 
       <div className="mx-auto max-w-[1380px] px-4 py-6 sm:px-6 md:px-8 md:py-8">
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3 text-xs text-white/65">
+          <p>Connected hardware, live telemetry, and access-controlled camera feeds.</p>
+          <Link href="/lab/dashboard" className="inline-flex min-h-11 items-center text-[#f49a6c] hover:underline">Open compact dashboard →</Link>
+        </div>
         <LiveSystemDashboard
           selectedCamera={selectedCamera}
           onCameraChange={setSelectedCamera}

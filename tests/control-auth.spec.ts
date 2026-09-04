@@ -81,10 +81,19 @@ test('creates a signed control session after the correct password', async ({ req
   expect(unlocked.ok()).toBeTruthy()
   await expect(unlocked.json()).resolves.toMatchObject({ ok: true, authenticated: true })
 
-  const status = await request.get('/api/v3/control-auth')
+  const sessionCookie = unlocked.headers()['set-cookie']
+  expect(sessionCookie).toMatch(/;\s*Secure(?:;|$)/i)
+  expect(sessionCookie).toMatch(/;\s*HttpOnly(?:;|$)/i)
+  expect(sessionCookie).toMatch(/;\s*SameSite=strict(?:;|$)/i)
+  // APIRequestContext correctly withholds Secure cookies on local HTTP. Replay
+  // the server-issued cookie for these API contract checks, while browser tests
+  // cover the actual cookie flow on Chromium's trustworthy loopback origin.
+  const sessionHeaders = { Cookie: sessionCookie.split(';', 1)[0] }
+
+  const status = await request.get('/api/v3/control-auth', { headers: sessionHeaders })
   await expect(status.json()).resolves.toMatchObject({ configured: true, authenticated: true })
 
-  const ticket = await request.post('/api/v3/control-auth/ticket')
+  const ticket = await request.post('/api/v3/control-auth/ticket', { headers: sessionHeaders })
   expect(ticket.ok()).toBeTruthy()
   const ticketBody = await ticket.json() as { ticket?: string; expiresAt?: number }
   expect(ticketBody.ticket).toMatch(/^ws1\.\d+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/)
@@ -92,12 +101,13 @@ test('creates a signed control session after the correct password', async ({ req
   expect(ticketBody.expiresAt).toBeLessThanOrEqual(Math.floor(Date.now() / 1000) + 31)
 
   const crossOriginRead = await request.get('/api/v3/camera/snapshot', {
-    headers: { Origin: 'https://example.net' },
+    headers: { ...sessionHeaders, Origin: 'https://example.net' },
   })
   expect(crossOriginRead.status()).toBe(403)
 
   const crossOriginOffer = await request.post('/api/v3/camera/webrtc/offer', {
     headers: {
+      ...sessionHeaders,
       'Content-Type': 'application/sdp',
       Origin: 'https://example.net',
     },
@@ -106,7 +116,7 @@ test('creates a signed control session after the correct password', async ({ req
   expect(crossOriginOffer.status()).toBe(403)
 
   const gatedOffer = await request.post('/api/v3/camera/webrtc/offer', {
-    headers: { 'Content-Type': 'application/sdp' },
+    headers: { ...sessionHeaders, 'Content-Type': 'application/sdp' },
     data: 'invalid offer',
   })
   expect(gatedOffer.status()).toBe(400)
@@ -122,7 +132,7 @@ test('rejects cross-origin control authentication', async ({ request }) => {
 
 test('unlocks controls from the Field Live dialog', async ({ page }) => {
   await mockPortfolioNetwork(page)
-  await page.goto('/')
+  await page.goto('/lab/dashboard')
   await page.getByRole('button', { name: 'Open Field Live' }).click()
   await page.getByRole('button', { name: 'Unlock', exact: true }).click()
 
@@ -150,7 +160,7 @@ test('does not request camera media until the viewer unlocks it', async ({ page 
     }
   })
   await mockPortfolioNetwork(page)
-  await page.goto('/')
+  await page.goto('/lab/dashboard')
   await page.getByRole('tab', { name: 'Cam 1' }).click()
 
   await expect(page.getByRole('button', { name: 'Unlock Cam 1 live stream' })).toBeVisible()

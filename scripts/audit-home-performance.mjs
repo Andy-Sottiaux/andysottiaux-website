@@ -62,7 +62,7 @@ try {
     perf.resources.reduce((sum, resource) => sum + (resource.transferSize || 0), 0)
   const totalTransferKb = Math.round(totalTransferBytes / 1024)
   const cameraIdleRequests = requests.filter((request) =>
-    /cam1|cam2|camera|webrtc|mjpeg|snapshot/i.test(request.url)
+    /\/api\/v3\/(?:camera|camera2)\//i.test(request.url)
   )
   const healthRequests = requests.filter((request) =>
     /\/api\/v3\/health(?:\?|$)/.test(request.url)
