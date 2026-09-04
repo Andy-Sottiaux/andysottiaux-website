@@ -42,7 +42,7 @@ export default function IdentityTile({ onOpen }: { onOpen?: () => void }) {
 
         <div className="flex min-w-0 flex-col items-center gap-2.5 sm:gap-3 md:gap-[clamp(0.35rem,1.05dvh,0.8rem)] lg:flex-1 lg:items-start lg:gap-0.5">
           <h1
-            className="max-w-full truncate text-center text-[32px] font-semibold leading-none tracking-tight sm:text-[34px] md:text-[clamp(17px,2.2dvh,22px)] lg:text-left"
+            className="max-w-full truncate text-center text-[32px] font-semibold leading-none tracking-tight sm:text-[34px] md:text-[clamp(17px,2.2dvh,22px)] lg:text-left lg:text-[clamp(14px,1.4vw,17px)] xl:text-[clamp(17px,2.2dvh,22px)]"
             style={{
               backgroundImage: palette.headlineGradient,
               WebkitBackgroundClip: 'text',
