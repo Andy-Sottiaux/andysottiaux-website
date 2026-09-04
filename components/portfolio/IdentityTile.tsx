@@ -16,7 +16,7 @@ export default function IdentityTile({ onOpen }: { onOpen?: () => void }) {
       onOpen={onOpen}
       modalLabel="Open About"
       className="min-h-[170px] lg:min-h-0"
-      triggerClassName="lg:left-2 lg:right-auto lg:top-1 xl:left-auto xl:right-3 xl:top-3"
+      triggerClassName="lg:left-2 lg:right-auto lg:top-1 2xl:left-auto 2xl:right-3 2xl:top-3"
     >
       <div className="flex-1 min-h-0 flex flex-col items-center justify-center px-6 sm:px-7 md:px-[clamp(1rem,1.7vw,1.5rem)] py-8 sm:py-8 md:py-[clamp(0.75rem,1.7dvh,1.25rem)] gap-2.5 sm:gap-3 md:gap-[clamp(0.35rem,1.05dvh,0.8rem)] lg:flex-row lg:gap-2 lg:px-2 lg:py-1 xl:gap-3 xl:px-4">
         {/* Hero portrait — square card with a subtle ring + soft drop. */}
