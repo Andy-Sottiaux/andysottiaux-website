@@ -64,6 +64,7 @@ export default function PortfolioModals({
         onClose={onClose}
         title="About Andy"
         eyebrow="Profile"
+        size="lg"
       >
         <AboutModalContent />
       </Modal>

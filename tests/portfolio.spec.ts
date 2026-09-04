@@ -33,6 +33,47 @@ test('renders the bento shell and spotlight order', async ({ page }) => {
   await expect(page.getByRole('tab', { name: 'E-Paper' })).toHaveAttribute('aria-selected', 'true')
 })
 
+test('gives the profile portrait room without overflowing the identity tile', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop')
+  await page.setViewportSize({ width: 1280, height: 720 })
+  await openHome(page)
+
+  const portrait = page.getByRole('img', { name: 'Andy Sottiaux' })
+  const metrics = await portrait.evaluate((image) => {
+    const frame = image.parentElement
+    const tile = image.closest<HTMLElement>('[data-peek-target="true"]')
+
+    return {
+      portraitWidth: frame?.getBoundingClientRect().width ?? 0,
+      tileClientHeight: tile?.clientHeight ?? 0,
+      tileScrollHeight: tile?.scrollHeight ?? 0,
+      tileClientWidth: tile?.clientWidth ?? 0,
+      tileScrollWidth: tile?.scrollWidth ?? 0,
+    }
+  })
+
+  expect(metrics.portraitWidth).toBeGreaterThanOrEqual(96)
+  expect(metrics.tileScrollHeight).toBe(metrics.tileClientHeight)
+  expect(metrics.tileScrollWidth).toBe(metrics.tileClientWidth)
+  await expect(page.getByRole('heading', { level: 1, name: 'Andy Sottiaux' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Get in touch' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Open About' }).click()
+  const modalPortrait = page.getByRole('dialog', { name: 'About Andy' }).getByRole('img', { name: 'Andy Sottiaux' })
+  const modalMetrics = await modalPortrait.evaluate((image) => {
+    const frame = image.parentElement
+    const style = frame ? window.getComputedStyle(frame) : null
+
+    return {
+      portraitWidth: frame?.getBoundingClientRect().width ?? 0,
+      float: style?.cssFloat ?? 'none',
+    }
+  })
+
+  expect(modalMetrics.portraitWidth).toBeGreaterThanOrEqual(288)
+  expect(modalMetrics.float).toBe('left')
+})
+
 test('shows the e-paper interface preview and links to its guided case study', async ({ page }) => {
   await openHome(page)
 

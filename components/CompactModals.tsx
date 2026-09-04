@@ -97,31 +97,33 @@ export function AboutModalContent() {
           isLight ? 'rgba(10,138,168,0.055)' : 'rgba(103,232,249,0.075)'
         )}
       >
-        <div className="flex flex-col sm:flex-row gap-5 sm:gap-7 items-center sm:items-start">
         <div
-          className="relative w-[160px] h-[160px] sm:w-[200px] sm:h-[200px] rounded-2xl overflow-hidden flex-shrink-0"
-          style={{
-            boxShadow: isLight
-              ? '0 12px 32px rgba(28,26,28,0.18), 0 0 0 1px rgba(0,0,0,0.05)'
-              : '0 16px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06)',
-          }}
+          className="flow-root text-[14px] leading-relaxed sm:text-[15px]"
+          style={{ color: palette.bodyText }}
         >
-          <Image
-            src="/images/andy-casual-headshot-2026.webp"
-            alt="Andy Sottiaux"
-            fill
-            sizes="200px"
-            className="object-cover"
-          />
-        </div>
-        <div className="flex-1 space-y-3 text-[14px] sm:text-[15px] leading-relaxed" style={{ color: palette.bodyText }}>
+          <div
+            className="relative mx-auto mb-5 h-[180px] w-[180px] overflow-hidden rounded-2xl sm:h-[208px] sm:w-[208px] md:float-left md:mx-0 md:mb-3 md:mr-7 md:h-72 md:w-72 md:rounded-3xl"
+            style={{
+              boxShadow: isLight
+                ? '0 12px 32px rgba(28,26,28,0.18), 0 0 0 1px rgba(0,0,0,0.05)'
+                : '0 16px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06)',
+            }}
+          >
+            <Image
+              src="/images/andy-casual-headshot-2026.webp"
+              alt="Andy Sottiaux"
+              fill
+              sizes="(max-width: 639px) 180px, (max-width: 767px) 208px, 288px"
+              className="object-cover"
+            />
+          </div>
           <div
             className="text-[9.5px] font-semibold uppercase tracking-[0.2em]"
             style={{ color: palette.mutedText }}
           >
             Profile
           </div>
-          <p>
+          <p className="mt-3">
             I&apos;m an{' '}
             <span className="font-semibold" style={{ color: isLight ? '#1c1a1c' : '#fff' }}>
               engineer and founder
@@ -130,7 +132,7 @@ export function AboutModalContent() {
             rotor systems and led our subscale UAV and early autonomy work, including CubePilot/CubeNode
             integration and ROS2-based test and control software.
           </p>
-          <p>
+          <p className="mt-3">
             I enjoy bridging mechanical design, embedded systems, and hands-on testing, and I bring a
             practical,{' '}
             <span className="font-semibold" style={{ color: isLight ? '#1c1a1c' : '#fff' }}>
@@ -138,7 +140,7 @@ export function AboutModalContent() {
             </span>{' '}
             to moving ideas into real, working aerospace capabilities.
           </p>
-          <p>
+          <p className="mt-3">
             Beyond aerospace, I founded{' '}
             <span className="font-semibold" style={{ color: isLight ? '#1c1a1c' : '#fff' }}>
               HatchingPoint
@@ -146,12 +148,11 @@ export function AboutModalContent() {
             where I&apos;ve designed and developed 10+ production iPhone apps, built modern web applications,
             and architected robust back-end systems. I thrive at the intersection of hardware and software.
           </p>
-          <div className="flex flex-wrap gap-1.5 pt-1">
+          <div className="clear-both flex flex-wrap gap-1.5 pt-4">
             {ABOUT_TAGS.map((tag) => (
               <Chip key={tag}>{tag}</Chip>
             ))}
           </div>
-        </div>
         </div>
       </div>
 
