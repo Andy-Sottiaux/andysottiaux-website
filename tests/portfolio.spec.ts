@@ -150,6 +150,9 @@ test('gives the profile portrait room without overflowing the identity tile', as
   ]) {
     await page.setViewportSize(viewport)
     const portrait = page.getByRole('img', { name: 'Andy Sottiaux' })
+    const heading = page.getByRole('heading', { level: 1, name: 'Andy Sottiaux' })
+    const cta = page.getByRole('link', { name: 'Get in touch' })
+    const trigger = page.getByRole('button', { name: 'Open About' })
     const metrics = await portrait.evaluate((image) => {
       const frame = image.parentElement
       const tile = image.closest<HTMLElement>('[data-peek-target="true"]')
@@ -162,12 +165,37 @@ test('gives the profile portrait room without overflowing the identity tile', as
         tileScrollWidth: tile?.scrollWidth ?? 0,
       }
     })
+    const textMetrics = await Promise.all([
+      heading.evaluate((element) => ({
+        clientWidth: element.clientWidth,
+        scrollWidth: element.scrollWidth,
+        rect: element.getBoundingClientRect().toJSON(),
+      })),
+      cta.evaluate((element) => ({
+        height: element.getBoundingClientRect().height,
+        clientWidth: element.clientWidth,
+        scrollWidth: element.scrollWidth,
+      })),
+      trigger.evaluate((element) => element.getBoundingClientRect().toJSON()),
+    ])
+
+    const [headingMetrics, ctaMetrics, triggerRect] = textMetrics
+    const headingOverlapsTrigger = !(
+      headingMetrics.rect.right <= triggerRect.left
+      || headingMetrics.rect.left >= triggerRect.right
+      || headingMetrics.rect.bottom <= triggerRect.top
+      || headingMetrics.rect.top >= triggerRect.bottom
+    )
 
     expect(metrics.portraitWidth).toBeGreaterThanOrEqual(viewport.minimumPortrait)
     expect(metrics.tileScrollHeight).toBe(metrics.tileClientHeight)
     expect(metrics.tileScrollWidth).toBe(metrics.tileClientWidth)
-    await expect(page.getByRole('heading', { level: 1, name: 'Andy Sottiaux' })).toBeVisible()
-    await expect(page.getByRole('link', { name: 'Get in touch' })).toBeVisible()
+    expect(headingMetrics.scrollWidth).toBeLessThanOrEqual(headingMetrics.clientWidth)
+    expect(headingOverlapsTrigger).toBe(false)
+    expect(ctaMetrics.scrollWidth).toBeLessThanOrEqual(ctaMetrics.clientWidth)
+    expect(ctaMetrics.height).toBeLessThanOrEqual(32)
+    await expect(heading).toBeVisible()
+    await expect(cta).toBeVisible()
   }
 
   await page.setViewportSize({ width: 1280, height: 720 })

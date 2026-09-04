@@ -16,8 +16,9 @@ export default function IdentityTile({ onOpen }: { onOpen?: () => void }) {
       onOpen={onOpen}
       modalLabel="Open About"
       className="min-h-[170px] lg:min-h-0"
+      triggerClassName="lg:left-2 lg:right-auto lg:top-1 xl:left-auto xl:right-3 xl:top-3"
     >
-      <div className="flex-1 min-h-0 flex flex-col items-center justify-center px-6 sm:px-7 md:px-[clamp(1rem,1.7vw,1.5rem)] py-8 sm:py-8 md:py-[clamp(0.75rem,1.7dvh,1.25rem)] gap-2.5 sm:gap-3 md:gap-[clamp(0.35rem,1.05dvh,0.8rem)] lg:flex-row lg:gap-3 lg:px-[clamp(0.75rem,1.4vw,1rem)] lg:py-1">
+      <div className="flex-1 min-h-0 flex flex-col items-center justify-center px-6 sm:px-7 md:px-[clamp(1rem,1.7vw,1.5rem)] py-8 sm:py-8 md:py-[clamp(0.75rem,1.7dvh,1.25rem)] gap-2.5 sm:gap-3 md:gap-[clamp(0.35rem,1.05dvh,0.8rem)] lg:flex-row lg:gap-2 lg:px-2 lg:py-1 xl:gap-3 xl:px-4">
         {/* Hero portrait — square card with a subtle ring + soft drop. */}
         <div className="flex justify-center flex-shrink-0">
           <div
@@ -68,7 +69,7 @@ export default function IdentityTile({ onOpen }: { onOpen?: () => void }) {
           <div className="flex flex-shrink-0 justify-center lg:justify-start">
             <a
               href="mailto:andrewsottiaux@gmail.com"
-              className="relative z-10 inline-flex items-center gap-2 rounded-full px-4 py-2 text-[15px] font-semibold tracking-tight transition-all hover:gap-2.5 sm:text-[16px] md:gap-1.5 md:px-3 md:py-[clamp(0.25rem,0.7dvh,0.375rem)] md:text-[clamp(10px,1.15dvh,12px)] md:hover:gap-2"
+              className="relative z-10 inline-flex items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-[15px] font-semibold tracking-tight transition-all hover:gap-2.5 sm:text-[16px] md:gap-1.5 md:px-3 md:py-[clamp(0.25rem,0.7dvh,0.375rem)] md:text-[clamp(10px,1.15dvh,12px)] md:hover:gap-2"
               style={{
                 color: isLight ? '#0a8aa8' : 'rgb(103, 232, 249)',
                 background: isLight
