@@ -111,6 +111,8 @@ export default function ControlAuthProvider({ children }: { children: ReactNode 
     }
   }, [markLocked])
 
+  // Teardown below removes the listener and closes the optional channel.
+  // react-doctor-disable-next-line react-doctor/effect-needs-cleanup
   useEffect(() => {
     const onStorage = (event: StorageEvent) => {
       if (event.key === AUTH_EVENT_KEY) applyLocked()

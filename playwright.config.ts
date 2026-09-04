@@ -42,6 +42,16 @@ export default defineConfig({
   },
   projects: [
     {
+      name: 'webkit-desktop',
+      testMatch: '**/finish.spec.ts',
+      use: { ...devices['Desktop Safari'] },
+    },
+    {
+      name: 'webkit-mobile',
+      testMatch: '**/finish.spec.ts',
+      use: { ...devices['iPhone 13'] },
+    },
+    {
       name: 'chromium-desktop',
       use: { ...devices['Desktop Chrome'] },
     },

@@ -173,7 +173,7 @@ function useCameraIntelligence(enabled: boolean): IntelligenceState {
 
   useEffect(() => {
     if (!enabled) {
-      setState((current) => ({ ...current, loading: false }))
+      setState({ loading: false, error: null, training: null, detections: null, diagnostics: null, updatedAt: null })
       return
     }
 
@@ -360,6 +360,17 @@ export default function CameraIntelligencePanel({ enabled = true }: { enabled?: 
   const ready = trainingReady(training)
   const firstSamplePending = loading && updatedAt === null && training === null
   const tone = firstSamplePending ? 'neutral' : statusTone(training)
+  const detectionsAvailable = detections?.ok !== false && detections?.counts != null
+  const servicesAvailable = diagnostics?.ok !== false && Array.isArray(summary?.services_down)
+
+  if (!enabled) {
+    return (
+      <section aria-label="Cam1 AI training readiness" className="rounded-2xl p-5" style={surfaceStyle(isLight, palette.cardBorder)}>
+        <h2 className="text-sm font-semibold" style={{ color: palette.bodyText }}>AI Readiness · access-controlled</h2>
+        <p className="mt-2 text-sm leading-relaxed" style={{ color: palette.mutedText }}>Unlock camera access to inspect inference and training telemetry. No private readings are requested or presented while access is locked.</p>
+      </section>
+    )
+  }
 
   return (
     <section
@@ -393,7 +404,7 @@ export default function CameraIntelligencePanel({ enabled = true }: { enabled?: 
         <div className="flex flex-wrap items-center gap-1.5 sm:justify-end">
           <Pill tone={tone}>{firstSamplePending ? 'checking' : statusLabel(training)}</Pill>
           <Pill tone={firstSamplePending ? 'neutral' : ready ? 'good' : 'warn'}>
-            {firstSamplePending ? 'loading gates' : ready ? 'ready gate passed' : 'not training ready'}
+            {firstSamplePending ? 'loading gates' : !training ? 'gates unavailable' : ready ? 'ready gate passed' : 'not training ready'}
           </Pill>
         </div>
       </div>
@@ -401,7 +412,7 @@ export default function CameraIntelligencePanel({ enabled = true }: { enabled?: 
       <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-4">
         <MetricCard label="Stream" value={`${summary?.resolution || '—'}`} detail={`${formatNumber(summary?.fps)} FPS`} />
         <MetricCard label="RKNN" value={formatState(summary?.rknn_state)} detail={`${formatNumber(summary?.rknn_latency_ms)} ms`} />
-        <MetricCard label="Detections" value={String(detTotal)} detail={`last ${Math.round((detections?.window_sec ?? 900) / 60)} min`} />
+        <MetricCard label="Detections" value={detectionsAvailable ? String(detTotal) : '—'} detail={detectionsAvailable ? `last ${Math.round((detections?.window_sec ?? 900) / 60)} min` : 'unavailable'} />
         <MetricCard label="Sanitizer" value={summary?.sanitizer_age_s == null ? '—' : `${formatNumber(summary.sanitizer_age_s)}s`} detail="clean-frame age" />
       </div>
 
@@ -423,7 +434,7 @@ export default function CameraIntelligencePanel({ enabled = true }: { enabled?: 
                 <div key={row.label}>
                   <div className="flex items-center justify-between gap-3 text-[11px] font-semibold" style={{ color: palette.bodyText }}>
                     <span>{row.label}</span>
-                    <span className="tabular-nums">{formatNumber(row.value, '0')} / {row.target}</span>
+                    <span className="tabular-nums">{training ? formatNumber(row.value) : '—'} / {row.target}</span>
                   </div>
                   <div
                     className="mt-1 h-1.5 overflow-hidden rounded-full"
@@ -480,7 +491,7 @@ export default function CameraIntelligencePanel({ enabled = true }: { enabled?: 
                   {name} · {count}
                 </Pill>
               )) : (
-                <Pill tone="warn">no labeled classes</Pill>
+                <Pill tone="warn">{training ? 'no labeled classes' : 'class data unavailable'}</Pill>
               )}
             </div>
             {failures.length > 0 && (
@@ -496,11 +507,11 @@ export default function CameraIntelligencePanel({ enabled = true }: { enabled?: 
 
       <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap gap-1.5">
-          <Pill tone={detections?.relay?.stale ? 'warn' : 'good'}>
-            detections {detections?.relay?.stale ? 'stale' : 'fresh'}
+          <Pill tone={!detectionsAvailable ? 'neutral' : detections?.relay?.stale ? 'warn' : 'good'}>
+            detections {!detectionsAvailable ? 'unavailable' : detections?.relay?.stale ? 'stale' : 'fresh'}
           </Pill>
-          <Pill tone={(summary?.services_down?.length ?? 0) > 0 ? 'bad' : 'good'}>
-            services {(summary?.services_down?.length ?? 0) > 0 ? 'attention' : 'healthy'}
+          <Pill tone={!servicesAvailable ? 'neutral' : (summary?.services_down?.length ?? 0) > 0 ? 'bad' : 'good'}>
+            services {!servicesAvailable ? 'unavailable' : (summary?.services_down?.length ?? 0) > 0 ? 'attention' : 'healthy'}
           </Pill>
         </div>
         <div className="text-[10.5px] leading-tight" style={{ color: palette.mutedText }}>

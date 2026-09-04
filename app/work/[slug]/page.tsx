@@ -5,6 +5,11 @@ import { notFound } from 'next/navigation'
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUpRight, CheckCircle2, CircleDot, Radio } from 'lucide-react'
 import { FEATURED_CASE_STUDIES, getCaseStudy } from '@/content/caseStudies'
 import EpaperProductViewer from '@/components/EpaperProductViewer'
+import SiteNavigation from '@/components/site/SiteNavigation'
+import ProjectEvidence from '@/components/site/ProjectEvidence'
+import EpaperDriverTour from '@/components/site/EpaperDriverTour'
+import ProductScreens from '@/components/site/ProductScreens'
+import { TRAVEL_SCREENS } from '@/content/productScreens'
 import styles from './work.module.css'
 
 const FIELD_SYSTEM_NODES = ['Edge camera', 'Private relay', 'Public gateway', 'Portfolio UI']
@@ -43,18 +48,9 @@ export default async function WorkPage({ params }: WorkPageProps) {
   const nextProject = FEATURED_CASE_STUDIES[(projectIndex + 1) % FEATURED_CASE_STUDIES.length]
 
   return (
-    <main id="main-content" className={styles.page}>
-      <header className={styles.header}>
-        <nav className={styles.navigation} aria-label="Main navigation">
-          <Link href="/" className={styles.wordmark}>Andy Sottiaux<span aria-hidden="true">.</span></Link>
-          <div className={styles.navLinks}>
-            <Link href="/#projects">Selected work</Link>
-            <Link href="/#about">About</Link>
-            <Link href="/lab">Live lab</Link>
-            <Link href="/#contact">Contact <ArrowUpRight size={13} aria-hidden="true" /></Link>
-          </div>
-        </nav>
-      </header>
+    <div className={styles.page}>
+      <SiteNavigation />
+      <main id="main-content">
 
       <section className={styles.hero} aria-labelledby="project-title">
         <div className={styles.heroCopy}>
@@ -66,7 +62,7 @@ export default async function WorkPage({ params }: WorkPageProps) {
           <h1 id="project-title">{project.title}</h1>
           <p className={styles.subtitle}>{project.subtitle}</p>
           <div className={styles.heroActions}>
-            <a href={project.link} target={external ? '_blank' : undefined} rel={external ? 'noopener noreferrer' : undefined} className={styles.primaryLink}>
+            <a href={project.link} data-portfolio-event="product" target={external ? '_blank' : undefined} rel={external ? 'noopener noreferrer' : undefined} className={styles.primaryLink}>
               {project.linkLabel ?? 'Open project'}<ArrowUpRight size={17} aria-hidden="true" />
             </a>
             <a href="#overview" className={styles.textLink}>Read the case study <ArrowDown size={15} aria-hidden="true" /></a>
@@ -75,13 +71,13 @@ export default async function WorkPage({ params }: WorkPageProps) {
         <div className={styles.heroMedia}>
           <div className={`${styles.visualFrame} ${project.heroMode === 'epaper' ? styles.epaperFrame : ''}`}><HeroVisual project={project} /></div>
           <div className={styles.visualCaption}>
-            <span>{project.heroMode === 'system' ? 'System topology' : project.heroMode === 'epaper' ? 'Interactive product view' : 'Inside the product'}</span>
+            <span>{project.heroMode === 'system' ? 'System topology' : project.heroMode === 'epaper' ? 'Interactive 3D visualization' : project.heroMode === 'gallery' ? 'Actual native views · sample data' : 'CAD rendering'}</span>
             <span>{project.heroMode === 'system' ? 'Edge → interface' : project.heroMode === 'epaper' ? '1360 × 480 / four-color' : project.heroMode === 'gallery' ? 'Native iOS' : 'Hardware + software'}</span>
           </div>
         </div>
       </section>
 
-      <section className={styles.metrics} aria-label="Project evidence">
+      <section className={styles.metrics} aria-label="Project snapshot">
         {project.metrics.map((metric, index) => (
           <div key={metric}><span className={styles.metricIndex}>0{index + 1} /</span><p>{metric}</p></div>
         ))}
@@ -94,6 +90,7 @@ export default async function WorkPage({ params }: WorkPageProps) {
       </nav>
 
       {project.tour ? <CapabilityTour tour={project.tour} /> : null}
+      {project.slug === 'travel-agent-ai' && <div className={styles.productTour}><ProductScreens screens={TRAVEL_SCREENS} /></div>}
 
       <section id="overview" className={`${styles.section} ${styles.overview}`}>
         <div className={styles.sectionIntro}>
@@ -135,6 +132,7 @@ export default async function WorkPage({ params }: WorkPageProps) {
           </div>
           <div className={styles.stack}><span>Built with</span><ul>{project.tech.map((item) => <li key={item}>{item}</li>)}</ul></div>
         </div>
+        {project.slug === 'epaper-dashboard' && <div className={styles.interactiveSection}><EpaperDriverTour /></div>}
       </section>
 
       <section id="result" className={`${styles.section} ${styles.result}`}>
@@ -144,6 +142,7 @@ export default async function WorkPage({ params }: WorkPageProps) {
         </a>
       </section>
 
+      <div className={styles.evidenceRecord}><ProjectEvidence slug={project.slug!} /></div>
       <footer className={styles.footer}>
         <Link href={`/work/${nextProject.slug}`} className={styles.nextProject}>
           <div>
@@ -156,7 +155,8 @@ export default async function WorkPage({ params }: WorkPageProps) {
           <Link href="/">Andy Sottiaux</Link><Link href="/#projects">All selected work <ArrowUpRight size={14} aria-hidden="true" /></Link>
         </div>
       </footer>
-    </main>
+      </main>
+    </div>
   )
 }
 
@@ -166,7 +166,7 @@ function HeroVisual({ project }: { project: NonNullable<ReturnType<typeof getCas
       <div className={styles.gallery}>
         {project.heroGallery.map((image, index) => (
           <div key={image} className={styles.phone}>
-            <Image src={image} alt={`${project.title} product screen ${index + 1}`} fill priority={index === 0} sizes="(max-width: 640px) 36vw, (max-width: 1000px) 25vw, 230px" className={styles.screenImage} />
+            <Image src={image} alt={TRAVEL_SCREENS[index]?.alt ?? `${project.title} product screen ${index + 1}`} fill priority={index === 0} sizes="(max-width: 640px) 36vw, (max-width: 1000px) 25vw, 230px" className={styles.screenImage} />
           </div>
         ))}
       </div>

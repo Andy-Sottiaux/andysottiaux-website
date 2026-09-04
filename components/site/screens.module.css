@@ -1,0 +1,14 @@
+.story { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(35px, 6vw, 90px); align-items: center; padding: clamp(24px, 4vw, 56px); background: #e6e8dc; color: #263021; border-radius: 5px; }
+.kicker { font: .75rem/1.7 ui-monospace, monospace; letter-spacing: .06em; color: #735031; }
+.intro h2 { font-size: clamp(32px, 3.8vw, 52px); font-weight: 500; line-height: 1.1; letter-spacing: -.04em; margin-top: 20px; }
+.intro > p:not(.kicker):not(.note) { font-size: 1rem; line-height: 1.8; color: #4f5a48; margin-top: 25px; }
+.steps { margin-top: 30px; border-top: 1px solid #acb59e; }
+.steps button { display: flex; width: 100%; align-items: center; gap: 16px; min-height: 64px; padding: 16px 8px; border-bottom: 1px solid #acb59e; text-align: left; color: #4e5a44; font-size: 1rem; }
+.steps button span:first-child { font: .75rem ui-monospace, monospace; }.steps button span:nth-child(2) { flex: 1; }.steps button[aria-pressed='true'] { background: #d7dfc9; color: #202b19; }
+.story button:focus-visible, .story a:focus-visible { outline: 2px solid #7b4326; outline-offset: 4px; }
+.detail { margin-top: 28px; min-height: 155px; }.detail h3 { font-size: 20px; font-weight: 500; }.detail p { font-size: 1rem; line-height: 1.8; color: #4f5a48; margin-top: 12px; }.note { font-size: .75rem; line-height: 1.8; color: #58654e; margin-top: 20px; }
+.capture { width: 100%; max-width: 410px; justify-self: center; }
+.image { position: relative; aspect-ratio: 402/874; overflow: hidden; border-radius: 24px; box-shadow: 0 25px 60px #26302120; background: #f7f4ed; }
+.nativeImage { object-fit: contain; }.capture figcaption { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px 14px; font-size: .75rem; line-height: 1.6; color: #4b5940; padding-top: 20px; }.capture figcaption a { display: inline-flex; align-items: center; gap: 5px; min-height: 32px; color: #6d4427; }
+@media (max-width: 850px) { .story { gap: 30px; padding: 30px; }.intro h2 { font-size: 34px; } }
+@media (max-width: 650px) { .story { grid-template-columns: 1fr; padding: 26px 20px; gap: 28px; }.capture { max-width: 365px; }.detail { min-height: 0; }.intro h2 br { display: none; } }

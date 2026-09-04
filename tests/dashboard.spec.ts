@@ -38,7 +38,10 @@ test('renders the bento shell and spotlight order', async ({ page }) => {
 })
 
 test('uses polished directional motion between spotlight items', async ({ page }) => {
+  await page.clock.install()
   await openDashboard(page, 'no-preference')
+  // Hold the transition timer while inspecting it, independent of machine load.
+  await page.clock.pauseAt(new Date(Date.now() + 1_000))
 
   await page.getByRole('tab', { name: 'Travel' }).click()
   const forwardSlide = page.locator('.spotlight-slide[aria-hidden="false"]')
@@ -72,6 +75,7 @@ test('uses polished directional motion between spotlight items', async ({ page }
     animationName: 'spotlight-leave-forward',
   })
   const leavingSlide = page.locator('.spotlight-slide[data-spotlight-state="leaving"]')
+  await page.clock.runFor(700)
   await expect(leavingSlide).toHaveCount(0, { timeout: 1_500 })
   await expect(forwardSlide).toHaveAttribute('data-spotlight-animate', 'false')
 
@@ -137,6 +141,7 @@ test('lets visitors pause and resume spotlight rotation', async ({ page }, testI
 
 test('keeps an outgoing camera active until its spotlight transition settles', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium-desktop')
+  await page.clock.install()
   await openDashboard(page, 'no-preference')
 
   await page.getByRole('tab', { name: 'Cam 1' }).click()
@@ -149,9 +154,11 @@ test('keeps an outgoing camera active until its spotlight transition settles', a
   const cam1Slide = page.locator('#spotlight-panel-cam1')
   const cam1Panel = cam1Slide.locator('[data-spotlight-camera-panel="true"]')
   await expect(cam1Panel).toHaveAttribute('data-stream-enabled', 'true')
+  await page.clock.pauseAt(new Date(Date.now() + 1_000))
   await page.getByRole('tab', { name: 'Travel' }).click()
   await expect(cam1Slide).toHaveAttribute('data-spotlight-state', 'leaving')
   await expect(cam1Panel).toHaveAttribute('data-stream-enabled', 'true')
+  await page.clock.runFor(700)
   await expect(cam1Slide).toHaveAttribute('data-spotlight-state', 'idle', { timeout: 1_500 })
   await expect(cam1Panel).toHaveAttribute('data-stream-enabled', 'false')
 })

@@ -1,81 +1,34 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowLeft, Code2, Mail } from 'lucide-react'
+import { ArrowDown, ArrowUpRight } from 'lucide-react'
 import { useState } from 'react'
 import LiveSystemDashboard from './LiveSystemDashboard'
-import { FieldThemeProvider, useFieldTheme } from '../fieldTheme'
+import { FieldThemeProvider } from '../fieldTheme'
 import type { FieldCameraSource } from '@/lib/fieldCameraConfig'
+import SiteNavigation from '../site/SiteNavigation'
+import LabWalkthrough from '../site/LabWalkthrough'
+import styles from './lab.module.css'
 
 export default function LiveLabPage() {
-  return (
-    <FieldThemeProvider>
-      <LiveLabInner />
-    </FieldThemeProvider>
-  )
-}
-
-function LiveLabInner() {
-  const palette = useFieldTheme()
   const [selectedCamera, setSelectedCamera] = useState<FieldCameraSource>('field')
-
   return (
-    <main
-      id="main-content"
-      className="min-h-screen"
-      data-camera-performance="true"
-      style={{ background: palette.sectionBackground, color: '#fff' }}
-    >
-      <header className="border-b border-white/10">
-        <div className="mx-auto flex max-w-[1380px] items-center justify-between gap-4 px-4 py-4 sm:px-6 md:px-8">
-          <div className="flex min-w-0 items-center gap-4">
-            <Link
-              href="/"
-              aria-label="Back to portfolio"
-              title="Back to portfolio"
-              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[8px] border border-white/12 bg-white/[0.04] text-white/75 hover:text-white"
-            >
-              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-            </Link>
-            <div className="min-w-0">
-              <div className="text-[10px] font-semibold uppercase tracking-widest text-[#f49a6c]">Live lab</div>
-              <h1 className="text-base font-semibold leading-snug sm:text-xl">Field systems and operational telemetry</h1>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <a
-              href="https://github.com/Andy-Sottiaux"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="GitHub"
-              title="GitHub"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-[8px] border border-white/12 bg-white/[0.04] text-white/70 hover:text-white"
-            >
-              <Code2 className="h-4 w-4" aria-hidden="true" />
-            </a>
-            <a
-              href="mailto:andrewsottiaux@gmail.com"
-              aria-label="Email Andy"
-              title="Email Andy"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-[8px] border border-white/12 bg-white/[0.04] text-white/70 hover:text-white"
-            >
-              <Mail className="h-4 w-4" aria-hidden="true" />
-            </a>
-          </div>
-        </div>
-      </header>
-
-      <div className="mx-auto max-w-[1380px] px-4 py-6 sm:px-6 md:px-8 md:py-8">
-        <div className="mb-5 flex flex-wrap items-center justify-between gap-3 text-xs text-white/65">
-          <p>Connected hardware, live telemetry, and access-controlled camera feeds.</p>
-          <Link href="/lab/dashboard" className="inline-flex min-h-11 items-center text-[#f49a6c] hover:underline">Open compact dashboard →</Link>
-        </div>
-        <LiveSystemDashboard
-          selectedCamera={selectedCamera}
-          onCameraChange={setSelectedCamera}
-          showCaseStudyLink
-        />
+    <FieldThemeProvider portfolio>
+      <div className={styles.page}>
+        <SiteNavigation />
+        <main id="main-content" className={styles.container}>
+          <header className={styles.intro}>
+            <div><p className={styles.kicker}>ENGINEERING IN OPERATION</p><h1>Field systems and<br/>operational telemetry</h1><p className={styles.description}>A solar-powered camera, on-device inference, and a protected path to the browser. Explore the architecture, then inspect the system’s current state.</p></div>
+            <div className={styles.actions}><a href="#live-dashboard">Inspect live status<ArrowDown size={17} aria-hidden="true"/></a><Link href="/work/field-camera">Read the case study<ArrowUpRight size={17} aria-hidden="true"/></Link></div>
+          </header>
+          <LabWalkthrough />
+          <section id="live-dashboard" className={styles.dashboard} aria-labelledby="live-title">
+            <div className={styles.dashboardHeading}><div><p className={styles.kicker}>CONNECTED HARDWARE</p><h2 id="live-title">The operational view.</h2><p>Each reading reports its own availability. Camera media requires access; the guide above does not.</p></div><Link href="/lab/dashboard">Compact dashboard<ArrowUpRight size={16} aria-hidden="true"/></Link></div>
+            <LiveSystemDashboard selectedCamera={selectedCamera} onCameraChange={setSelectedCamera} showCaseStudyLink />
+          </section>
+          <footer className={styles.footer}><Link href="/">← Back to portfolio</Link><a href="mailto:andrewsottiaux@gmail.com">Discuss the engineering<ArrowUpRight size={16} aria-hidden="true"/></a></footer>
+        </main>
       </div>
-    </main>
+    </FieldThemeProvider>
   )
 }

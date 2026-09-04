@@ -76,9 +76,18 @@ const LIGHT_PALETTE: FieldPalette = {
 
 const FieldThemeContext = createContext<FieldPalette>(DARK_PALETTE)
 
-export function FieldThemeProvider({ children }: { children: React.ReactNode }) {
+export function FieldThemeProvider({ children, portfolio = false }: { children: React.ReactNode; portfolio?: boolean }) {
   const { resolvedTheme } = useTheme()
-  const palette = resolvedTheme === 'light' ? LIGHT_PALETTE : DARK_PALETTE
+  const palette = portfolio ? {
+    ...DARK_PALETTE,
+    sectionBackground: '#121513',
+    cardBackground: '#1a211c',
+    cardBorder: '1px solid #394333',
+    bodyText: '#c2cbbb',
+    mutedText: '#aebca4',
+    fadedText: '#a1b294',
+    hairline: '#394333',
+  } : resolvedTheme === 'light' ? LIGHT_PALETTE : DARK_PALETTE
 
   return (
     <FieldThemeContext.Provider value={palette}>

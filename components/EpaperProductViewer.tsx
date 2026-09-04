@@ -35,6 +35,8 @@ export default function EpaperProductViewer({
     if (active) wakeAnimationRef.current?.()
   }, [active])
 
+  // Teardown cancels async setup/RAF, disconnects observers, and disposes WebGL.
+  // react-doctor-disable-next-line react-doctor/effect-needs-cleanup
   useEffect(() => {
     const host = hostRef.current
     if (!host || !supportsWebGL()) return

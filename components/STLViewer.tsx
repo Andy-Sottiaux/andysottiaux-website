@@ -14,7 +14,9 @@ function isWebGLAvailable(): boolean {
 
 export default function STLViewer({ urls, colors }: { urls: string[]; colors?: number[] }) {
   const containerRef = useRef<HTMLDivElement>(null)
+  // The sole importer in CompactModals uses dynamic({ ssr: false }).
   const [supported, setSupported] = useState(() =>
+    // react-doctor-disable-next-line react-doctor/no-hydration-branch-on-browser-global
     typeof document === 'undefined' ? true : isWebGLAvailable()
   )
 

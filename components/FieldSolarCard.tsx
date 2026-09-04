@@ -189,7 +189,7 @@ export default function FieldSolarCard({
   }, [requestedHistoryPoints])
 
   const solarData = solarPoll?.data ?? null
-  const solar = solarData && typeof solarData.battery_voltage === 'number' && !solarData.error
+  const solar = solarData && typeof solarData.battery_voltage === 'number' && Number.isFinite(solarData.battery_voltage) && !solarData.error
     ? solarData as Solar
     : null
   const state: CardState = solar
@@ -200,9 +200,9 @@ export default function FieldSolarCard({
         ? 'offline'
         : 'no-telemetry'
 
-  const soc = solar
-    ? Math.round(typeof solar.battery_soc === 'number'
-      ? solar.battery_soc
+  const soc = solar && (Number.isFinite(solar.battery_soc) || Number.isFinite(solar.charging_current))
+    ? Math.round(Number.isFinite(solar.battery_soc)
+      ? solar.battery_soc!
       : calcSOC(solar.battery_voltage, solar.charging_current))
     : null
   // Display values whenever we have a reading at all, fresh or stale.
@@ -222,7 +222,7 @@ export default function FieldSolarCard({
   const hasHistory = history.length >= 2
   const solarHistory = history.map((p) => p.solar_power)
   const voltageHistory = history.map((p) => p.battery_voltage)
-  const loadWatts = solar ? Math.max(0, solar.battery_voltage * solar.load_current) : null
+  const loadWatts = solar && Number.isFinite(solar.load_current) ? Math.max(0, solar.battery_voltage * solar.load_current) : null
 
   return (
     <div
@@ -252,9 +252,9 @@ export default function FieldSolarCard({
         >
           Solar
         </div>
-        {compact && (
+        {(
           <div
-            className="rounded-full px-2 py-0.5 text-[9px] md:text-[clamp(7.5px,0.9dvh,9px)] font-bold uppercase tracking-[0.18em]"
+            className={`rounded-full px-2 py-0.5 ${compact ? 'text-[9px] md:text-[clamp(7.5px,0.9dvh,9px)]' : 'text-xs'} font-bold uppercase tracking-[0.12em]`}
             style={{
               color: live
                 ? (isLight ? '#0f9d4f' : '#86efac')
@@ -304,7 +304,7 @@ export default function FieldSolarCard({
         {hasValues ? (
           <>
             <span>
-              Battery <span className="tabular-nums" style={{ color: valueColor, opacity: 0.85 }}>{soc}%</span>
+              Battery <span className="tabular-nums" style={{ color: valueColor, opacity: 0.85 }}>{soc ?? '—'}%</span>
               <span className="mx-2" style={{ color: palette.fadedText }}>·</span>
               <span className="capitalize">{solar.charge_state}</span>
               {state === 'stale' && solar.age_seconds != null && (
@@ -379,7 +379,7 @@ export default function FieldSolarCard({
               opacity: state === 'stale' ? 0.7 : 1,
             }}
           >
-            {hasValues ? Math.round(solar.solar_power) : '—'}
+            {hasValues && Number.isFinite(solar.solar_power) ? Math.round(solar.solar_power) : '—'}
             <span className="text-[12px] font-medium ml-1" style={{ color: palette.mutedText }}>W</span>
           </div>
         </div>
@@ -409,7 +409,7 @@ export default function FieldSolarCard({
             className={`${compact ? 'text-[19px] md:text-[clamp(14px,1.85dvh,19px)]' : 'text-[24px] sm:text-[26px]'} font-semibold tracking-tight tabular-nums mt-1 md:mt-[clamp(0.15rem,0.55dvh,0.25rem)]`}
             style={{ color: valueColor, opacity: state === 'stale' ? 0.7 : 1 }}
           >
-            {hasValues ? solar.yield_today : '—'}
+            {hasValues && Number.isFinite(solar.yield_today) ? solar.yield_today : '—'}
             <span className="text-[12px] font-medium ml-1" style={{ color: palette.mutedText }}>Wh</span>
           </div>
         </div>
@@ -423,7 +423,7 @@ export default function FieldSolarCard({
             <>
               <CompactTrendPanel
                 title="Solar input"
-                value={hasValues ? `${Math.round(solar.solar_power)} W` : 'waiting'}
+                value={hasValues && Number.isFinite(solar.solar_power) ? `${Math.round(solar.solar_power)} W` : 'waiting'}
                 isLight={isLight}
                 tone="solar"
               >

@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Analytics } from "@vercel/analytics/next"
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import ThemeProvider from '../components/ThemeProvider'
+import PortfolioAnalytics from '../components/site/PortfolioAnalytics'
 import './globals.css'
 
 const siteUrl = 'https://andysottiaux.com'
@@ -205,6 +206,7 @@ export default function RootLayout({
             {children}
         </ThemeProvider>
         <Analytics />
+        <PortfolioAnalytics />
         <SpeedInsights />
       </body>
     </html>

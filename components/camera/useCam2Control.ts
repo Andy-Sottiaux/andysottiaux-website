@@ -204,6 +204,8 @@ export function useCam2Control() {
     return stopVectorControl
   }, [loadSettings, stopVectorControl])
 
+  // Teardown marks disposed, clears the retry timer, and closes the socket.
+  // react-doctor-disable-next-line react-doctor/effect-needs-cleanup
   useEffect(() => {
     let disposed = false
 
@@ -216,6 +218,7 @@ export function useCam2Control() {
           cache: 'no-store',
           credentials: 'same-origin',
         })
+        if (disposed) return
         if (ticketResponse.status === 401 || ticketResponse.status === 403) markLocked()
         if (!ticketResponse.ok) throw new Error(`control_ticket_${ticketResponse.status}`)
         const ticketBody = await ticketResponse.json() as { ticket?: unknown }

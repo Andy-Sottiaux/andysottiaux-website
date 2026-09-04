@@ -1,0 +1,20 @@
+.page { min-height: 100vh; background: var(--portfolio-background); color: var(--portfolio-ink); font-family: Arial, Helvetica, sans-serif; }
+.container { width: min(calc(100% - 112px), 1320px); margin-inline: auto; }
+.page a:focus-visible, .page button:focus-visible { outline: 2px solid var(--portfolio-accent); outline-offset: 5px; }
+.intro { display: flex; justify-content: space-between; align-items: end; gap: 40px; padding-block: 64px 44px; }
+.kicker { font: .75rem/1.7 ui-monospace, monospace; letter-spacing: .09em; color: var(--portfolio-accent); }
+.intro h1 { font-size: clamp(35px, 4.6vw, 64px); font-weight: 500; letter-spacing: -.045em; line-height: 1.08; margin-top: 20px; }
+.description { color: #b4bfa9; max-width: 650px; font-size: 1rem; line-height: 1.8; margin-top: 24px; }
+.actions { display: flex; flex-direction: column; align-items: start; gap: 16px; flex-shrink: 0; }
+.actions a { display: inline-flex; min-height: 48px; align-items: center; gap: 20px; font-size: .875rem; }
+.actions a:first-child { background: var(--portfolio-accent); color: #121513; padding: 12px 20px; border-radius: 3px; }
+.actions a:last-child { color: #efba9b; }
+.dashboard { padding-block: 64px; scroll-margin-top: 135px; }
+.dashboardHeading { display: flex; justify-content: space-between; align-items: end; gap: 30px; margin-bottom: 28px; }
+.dashboardHeading h2 { font-size: clamp(28px, 3.6vw, 44px); font-weight: 500; letter-spacing: -.035em; margin-top: 12px; }
+.dashboardHeading p:not(.kicker) { max-width: 640px; margin-top: 13px; font-size: 1rem; line-height: 1.7; color: #b4bfa9; }
+.dashboardHeading a { display: flex; gap: 10px; min-height: 44px; align-items: center; font-size: .875rem; color: #efba9b; flex-shrink: 0; }
+.footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 18px; padding-block: 28px 40px; border-top: 1px solid #394333; }
+.footer a { display: flex; align-items: center; min-height: 44px; gap: 10px; font-size: .875rem; color: #c3ccb9; }
+@media (max-width: 1100px) { .container { width: calc(100% - 64px); }.intro { align-items: start; flex-direction: column; gap: 28px; }.actions { flex-direction: row; flex-wrap: wrap; gap: 12px 25px; } }
+@media (max-width: 600px) { .container { width: calc(100% - 40px); }.intro { padding-block: 40px 32px; }.dashboardHeading { flex-direction: column; align-items: start; gap: 18px; }.dashboard { padding-block: 48px; } }

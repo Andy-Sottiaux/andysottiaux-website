@@ -135,11 +135,9 @@ export default function SpotlightTile({
   }
 
   const toggleRotation = () => {
-    setRotationPaused((current) => {
-      explicitResumeRef.current = current
-      if (current) interactionPausedRef.current = false
-      return !current
-    })
+    explicitResumeRef.current = rotationPaused
+    if (rotationPaused) interactionPausedRef.current = false
+    setRotationPaused(!rotationPaused)
   }
 
   const pauseForInteraction = () => {

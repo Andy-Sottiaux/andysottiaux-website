@@ -3,6 +3,11 @@
 @tailwind utilities;
 
 :root {
+  --portfolio-background: #121513;
+  --portfolio-ink: #f0eee8;
+  --portfolio-muted: #a4aaa1;
+  --portfolio-accent: #f49a6c;
+  --portfolio-rule: #333a32;
   --background: #FAFAFA;
   --foreground: #1C1A1C;
 

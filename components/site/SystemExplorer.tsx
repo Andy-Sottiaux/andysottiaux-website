@@ -6,7 +6,7 @@ import Link from 'next/link'
 import styles from './portfolio.module.css'
 
 const LAYERS = [
-  { name: 'Mechanical', label: 'Give an idea physical form.', detail: 'Rotor systems, CAD, and hardware built for the real world.', link: '/#about', cta: 'The engineering background', number: '01' },
+  { name: 'Mechanical', label: 'Give an idea physical form.', detail: 'Rotor systems, CAD, and hardware built for the real world.', link: '/#professional-context', cta: 'The professional context', number: '01' },
   { name: 'Embedded', label: 'Make the physical intelligent.', detail: 'Custom display drivers, edge perception, and the software inside the system.', link: '/work/epaper-dashboard', cta: 'Explore an embedded system', number: '02' },
   { name: 'Software', label: 'Bring it into people’s hands.', detail: 'Thoughtful interfaces and production apps that connect the whole experience.', link: '/work/travel-agent-ai', cta: 'Explore a shipped product', number: '03' },
 ] as const

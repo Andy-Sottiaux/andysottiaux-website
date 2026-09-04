@@ -30,6 +30,9 @@ const scoreAcceptedRules = [
 ]
 
 export default {
+  // Preview builds are generated bundles, not application source. Some Doctor
+  // scanners do not inherit Git's ignore list for custom Next.js output paths.
+  ignore: { files: ['.next/**', '.next-dev/**'] },
   surfaces: {
     score: {
       excludeRules: scoreAcceptedRules,

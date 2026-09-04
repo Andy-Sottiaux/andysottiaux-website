@@ -1,0 +1,15 @@
+.record { border: 1px solid #414b3c; padding: clamp(24px, 4vw, 52px); background: #1c241d; color: #f0eee8; border-radius: 5px; }
+.heading { display: flex; justify-content: space-between; align-items: start; gap: 30px; }
+.kicker { font: .75rem/1.6 ui-monospace, monospace; letter-spacing: .09em; color: #f49a6c; }
+.heading h2 { font-size: clamp(28px, 3vw, 42px); font-weight: 500; letter-spacing: -.035em; line-height: 1.2; margin-top: 15px; }
+.stamp { display: flex; flex-direction: column; gap: 5px; flex-shrink: 0; font-size: .75rem; line-height: 1.6; color: #bac7b0; border-left: 1px solid #596a4c; padding-left: 18px; }
+.result { margin-top: 34px; }.status { font-size: .875rem; color: #c8d9b9; }
+.result p { margin-top: 14px; font-size: clamp(18px, 2vw, 23px); line-height: 1.65; letter-spacing: -.015em; max-width: 960px; }
+.tradeoff { display: grid; grid-template-columns: 1fr 1.2fr; gap: 45px; padding-block: 32px; margin-top: 32px; border-block: 1px solid #44513c; }
+.tradeoff h3 { font-size: 23px; line-height: 1.4; font-weight: 500; letter-spacing: -.02em; }
+.tradeoff dl { display: grid; gap: 22px; }.tradeoff dt { font-size: .75rem; color: #f1b897; margin-bottom: 8px; }.tradeoff dd, .limit p { color: #bac7b0; font-size: 1rem; line-height: 1.75; }
+.limit { margin-top: 28px; }.limit h3 { font-size: .875rem; font-weight: 500; color: #e1d3ba; margin-bottom: 10px; }
+.sources { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 26px; margin-top: 32px; padding-top: 26px; border-top: 1px solid #44513c; list-style: none; }
+.sources a { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; color: #f3b392; font-size: .875rem; }.sources a:hover { text-decoration: underline; }.sources p { font-size: .875rem; line-height: 1.7; color: #b3c0a8; margin-top: 4px; }
+.sources a:focus-visible { outline: 2px solid #f49a6c; outline-offset: 4px; }
+@media (max-width: 800px) { .heading { flex-direction: column; gap: 22px; }.tradeoff { grid-template-columns: 1fr; gap: 25px; }.stamp { flex-shrink: 1; } }

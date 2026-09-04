@@ -2215,6 +2215,8 @@ function initialActive(): boolean {
 
 function useDebugFlag(): boolean {
   const [on] = useState(() => {
+    // Both CameraFeedSwitcher importers use dynamic({ ssr: false }).
+    // react-doctor-disable-next-line react-doctor/no-hydration-branch-on-browser-global
     if (typeof window === 'undefined') return false
     const url = new URL(window.location.href)
     return url.searchParams.get('debug') === '1'
