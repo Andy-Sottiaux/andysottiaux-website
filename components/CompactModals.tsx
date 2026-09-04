@@ -107,7 +107,7 @@ export function AboutModalContent() {
           }}
         >
           <Image
-            src="/images/andy-headshot-2026.webp"
+            src="/images/andy-casual-headshot-2026.webp"
             alt="Andy Sottiaux"
             fill
             sizes="200px"
