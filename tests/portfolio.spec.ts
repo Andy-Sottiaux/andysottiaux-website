@@ -1,11 +1,15 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test } from '@playwright/test'
+import { SPOTLIGHT_ROTATION_MS } from '../components/portfolio/content'
 import { mockPortfolioNetwork } from './support/mockPortfolioNetwork'
 
 const TEST_PASSWORD = 'test-device-control-password'
 
-async function openHome(page: import('@playwright/test').Page) {
-  await page.emulateMedia({ reducedMotion: 'reduce' })
+async function openHome(
+  page: import('@playwright/test').Page,
+  reducedMotion: 'reduce' | 'no-preference' = 'reduce',
+) {
+  await page.emulateMedia({ reducedMotion })
   await page.setExtraHTTPHeaders({
     'x-forwarded-for': `203.0.113.${Math.floor(Math.random() * 250) + 1}`,
   })
@@ -33,31 +37,140 @@ test('renders the bento shell and spotlight order', async ({ page }) => {
   await expect(page.getByRole('tab', { name: 'E-Paper' })).toHaveAttribute('aria-selected', 'true')
 })
 
-test('gives the profile portrait room without overflowing the identity tile', async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== 'chromium-desktop')
-  await page.setViewportSize({ width: 1280, height: 720 })
-  await openHome(page)
+test('uses polished directional motion between spotlight items', async ({ page }) => {
+  await openHome(page, 'no-preference')
 
-  const portrait = page.getByRole('img', { name: 'Andy Sottiaux' })
-  const metrics = await portrait.evaluate((image) => {
-    const frame = image.parentElement
-    const tile = image.closest<HTMLElement>('[data-peek-target="true"]')
-
+  await page.getByRole('tab', { name: 'Travel' }).click()
+  const forwardSlide = page.locator('.spotlight-slide[aria-hidden="false"]')
+  const forwardMotion = await forwardSlide.evaluate((slide) => {
+    const content = slide.querySelector<HTMLElement>('.spotlight-slide-content')
+    const style = content ? window.getComputedStyle(content) : null
     return {
-      portraitWidth: frame?.getBoundingClientRect().width ?? 0,
-      tileClientHeight: tile?.clientHeight ?? 0,
-      tileScrollHeight: tile?.scrollHeight ?? 0,
-      tileClientWidth: tile?.clientWidth ?? 0,
-      tileScrollWidth: tile?.scrollWidth ?? 0,
+      animationName: style?.animationName,
+      animationDuration: style?.animationDuration,
+      direction: slide.getAttribute('data-spotlight-direction'),
+      state: slide.getAttribute('data-spotlight-state'),
     }
   })
 
-  expect(metrics.portraitWidth).toBeGreaterThanOrEqual(96)
-  expect(metrics.tileScrollHeight).toBe(metrics.tileClientHeight)
-  expect(metrics.tileScrollWidth).toBe(metrics.tileClientWidth)
-  await expect(page.getByRole('heading', { level: 1, name: 'Andy Sottiaux' })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Get in touch' })).toBeVisible()
+  expect(forwardMotion).toEqual({
+    animationName: 'spotlight-enter-forward',
+    animationDuration: expect.stringMatching(/^0\.[5-8]\d?s$/),
+    direction: 'forward',
+    state: 'active',
+  })
+  const leavingSlide = page.locator('.spotlight-slide[data-spotlight-state="leaving"]')
+  await expect(leavingSlide).toHaveCount(1)
+  await expect(leavingSlide.locator('.spotlight-slide-content')).toHaveCSS('animation-name', 'spotlight-leave-forward')
+  await expect(leavingSlide).toHaveCount(0, { timeout: 1_500 })
+  await expect(forwardSlide).toHaveAttribute('data-spotlight-animate', 'false')
 
+  await page.getByRole('tab', { name: 'E-Paper' }).click()
+  const backwardSlide = page.locator('.spotlight-slide[aria-hidden="false"]')
+  await expect(backwardSlide).toHaveAttribute('data-spotlight-direction', 'backward')
+  await expect(backwardSlide.locator('.spotlight-slide-content')).toHaveCSS('animation-name', 'spotlight-enter-backward')
+
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.getByRole('tab', { name: 'WYZECAR' }).click()
+  const reducedSlide = page.locator('.spotlight-slide[aria-hidden="false"]')
+  await expect(reducedSlide.locator('.spotlight-slide-content')).toHaveCSS('animation-name', 'none')
+  await expect(page.getByRole('button', { name: /spotlight rotation/i })).toHaveCount(0)
+})
+
+test('supports keyboard navigation across the spotlight rail', async ({ page }) => {
+  await openHome(page)
+
+  const ePaper = page.getByRole('tab', { name: 'E-Paper' })
+  const travel = page.getByRole('tab', { name: 'Travel' })
+  await ePaper.focus()
+  await page.keyboard.press('ArrowRight')
+  await expect(travel).toBeFocused()
+  await expect(travel).toHaveAttribute('aria-selected', 'true')
+  await expect(ePaper).toHaveAttribute('tabindex', '-1')
+
+  await page.keyboard.press('End')
+  const cam2 = page.getByRole('tab', { name: 'Cam 2' })
+  await expect(cam2).toBeFocused()
+  await expect(cam2).toHaveAttribute('aria-selected', 'true')
+
+  await page.keyboard.press('Home')
+  await expect(ePaper).toBeFocused()
+  await expect(ePaper).toHaveAttribute('aria-selected', 'true')
+})
+
+test('lets visitors pause and resume spotlight rotation', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop')
+  await openHome(page, 'no-preference')
+
+  const pause = page.getByRole('button', { name: 'Pause spotlight rotation' })
+  await pause.click()
+  const resume = page.getByRole('button', { name: 'Resume spotlight rotation' })
+  await expect(resume).toBeVisible()
+  await page.waitForTimeout(SPOTLIGHT_ROTATION_MS + 300)
+  await expect(page.getByRole('tab', { name: 'E-Paper' })).toHaveAttribute('aria-selected', 'true')
+
+  await resume.click()
+  await expect(page.getByRole('button', { name: 'Pause spotlight rotation' })).toBeVisible()
+  await expect(page.getByRole('tab', { name: 'Travel' })).toHaveAttribute('aria-selected', 'true', {
+    timeout: SPOTLIGHT_ROTATION_MS + 1_500,
+  })
+})
+
+test('keeps an outgoing camera active until its spotlight transition settles', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop')
+  await openHome(page, 'no-preference')
+
+  await page.getByRole('tab', { name: 'Cam 1' }).click()
+  await page.getByRole('button', { name: 'Unlock Cam 1 live stream' }).click()
+  const authDialog = page.getByRole('dialog', { name: 'Camera & device access' })
+  await authDialog.getByLabel('Access password').fill(TEST_PASSWORD)
+  await authDialog.getByRole('button', { name: 'Unlock', exact: true }).click()
+  await expect(authDialog).toHaveCount(0)
+
+  const cam1Slide = page.locator('#spotlight-panel-cam1')
+  const cam1Panel = cam1Slide.locator('[data-spotlight-camera-panel="true"]')
+  await expect(cam1Panel).toHaveAttribute('data-stream-enabled', 'true')
+  await page.getByRole('tab', { name: 'Travel' }).click()
+  await expect(cam1Slide).toHaveAttribute('data-spotlight-state', 'leaving')
+  await expect(cam1Panel).toHaveAttribute('data-stream-enabled', 'true')
+  await expect(cam1Slide).toHaveAttribute('data-spotlight-state', 'idle', { timeout: 1_500 })
+  await expect(cam1Panel).toHaveAttribute('data-stream-enabled', 'false')
+})
+
+test('gives the profile portrait room without overflowing the identity tile', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop')
+  await page.setViewportSize({ width: 1024, height: 768 })
+  await openHome(page)
+
+  for (const viewport of [
+    { width: 1024, height: 768, minimumPortrait: 90 },
+    { width: 1180, height: 820, minimumPortrait: 100 },
+    { width: 1280, height: 720, minimumPortrait: 96 },
+    { width: 1280, height: 500, minimumPortrait: 64 },
+  ]) {
+    await page.setViewportSize(viewport)
+    const portrait = page.getByRole('img', { name: 'Andy Sottiaux' })
+    const metrics = await portrait.evaluate((image) => {
+      const frame = image.parentElement
+      const tile = image.closest<HTMLElement>('[data-peek-target="true"]')
+
+      return {
+        portraitWidth: frame?.getBoundingClientRect().width ?? 0,
+        tileClientHeight: tile?.clientHeight ?? 0,
+        tileScrollHeight: tile?.scrollHeight ?? 0,
+        tileClientWidth: tile?.clientWidth ?? 0,
+        tileScrollWidth: tile?.scrollWidth ?? 0,
+      }
+    })
+
+    expect(metrics.portraitWidth).toBeGreaterThanOrEqual(viewport.minimumPortrait)
+    expect(metrics.tileScrollHeight).toBe(metrics.tileClientHeight)
+    expect(metrics.tileScrollWidth).toBe(metrics.tileClientWidth)
+    await expect(page.getByRole('heading', { level: 1, name: 'Andy Sottiaux' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Get in touch' })).toBeVisible()
+  }
+
+  await page.setViewportSize({ width: 1280, height: 720 })
   await page.getByRole('button', { name: 'Open About' }).click()
   const modalPortrait = page.getByRole('dialog', { name: 'About Andy' }).getByRole('img', { name: 'Andy Sottiaux' })
   const modalMetrics = await modalPortrait.evaluate((image) => {

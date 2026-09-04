@@ -119,14 +119,170 @@ html {
   }
 }
 
+@keyframes spotlight-enter-forward {
+  0%, 12% {
+    opacity: 0;
+    transform: translate3d(20px, 0, 0) scale(0.992);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes spotlight-enter-backward {
+  0%, 12% {
+    opacity: 0;
+    transform: translate3d(-20px, 0, 0) scale(0.992);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes spotlight-leave-forward {
+  0% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  42%, 100% {
+    opacity: 0;
+    transform: translate3d(-12px, 0, 0) scale(0.994);
+  }
+}
+
+@keyframes spotlight-leave-backward {
+  0% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  42%, 100% {
+    opacity: 0;
+    transform: translate3d(12px, 0, 0) scale(0.994);
+  }
+}
+
+@keyframes spotlight-backdrop-enter {
+  0% { opacity: 0; }
+  24% { opacity: 0.92; }
+  32%, 100% { opacity: 1; }
+}
+
+@keyframes spotlight-accent-wash {
+  0%, 100% { opacity: 0; }
+  34% { opacity: 0.1; }
+}
+
 [data-camera-performance="true"] [data-spotlight-motion="true"] .spotlight-slide {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+[data-camera-performance="true"] [data-spotlight-motion="true"] .spotlight-slide[data-spotlight-state="active"] {
+  z-index: 2;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+[data-camera-performance="true"] [data-spotlight-motion="true"] .spotlight-slide[data-spotlight-state="leaving"] {
+  z-index: 1;
+  opacity: 1;
+  visibility: visible;
+}
+
+[data-camera-performance="true"] [data-spotlight-motion="true"] .spotlight-slide-backdrop {
+  opacity: 1;
+}
+
+[data-camera-performance="true"] [data-spotlight-motion="true"] .spotlight-slide[data-spotlight-state="active"][data-spotlight-animate="true"] .spotlight-slide-backdrop {
+  animation: spotlight-backdrop-enter var(--spotlight-transition-duration, 680ms) linear both !important;
+  will-change: opacity;
+}
+
+[data-camera-performance="true"] [data-spotlight-motion="true"] .spotlight-slide[data-spotlight-state="active"][data-spotlight-direction="forward"][data-spotlight-animate="true"] .spotlight-slide-content {
+  animation: spotlight-enter-forward var(--spotlight-transition-duration, 680ms) cubic-bezier(0.16, 1, 0.3, 1) both !important;
+  will-change: opacity, transform;
+}
+
+[data-camera-performance="true"] [data-spotlight-motion="true"] .spotlight-slide[data-spotlight-state="active"][data-spotlight-direction="backward"][data-spotlight-animate="true"] .spotlight-slide-content {
+  animation: spotlight-enter-backward var(--spotlight-transition-duration, 680ms) cubic-bezier(0.16, 1, 0.3, 1) both !important;
+  will-change: opacity, transform;
+}
+
+[data-camera-performance="true"] [data-spotlight-motion="true"] .spotlight-slide[data-spotlight-state="leaving"][data-spotlight-direction="forward"][data-spotlight-animate="true"] .spotlight-slide-content {
+  animation: spotlight-leave-forward var(--spotlight-transition-duration, 680ms) cubic-bezier(0.4, 0, 0.2, 1) both !important;
+  will-change: opacity, transform;
+}
+
+[data-camera-performance="true"] [data-spotlight-motion="true"] .spotlight-slide[data-spotlight-state="leaving"][data-spotlight-direction="backward"][data-spotlight-animate="true"] .spotlight-slide-content {
+  animation: spotlight-leave-backward var(--spotlight-transition-duration, 680ms) cubic-bezier(0.4, 0, 0.2, 1) both !important;
+  will-change: opacity, transform;
+}
+
+[data-camera-performance="true"] [data-spotlight-motion="true"] .spotlight-transition-wash {
+  animation: spotlight-accent-wash var(--spotlight-transition-duration, 680ms) ease-out both !important;
+}
+
+[data-camera-performance="true"] [data-spotlight-motion="true"] [data-spotlight-tab="true"] {
   transition:
-    opacity 360ms cubic-bezier(0.16, 1, 0.3, 1),
-    transform 360ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+    color 320ms ease,
+    background 320ms ease,
+    border-color 320ms ease,
+    box-shadow 420ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 420ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+[data-camera-performance="true"] [data-spotlight-motion="true"] [data-spotlight-tab="true"][data-active="true"] {
+  transform: translate3d(0, -1px, 0);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+}
+
+[data-camera-performance="true"] [data-spotlight-motion="true"] [data-spotlight-dot="true"] {
+  transition:
+    box-shadow 420ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 420ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+[data-camera-performance="true"] [data-spotlight-motion="true"] [data-spotlight-rotation-toggle="true"] {
+  transition:
+    color 320ms ease,
+    background 320ms ease,
+    transform 320ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+[data-camera-performance="true"] [data-spotlight-motion="true"] [data-spotlight-rotation-toggle="true"]:hover {
+  transform: scale(1.06);
+}
+
+[data-camera-performance="true"] [data-spotlight-motion="true"] [data-spotlight-tab="true"][data-active="true"] [data-spotlight-dot="true"] {
+  transform: scale(1.22);
+  box-shadow: 0 0 10px currentColor;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  [data-camera-performance="true"] [data-spotlight-motion="true"] .spotlight-slide {
+  [data-camera-performance="true"] [data-spotlight-motion="true"] .spotlight-slide[data-spotlight-state][data-spotlight-direction][data-spotlight-animate] .spotlight-slide-content {
+    animation: none !important;
+    transform: none !important;
+    will-change: auto;
+  }
+
+  [data-camera-performance="true"] [data-spotlight-motion="true"] .spotlight-slide[data-spotlight-state][data-spotlight-direction][data-spotlight-animate] .spotlight-slide-backdrop {
+    opacity: 1;
+    animation: none !important;
+    will-change: auto;
+  }
+
+  [data-camera-performance="true"] [data-spotlight-motion="true"] .spotlight-transition-wash {
+    display: none;
+    animation: none !important;
+  }
+
+  [data-camera-performance="true"] [data-spotlight-motion="true"] [data-spotlight-tab="true"],
+  [data-camera-performance="true"] [data-spotlight-motion="true"] [data-spotlight-dot="true"],
+  [data-camera-performance="true"] [data-spotlight-motion="true"] [data-spotlight-rotation-toggle="true"] {
     transition: none !important;
   }
 

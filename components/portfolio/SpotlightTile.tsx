@@ -3,6 +3,7 @@
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
+import { Pause, Play } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import type { ModalKey } from '../CompactModals'
 import CameraIdleSurface from '../CameraIdleSurface'
@@ -17,6 +18,20 @@ const CameraFeedSwitcher = dynamic(() => import('../CameraFeedSwitcher'), {
   ssr: false,
   loading: () => <CameraIdleSurface mode="loading" />,
 })
+
+const SPOTLIGHT_TRANSITION_MS = 680
+
+type SpotlightMotionState = {
+  activeIndex: number
+  previousIndex: number | null
+  direction: 'forward' | 'backward'
+  sequence: number
+  animating: boolean
+}
+
+function getSpotlightDirection(currentIndex: number, nextIndex: number): 'forward' | 'backward' {
+  return nextIndex > currentIndex ? 'forward' : 'backward'
+}
 
 export default function SpotlightTile({
   enabled,
@@ -34,32 +49,75 @@ export default function SpotlightTile({
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
   const reducedMotion = useReducedMotion()
-  const [activeIndex, setActiveIndex] = useState(0)
+  const [motion, setMotion] = useState<SpotlightMotionState>({
+    activeIndex: 0,
+    previousIndex: null,
+    direction: 'forward',
+    sequence: 0,
+    animating: false,
+  })
   const [streamIntent, setStreamIntent] = useState<{
     itemId: string
     sessionId: number
   } | null>(null)
+  const [rotationPaused, setRotationPaused] = useState(false)
   const interactionPausedRef = useRef(false)
+  const explicitResumeRef = useRef(false)
+  const { activeIndex, previousIndex, direction, sequence, animating } = motion
   const active = SPOTLIGHT_ITEMS[activeIndex]
-  const streamEnabled = enabled &&
+  const activeAccent = isLight ? active.accent.light : active.accent.dark
+  const transitionSurface = isLight ? '#f7f7f9' : '#0d0d10'
+  const activeStreamEnabled = enabled &&
     streamIntent?.itemId === active.id &&
     streamIntent.sessionId === streamSessionId
 
   useEffect(() => {
-    if (reducedMotion || modalOpen || streamEnabled) return
+    if (reducedMotion || modalOpen || activeStreamEnabled || rotationPaused) return
 
     const timer = window.setInterval(() => {
-      if (!interactionPausedRef.current) {
-        setActiveIndex((current) => (current + 1) % SPOTLIGHT_ITEMS.length)
+      if (!interactionPausedRef.current || explicitResumeRef.current) {
+        setMotion((current) => ({
+          activeIndex: (current.activeIndex + 1) % SPOTLIGHT_ITEMS.length,
+          previousIndex: current.activeIndex,
+          direction: 'forward',
+          sequence: current.sequence + 1,
+          animating: true,
+        }))
       }
     }, SPOTLIGHT_ROTATION_MS)
 
     return () => window.clearInterval(timer)
-  }, [modalOpen, reducedMotion, streamEnabled])
+  }, [activeStreamEnabled, modalOpen, reducedMotion, rotationPaused])
+
+  useEffect(() => {
+    if (previousIndex === null) return
+
+    const timer = window.setTimeout(() => {
+      setMotion((current) => current.sequence === sequence
+        ? { ...current, previousIndex: null, animating: false }
+        : current)
+      const activeItemId = SPOTLIGHT_ITEMS[activeIndex]?.id
+      setStreamIntent((current) => current?.itemId === activeItemId ? current : null)
+    }, reducedMotion ? 0 : SPOTLIGHT_TRANSITION_MS)
+
+    return () => window.clearTimeout(timer)
+  }, [activeIndex, previousIndex, reducedMotion, sequence])
 
   const selectSpotlight = (index: number) => {
-    setActiveIndex(index)
-    setStreamIntent(null)
+    if (!SPOTLIGHT_ITEMS[index]) return
+
+    explicitResumeRef.current = false
+    interactionPausedRef.current = true
+    setMotion((current) => index === current.activeIndex
+      ? current
+      : {
+          activeIndex: index,
+          previousIndex: current.activeIndex,
+          direction: getSpotlightDirection(current.activeIndex, index),
+          sequence: current.sequence + 1,
+          animating: true,
+        })
+    if (index === activeIndex) setStreamIntent(null)
 
     const nextCamera = SPOTLIGHT_ITEMS[index]?.camera
     if (nextCamera) onCameraChange(nextCamera)
@@ -76,10 +134,27 @@ export default function SpotlightTile({
     setStreamIntent({ itemId: active.id, sessionId: streamSessionId })
   }
 
+  const toggleRotation = () => {
+    setRotationPaused((current) => {
+      explicitResumeRef.current = current
+      if (current) interactionPausedRef.current = false
+      return !current
+    })
+  }
+
+  const pauseForInteraction = () => {
+    if (!explicitResumeRef.current) interactionPausedRef.current = true
+  }
+
+  const releaseInteractionPause = () => {
+    interactionPausedRef.current = false
+    explicitResumeRef.current = false
+  }
+
   const resumeAfterFocus = (event: React.FocusEvent<HTMLDivElement>) => {
     const nextTarget = event.relatedTarget
     if (!(nextTarget instanceof Node) || !event.currentTarget.contains(nextTarget)) {
-      interactionPausedRef.current = false
+      releaseInteractionPause()
     }
   }
 
@@ -95,40 +170,72 @@ export default function SpotlightTile({
       <div
         data-spotlight-motion="true"
         className="flex flex-1 min-h-0 flex-col"
-        onPointerEnter={() => { interactionPausedRef.current = true }}
-        onPointerLeave={() => { interactionPausedRef.current = false }}
-        onFocusCapture={() => { interactionPausedRef.current = true }}
+        style={{ '--spotlight-transition-duration': `${SPOTLIGHT_TRANSITION_MS}ms` } as React.CSSProperties }
+        onPointerEnter={pauseForInteraction}
+        onPointerLeave={releaseInteractionPause}
+        onFocusCapture={pauseForInteraction}
         onBlurCapture={resumeAfterFocus}
       >
         <div className="relative flex-1 min-h-[230px] overflow-hidden">
           {SPOTLIGHT_ITEMS.map((item, index) => {
             const isActive = index === activeIndex
+            const slideState = isActive
+              ? 'active'
+              : index === previousIndex
+                ? 'leaving'
+                : 'idle'
             return (
               <div
                 key={item.id}
+                id={`spotlight-panel-${item.id}`}
+                role="tabpanel"
+                aria-labelledby={`spotlight-tab-${item.id}`}
                 aria-hidden={!isActive}
-                className={`spotlight-slide absolute inset-0 ${isActive
-                  ? 'opacity-100 translate-x-0 scale-100 pointer-events-auto'
-                  : 'opacity-0 translate-x-4 scale-[0.985] pointer-events-none'}`}
+                data-spotlight-state={slideState}
+                data-spotlight-direction={direction}
+                data-spotlight-animate={animating && slideState !== 'idle' ? 'true' : 'false'}
+                className="spotlight-slide absolute inset-0"
               >
-                {item.kind === 'camera' ? (
-                  <SpotlightCameraPanel
-                    item={item}
-                    active={isActive}
-                    enabled={enabled}
-                    streamEnabled={isActive && streamEnabled}
-                    onStart={startActiveCamera}
-                    onOpen={openActive}
-                  />
-                ) : (
-                  <SpotlightProjectPanel
-                    item={item}
-                    active={isActive}
-                  />
-                )}
+                <div
+                  aria-hidden="true"
+                  className="spotlight-slide-backdrop pointer-events-none absolute inset-0"
+                  style={{ background: transitionSurface }}
+                />
+                <div className="spotlight-slide-content relative h-full">
+                  {item.kind === 'camera' ? (
+                    <SpotlightCameraPanel
+                      item={item}
+                      active={isActive}
+                      enabled={enabled}
+                      streamEnabled={
+                        (isActive || slideState === 'leaving') &&
+                        enabled &&
+                        streamIntent?.itemId === item.id &&
+                        streamIntent.sessionId === streamSessionId
+                      }
+                      onStart={startActiveCamera}
+                      onOpen={openActive}
+                    />
+                  ) : (
+                    <SpotlightProjectPanel
+                      item={item}
+                      active={isActive}
+                    />
+                  )}
+                </div>
               </div>
             )
           })}
+          {animating ? (
+            <div
+              key={sequence}
+              aria-hidden="true"
+              className="spotlight-transition-wash pointer-events-none absolute inset-0 z-[3]"
+              style={{
+                background: `radial-gradient(ellipse at 52% 44%, ${activeAccent}, transparent 68%)`,
+              }}
+            />
+          ) : null}
         </div>
 
         <SpotlightRail
@@ -138,6 +245,10 @@ export default function SpotlightTile({
           isLight={isLight}
           border={palette.cardBorder}
           muted={palette.mutedText}
+          accent={activeAccent}
+          rotationPaused={rotationPaused}
+          rotationAvailable={!reducedMotion}
+          onToggleRotation={toggleRotation}
         />
       </div>
     </Tile>
@@ -164,7 +275,11 @@ function SpotlightCameraPanel({
   const camera = item.camera ?? 'field'
 
   return (
-    <div className="h-full px-3 md:px-[clamp(0.75rem,1.15vw,1rem)] pt-2 md:pt-[clamp(0.35rem,1.0dvh,0.75rem)] pb-2 flex flex-col gap-2">
+    <div
+      data-spotlight-camera-panel="true"
+      data-stream-enabled={streamEnabled ? 'true' : 'false'}
+      className="h-full px-3 md:px-[clamp(0.75rem,1.15vw,1rem)] pt-2 md:pt-[clamp(0.35rem,1.0dvh,0.75rem)] pb-2 flex flex-col gap-2"
+    >
       <div
         className="relative w-full flex-1 min-h-[148px] overflow-hidden rounded-[14px]"
         style={{
@@ -536,6 +651,10 @@ function SpotlightRail({
   isLight,
   border,
   muted,
+  accent,
+  rotationPaused,
+  rotationAvailable,
+  onToggleRotation,
 }: {
   items: SpotlightItem[]
   activeIndex: number
@@ -543,52 +662,109 @@ function SpotlightRail({
   isLight: boolean
   border: string
   muted: string
+  accent: string
+  rotationPaused: boolean
+  rotationAvailable: boolean
+  onToggleRotation: () => void
 }) {
-  return (
-    <div
-      className="grid gap-1 px-3 pb-3 sm:gap-1.5"
-      style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
-      role="tablist"
-      aria-label="Featured spotlight"
-    >
-      {items.map((item, index) => {
-        const active = index === activeIndex
-        const accent = isLight ? item.accent.light : item.accent.dark
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
+    let nextIndex: number | null = null
 
-        return (
-          <button
-            key={item.id}
-            type="button"
-            role="tab"
-            aria-selected={active}
-            aria-label={`Show ${item.title}`}
-            onClick={(event) => {
-              event.stopPropagation()
-              haptic('tap')
-              onSelect(index)
-            }}
-            className="min-w-0 rounded-full px-2 sm:px-2.5 py-1.5 text-left focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
-            style={{
-              color: active ? accent : muted,
-              background: active
-                ? (isLight ? `${accent}14` : 'rgba(255,255,255,0.07)')
-                : (isLight ? 'rgba(0,0,0,0.025)' : 'rgba(255,255,255,0.035)'),
-              border,
-            }}
-          >
-            <span className="flex min-w-0 items-center gap-1 sm:gap-1.5">
-              <span
-                aria-hidden="true"
-                className="h-1.5 w-1.5 flex-shrink-0 rounded-full"
-                style={{ background: active ? accent : muted }}
-              />
-              <span className="truncate text-[8px] sm:text-[9px] font-semibold uppercase tracking-[0.08em] sm:tracking-[0.14em]">
-                {item.railLabel ?? item.title}
+    if (event.key === 'ArrowRight') nextIndex = (index + 1) % items.length
+    if (event.key === 'ArrowLeft') nextIndex = (index - 1 + items.length) % items.length
+    if (event.key === 'Home') nextIndex = 0
+    if (event.key === 'End') nextIndex = items.length - 1
+    if (nextIndex === null) return
+
+    event.preventDefault()
+    const tablist = event.currentTarget.closest('[role="tablist"]')
+    const tabs = tablist?.querySelectorAll<HTMLButtonElement>('[role="tab"]')
+    tabs?.[nextIndex]?.focus()
+    onSelect(nextIndex)
+  }
+
+  return (
+    <div className="flex flex-col gap-1 px-3 pb-3 sm:flex-row sm:items-center sm:gap-1.5">
+      <div
+        className="grid min-w-0 flex-1 gap-1 sm:gap-1.5"
+        style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
+        role="tablist"
+        aria-label="Featured spotlight"
+      >
+        {items.map((item, index) => {
+          const active = index === activeIndex
+          const itemAccent = isLight ? item.accent.light : item.accent.dark
+
+          return (
+            <button
+              key={item.id}
+              id={`spotlight-tab-${item.id}`}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              aria-label={`Show ${item.title}`}
+              aria-controls={`spotlight-panel-${item.id}`}
+              tabIndex={active ? 0 : -1}
+              data-spotlight-tab="true"
+              data-active={active ? 'true' : 'false'}
+              onKeyDown={(event) => handleKeyDown(event, index)}
+              onClick={(event) => {
+                event.stopPropagation()
+                haptic('tap')
+                onSelect(index)
+              }}
+              className="min-w-0 rounded-full px-1 py-1.5 text-left focus:outline-none focus:ring-2 focus:ring-cyan-300/70 sm:px-2.5"
+              style={{
+                color: active ? itemAccent : muted,
+                background: active
+                  ? (isLight ? `${itemAccent}14` : 'rgba(255,255,255,0.07)')
+                  : (isLight ? 'rgba(0,0,0,0.025)' : 'rgba(255,255,255,0.035)'),
+                border,
+              }}
+            >
+              <span className="flex min-w-0 items-center gap-0.5 sm:gap-1.5">
+                <span
+                  aria-hidden="true"
+                  data-spotlight-dot="true"
+                  className="h-1.5 w-1.5 flex-shrink-0 rounded-full"
+                  style={{ background: active ? itemAccent : muted }}
+                />
+                <span className="truncate text-[8px] font-semibold uppercase tracking-[0.04em] sm:text-[9px] sm:tracking-[0.14em]">
+                  {item.railLabel ?? item.title}
+                </span>
               </span>
-            </span>
-          </button>
-        )
-      })}
+            </button>
+          )
+        })}
+      </div>
+      {rotationAvailable ? (
+        <button
+          type="button"
+          aria-label={rotationPaused ? 'Resume spotlight rotation' : 'Pause spotlight rotation'}
+          title={rotationPaused ? 'Resume rotation' : 'Pause rotation'}
+          data-spotlight-rotation-toggle="true"
+          onClick={(event) => {
+            event.stopPropagation()
+            haptic('tap')
+            onToggleRotation()
+          }}
+          className="flex h-6 shrink-0 self-end items-center justify-center gap-1 rounded-full px-2 focus:outline-none focus:ring-2 focus:ring-cyan-300/70 sm:h-[26px] sm:w-[26px] sm:self-auto sm:px-0"
+          style={{
+            color: rotationPaused ? accent : muted,
+            background: isLight ? 'rgba(0,0,0,0.035)' : 'rgba(255,255,255,0.035)',
+            border,
+          }}
+        >
+          {rotationPaused ? (
+            <Play aria-hidden="true" className="h-2.5 w-2.5 fill-current" />
+          ) : (
+            <Pause aria-hidden="true" className="h-2.5 w-2.5 fill-current" />
+          )}
+          <span className="text-[8px] font-semibold uppercase tracking-[0.12em] sm:hidden">
+            {rotationPaused ? 'Resume' : 'Pause'}
+          </span>
+        </button>
+      ) : null}
     </div>
   )
 }
