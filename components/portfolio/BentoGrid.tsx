@@ -35,7 +35,7 @@ export default function BentoGrid({
 }) {
   return (
     <div
-      className="grid gap-3 md:gap-4 mt-4 lg:mt-0 lg:flex-1 lg:min-h-0 [grid-auto-rows:auto] lg:grid-rows-4 lg:[grid-auto-rows:minmax(0,1fr)]"
+      className="portfolio-grid grid gap-3 md:gap-4 mt-4 lg:mt-0 lg:flex-1 lg:min-h-0 [grid-auto-rows:auto] lg:grid-rows-4 lg:[grid-auto-rows:minmax(0,1fr)]"
       style={{
         gridTemplateColumns: 'repeat(12, minmax(0, 1fr))',
       }}

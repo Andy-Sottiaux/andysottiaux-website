@@ -43,12 +43,12 @@ export default defineConfig({
   projects: [
     {
       name: 'webkit-desktop',
-      testMatch: '**/finish.spec.ts',
+      testMatch: ['**/finish.spec.ts', '**/preview.spec.ts'],
       use: { ...devices['Desktop Safari'] },
     },
     {
       name: 'webkit-mobile',
-      testMatch: '**/finish.spec.ts',
+      testMatch: ['**/finish.spec.ts', '**/preview.spec.ts'],
       use: { ...devices['iPhone 13'] },
     },
     {

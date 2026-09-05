@@ -81,7 +81,7 @@ function CompactInner({
   return (
     <main
       id="main-content"
-      className="relative w-full flex flex-col min-h-screen lg:h-[100dvh] lg:overflow-hidden"
+      className="compact-portfolio relative w-full flex flex-col min-h-screen lg:h-[100dvh] lg:overflow-hidden"
       style={{
         background: palette.sectionBackground,
         color: isLight ? '#1c1a1c' : '#fff',

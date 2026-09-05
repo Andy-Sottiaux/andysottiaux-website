@@ -97,6 +97,22 @@ export default function Modal({ open, onClose, title, eyebrow, children, size = 
       ref={dialogRef}
       className="fixed inset-0 z-[1000] m-0 h-screen max-h-none w-screen max-w-none border-0 bg-transparent p-0 overflow-visible"
       aria-label={title}
+      onKeyDown={(event) => {
+        if (event.key !== 'Tab') return
+        const focusable = Array.from(event.currentTarget.querySelectorAll<HTMLElement>(
+          'a[href], button, input, select, textarea, [tabindex]',
+        )).filter((element) => element.tabIndex >= 0 && !element.matches(':disabled') && element.getClientRects().length > 0)
+        const first = focusable[0]
+        const last = focusable[focusable.length - 1]
+        if (!first || !last) return
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault()
+          last.focus()
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault()
+          first.focus()
+        }
+      }}
       onCancel={(event) => {
         event.preventDefault()
         onClose()
@@ -177,7 +193,7 @@ export default function Modal({ open, onClose, title, eyebrow, children, size = 
           </div>
 
           {/* Body — scrolls if content exceeds viewport */}
-          <div className="px-6 sm:px-8 py-5 sm:py-6 overflow-y-auto flex-1">
+          <div tabIndex={0} className="px-6 sm:px-8 py-5 sm:py-6 overflow-y-auto flex-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan-300/70">
             {children}
           </div>
         </div>

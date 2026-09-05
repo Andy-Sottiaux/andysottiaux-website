@@ -103,13 +103,13 @@ export default function Tile({
       ) : null}
       {label && (
         <div
-          className="pointer-events-none relative z-10 px-5 pr-14 pt-4 text-[10px] font-semibold uppercase tracking-[0.22em] md:px-[clamp(1rem,1.7vw,1.5rem)] md:pr-14 md:pt-[clamp(0.75rem,1.55dvh,1.25rem)] md:text-[clamp(8.5px,1.1dvh,10px)]"
+          className="pointer-events-none relative z-10 px-5 pr-14 pt-4 text-xs font-semibold uppercase tracking-[0.14em] md:px-[clamp(1rem,1.7vw,1.5rem)] md:pr-14 md:pt-[clamp(0.75rem,1.55dvh,1.25rem)]"
           style={{ color: accentColor ?? palette.mutedText }}
         >
           <span>{label}</span>
         </div>
       )}
-      <div className="relative flex flex-1 flex-col">
+      <div className="relative flex min-h-0 flex-1 flex-col">
         {children}
       </div>
     </div>

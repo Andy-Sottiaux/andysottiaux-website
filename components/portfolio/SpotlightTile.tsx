@@ -340,7 +340,7 @@ function SpotlightCameraPanel({
           {item.subtitle}
         </div>
         <p
-          className="mt-0.5 line-clamp-1 text-[11px] md:text-[clamp(9px,1.1dvh,11px)] leading-tight"
+          className="mt-0.5 line-clamp-1 text-xs leading-tight"
           style={{ color: palette.bodyText }}
         >
           {item.description}
@@ -368,13 +368,14 @@ function SpotlightProjectPanel({
   const halo = isLight ? item.halo?.light : item.halo?.dark
   const isWideMedia = !!item.iconContain
   const mediaClass = isWideMedia
-    ? 'h-[76px] w-[118px] sm:h-[clamp(5rem,11dvh,7rem)] sm:w-[clamp(7.25rem,16dvh,10.5rem)]'
-    : 'h-[76px] w-[76px] sm:h-[clamp(5rem,11dvh,7rem)] sm:w-[clamp(5rem,11dvh,7rem)]'
+    ? 'h-[76px] w-[118px] sm:h-[clamp(4rem,10dvh,7rem)] sm:w-[clamp(6rem,14dvh,10.5rem)]'
+    : 'h-[76px] w-[76px] sm:h-[clamp(4rem,10dvh,7rem)] sm:w-[clamp(4rem,10dvh,7rem)]'
 
   return (
     <div className="h-full px-3 md:px-[clamp(0.75rem,1.15vw,1rem)] pt-2 md:pt-[clamp(0.35rem,1.0dvh,0.75rem)] pb-2">
       <div
-        className="relative h-full min-h-0 overflow-hidden rounded-[14px] p-3.5 sm:p-4 md:p-[clamp(0.9rem,1.7dvh,1.25rem)] flex flex-col justify-between gap-3 sm:gap-4"
+        data-spotlight-project-card="true"
+        className="relative h-full min-h-0 overflow-hidden rounded-[14px] p-3.5 sm:p-4 md:p-[clamp(0.9rem,1.7dvh,1.25rem)] flex flex-col justify-between gap-2"
         style={{
           background: isLight
             ? 'linear-gradient(135deg, rgba(255,255,255,0.94), rgba(245,247,250,0.92))'
@@ -390,7 +391,7 @@ function SpotlightProjectPanel({
           className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full"
           style={{ background: `radial-gradient(circle, ${halo ?? 'rgba(255,255,255,0.12)'}, transparent 68%)` }}
         />
-        <div className="relative flex items-center gap-3 sm:items-start sm:justify-between sm:gap-4">
+        <div data-spotlight-project-media="true" className="relative flex items-center gap-3 sm:items-start sm:justify-between sm:gap-4">
           <div
             className={`relative ${mediaClass} flex-shrink-0 overflow-hidden rounded-[18px] sm:rounded-2xl`}
             style={{
@@ -436,6 +437,7 @@ function SpotlightProjectPanel({
             </div>
           </div>
           <div
+            data-spotlight-project-eyebrow="true"
             className="hidden rounded-full px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] sm:block"
             style={{
               color: accent,
@@ -447,7 +449,7 @@ function SpotlightProjectPanel({
           </div>
         </div>
 
-        <div className="relative max-w-[30rem]">
+        <div data-spotlight-project-copy="true" className="relative max-w-[30rem]">
           <div
             className="hidden text-[30px] font-semibold leading-[0.95] tracking-tight sm:block md:text-[clamp(24px,4.2dvh,40px)]"
             style={{ color: isLight ? '#1c1a1c' : '#fff' }}
@@ -461,19 +463,19 @@ function SpotlightProjectPanel({
             {item.subtitle}
           </div>
           <p
-            className="max-w-[42ch] text-[13px] leading-snug sm:mt-2 sm:text-[12px] md:text-[clamp(10px,1.35dvh,13px)]"
+            className="max-w-[42ch] text-sm leading-snug sm:mt-2"
             style={{ color: palette.bodyText }}
           >
             {item.description}
           </p>
         </div>
 
-        <div className="relative flex flex-wrap items-center gap-2">
+        <div data-spotlight-project-actions="true" className="relative flex flex-wrap items-center gap-2">
           {item.caseStudyHref ? (
             <Link
               href={item.caseStudyHref}
               tabIndex={active ? undefined : -1}
-              className="rounded-[8px] px-3 py-1.5 text-[11px] font-semibold focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
+              className="inline-flex min-h-8 items-center rounded-[8px] px-3 py-1.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
               style={{
                 color: isLight ? '#fff' : '#081012',
                 background: accent,
@@ -488,7 +490,7 @@ function SpotlightProjectPanel({
               target="_blank"
               rel="noopener noreferrer"
               tabIndex={active ? undefined : -1}
-              className="rounded-[8px] px-3 py-1.5 text-[11px] font-semibold focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
+              className="inline-flex min-h-8 items-center rounded-[8px] px-3 py-1.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
               style={{
                 color: palette.bodyText,
                 background: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.07)',
@@ -592,7 +594,7 @@ function SpotlightPreviewProjectPanel({
                 {item.subtitle}
               </p>
             ) : null}
-            <p className="mt-0.5 line-clamp-2 text-[10.5px] leading-snug sm:text-[11px]" style={{ color: palette.bodyText }}>
+            <p className="mt-0.5 line-clamp-2 text-xs leading-snug" style={{ color: palette.bodyText }}>
               {item.description}
             </p>
           </div>
@@ -600,7 +602,7 @@ function SpotlightPreviewProjectPanel({
             <Link
               href={item.caseStudyHref}
               tabIndex={active ? undefined : -1}
-              className="shrink-0 rounded-[8px] px-3 py-1.5 text-[10.5px] font-semibold focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
+              className="inline-flex min-h-8 shrink-0 items-center rounded-[8px] px-3 py-1.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
               style={{ color: isLight ? '#fff' : '#13090a', background: accent }}
             >
               Explore
@@ -711,7 +713,7 @@ function SpotlightRail({
                 haptic('tap')
                 onSelect(index)
               }}
-              className="min-w-0 rounded-full px-1 py-1.5 text-left focus:outline-none focus:ring-2 focus:ring-cyan-300/70 sm:px-2.5"
+              className="min-h-8 min-w-0 rounded-full px-1 py-1.5 text-left focus:outline-none focus:ring-2 focus:ring-cyan-300/70 sm:px-2"
               style={{
                 color: active ? itemAccent : muted,
                 background: active
@@ -727,7 +729,7 @@ function SpotlightRail({
                   className="h-1.5 w-1.5 flex-shrink-0 rounded-full"
                   style={{ background: active ? itemAccent : muted }}
                 />
-                <span className="truncate text-[8px] font-semibold uppercase tracking-[0.04em] sm:text-[9px] sm:tracking-[0.14em]">
+                <span className="truncate text-[10px] font-semibold uppercase tracking-[0.02em] sm:text-xs">
                   {item.railLabel ?? item.title}
                 </span>
               </span>
@@ -746,7 +748,7 @@ function SpotlightRail({
             haptic('tap')
             onToggleRotation()
           }}
-          className="flex h-6 shrink-0 self-end items-center justify-center gap-1 rounded-full px-2 focus:outline-none focus:ring-2 focus:ring-cyan-300/70 sm:h-[26px] sm:w-[26px] sm:self-auto sm:px-0"
+          className="flex h-8 shrink-0 self-end items-center justify-center gap-1 rounded-full px-2 focus:outline-none focus:ring-2 focus:ring-cyan-300/70 sm:w-8 sm:self-auto sm:px-0"
           style={{
             color: rotationPaused ? accent : muted,
             background: isLight ? 'rgba(0,0,0,0.035)' : 'rgba(255,255,255,0.035)',

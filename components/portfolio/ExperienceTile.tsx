@@ -20,8 +20,8 @@ export default function ExperienceTile({ onOpen }: { onOpen?: () => void }) {
         modalLabel="Open Experience"
         className="min-h-[285px] sm:min-h-[250px] lg:min-h-0"
       >
-        <div className="px-4 sm:px-5 md:px-[clamp(1rem,1.7vw,1.5rem)] pt-2 md:pt-[clamp(0.25rem,0.9dvh,0.75rem)] pb-3 md:pb-[clamp(0.5rem,1.4dvh,1.25rem)] flex-1 min-h-0 flex flex-col overflow-hidden">
-          <div className="h-full min-h-0 flex flex-col justify-between gap-2 lg:gap-[clamp(0.1rem,0.45dvh,0.4rem)]">
+        <div className="px-4 sm:px-5 md:px-[clamp(1rem,1.7vw,1.5rem)] pt-2 pb-3 lg:py-1 flex-1 min-h-0 flex flex-col overflow-hidden">
+          <div className="h-full min-h-0 flex flex-col justify-evenly gap-2 lg:gap-0.5">
             {EXPERIENCE_ITEMS.map((e) => {
               return (
                 <a
@@ -29,7 +29,7 @@ export default function ExperienceTile({ onOpen }: { onOpen?: () => void }) {
                   href={e.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="relative z-10 group min-h-0 flex items-center justify-between gap-2.5 md:gap-3 rounded-xl px-2.5 py-2 lg:px-[clamp(0.35rem,0.75dvh,0.55rem)] lg:py-[clamp(0.1rem,0.32dvh,0.3rem)] transition-all"
+                  className="relative z-10 group min-h-0 flex items-center justify-between gap-2.5 md:gap-3 rounded-xl px-2.5 py-2 lg:px-2 lg:py-px transition-all"
                   style={{
                     background: isLight ? 'rgba(0,0,0,0.025)' : 'rgba(255,255,255,0.035)',
                     border: palette.hairline ? `1px solid ${palette.hairline}` : palette.cardBorder,
@@ -41,7 +41,7 @@ export default function ExperienceTile({ onOpen }: { onOpen?: () => void }) {
                       so each mark reads at roughly the same visual weight
                       inside the same-sized plate. */}
                     <div
-                      className="flex h-12 w-12 items-center justify-center rounded-lg flex-shrink-0 overflow-hidden lg:h-[clamp(28px,3.35dvh,36px)] lg:w-[clamp(28px,3.35dvh,36px)] lg:rounded-md"
+                      className="flex h-12 w-12 items-center justify-center rounded-lg flex-shrink-0 overflow-hidden lg:h-6 lg:w-6 lg:rounded-md"
                       style={{
                         background: '#fff',
                       boxShadow: isLight
@@ -67,16 +67,16 @@ export default function ExperienceTile({ onOpen }: { onOpen?: () => void }) {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-baseline gap-2 min-w-0">
                         <span
-                          className="text-[13px] md:text-[clamp(11.5px,1.45dvh,14px)] font-semibold leading-tight tracking-tight truncate"
+                          className="text-sm font-semibold leading-tight tracking-tight truncate"
                           style={{ color: isLight ? '#1c1a1c' : '#fff' }}
                         >
                           {e.company}
                         </span>
                         <span
-                          className="hidden sm:inline text-[11px] md:text-[clamp(10px,1.2dvh,11px)] leading-none tabular-nums tracking-tight flex-shrink-0 opacity-80"
+                          className="hidden sm:inline text-xs leading-none tabular-nums tracking-tight flex-shrink-0 opacity-80"
                           style={{ color: palette.mutedText }}
                         >
-                          {e.period}
+                          {e.shortPeriod}
                         </span>
                       </div>
                       <span
@@ -91,7 +91,7 @@ export default function ExperienceTile({ onOpen }: { onOpen?: () => void }) {
                     className="sm:hidden text-[10.5px] leading-none tabular-nums tracking-tight flex-shrink-0 group-hover:opacity-100 opacity-75 transition-opacity"
                     style={{ color: palette.mutedText }}
                   >
-                    {e.period}
+                    {e.shortPeriod}
                 </span>
               </a>
             )

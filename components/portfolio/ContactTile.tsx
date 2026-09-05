@@ -2,6 +2,7 @@
 
 import type { CSSProperties } from 'react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { useFieldTheme } from '../fieldTheme'
 import { CONTACT_LINKS, COPYRIGHT_YEAR, type ContactIcon as ContactIconName } from './content'
 import Tile from './Tile'
@@ -54,6 +55,8 @@ function ContactIcon({ icon }: { icon: ContactIconName }) {
 export default function ContactTile({ onOpen }: { onOpen?: () => void }) {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
+  const pathname = usePathname()
+  const showPortfolioLink = pathname !== '/' && pathname !== '/preview'
 
   return (
     <Tile
@@ -71,24 +74,27 @@ export default function ContactTile({ onOpen }: { onOpen?: () => void }) {
               href={c.href}
               target={c.href.startsWith('mailto:') ? undefined : '_blank'}
               rel={c.href.startsWith('mailto:') ? undefined : 'noopener noreferrer'}
-                className="relative z-10 flex flex-col items-center justify-center gap-1.5 sm:flex-row sm:gap-2 md:gap-[clamp(0.35rem,0.8dvh,0.5rem)] px-2 py-3 sm:py-2 md:py-[clamp(0.35rem,1.0dvh,0.5rem)] rounded-xl transition-all hover:scale-[1.02] min-h-0"
+                className="relative z-10 flex flex-col items-center justify-center gap-2 px-2 py-3 sm:py-2 rounded-xl transition-all hover:scale-[1.02] min-h-0"
                 style={{
                   background: isLight ? 'rgba(0,0,0,0.035)' : 'rgba(255,255,255,0.045)',
                   border: palette.cardBorder,
                   color: isLight ? '#1c1a1c' : '#fff',
                 }}
               >
-                <div className="w-[20px] h-[20px] md:w-[clamp(13px,1.8dvh,17px)] md:h-[clamp(13px,1.8dvh,17px)] opacity-90 flex-shrink-0"><ContactIcon icon={c.icon} /></div>
-                <div className="max-w-full text-center text-[11.5px] md:text-[clamp(9.5px,1.15dvh,11px)] font-semibold tracking-tight truncate">{c.label}</div>
+                <div className="w-5 h-5 opacity-90 flex-shrink-0"><ContactIcon icon={c.icon} /></div>
+                <div className="max-w-full text-center text-sm lg:text-xs xl:text-sm font-semibold tracking-tight">{c.label}</div>
               </a>
             ))}
         </div>
         <div
-          className="mt-2 md:mt-[clamp(0.3rem,0.9dvh,0.5rem)] text-[9px] md:text-[clamp(7.5px,0.9dvh,9px)] tracking-wide text-center"
+          className="mt-2 text-xs tracking-tight text-center"
           style={{ color: palette.fadedText }}
         >
-          <Link href="/" className="relative z-10 inline-flex min-h-6 items-center gap-1 hover:underline" aria-label="Back to portfolio">← Portfolio</Link>
-          <span aria-hidden="true"> · </span>© {COPYRIGHT_YEAR} Andy Sottiaux
+          {showPortfolioLink && <>
+            <Link href="/" className="relative z-10 inline-flex min-h-6 items-center gap-1 hover:underline" aria-label="Back to portfolio">← Portfolio</Link>
+            <span aria-hidden="true"> · </span>
+          </>}
+          © {COPYRIGHT_YEAR} Andy Sottiaux
         </div>
       </div>
     </Tile>

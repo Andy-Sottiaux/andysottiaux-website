@@ -42,7 +42,7 @@ export default function IdentityTile({ onOpen }: { onOpen?: () => void }) {
 
         <div className="flex min-w-0 flex-col items-center gap-2.5 sm:gap-3 md:gap-[clamp(0.35rem,1.05dvh,0.8rem)] lg:flex-1 lg:items-start lg:gap-0.5">
           <h1
-            className="max-w-full truncate text-center text-[32px] font-semibold leading-none tracking-tight sm:text-[34px] md:text-[clamp(17px,2.2dvh,22px)] lg:text-left lg:text-[clamp(14px,1.4vw,17px)] xl:text-[clamp(17px,2.2dvh,22px)]"
+            className="max-w-full text-center text-[32px] font-semibold leading-none tracking-tight sm:text-[34px] lg:text-left lg:text-lg lg:leading-tight xl:text-xl"
             style={{
               backgroundImage: palette.headlineGradient,
               WebkitBackgroundClip: 'text',
@@ -53,23 +53,22 @@ export default function IdentityTile({ onOpen }: { onOpen?: () => void }) {
             Andy Sottiaux
           </h1>
           <div
-            className="text-center text-[12px] uppercase leading-none tracking-[0.18em] sm:text-[12.5px] md:text-[clamp(8.5px,1.05dvh,11px)] lg:text-left"
+            className="text-center text-xs uppercase leading-tight tracking-[0.12em] lg:text-left"
             style={{ color: palette.mutedText }}
           >
             Dallas, TX
           </div>
           <p
-            className="max-w-[30ch] text-center text-[15px] leading-snug tracking-tight sm:text-[15.5px] md:max-w-[24ch] md:text-[clamp(9px,1.08dvh,11.5px)] lg:max-w-none lg:text-left"
+            className="max-w-[30ch] text-center text-base leading-snug tracking-tight lg:max-w-none lg:text-left lg:text-sm"
             style={{ color: palette.bodyText }}
           >
-            Hardware/software engineer building aircraft systems, edge AI,
-            robotics, and iOS products.
+            Hardware + software engineer.
           </p>
 
           <div className="flex flex-shrink-0 justify-center lg:justify-start">
             <a
               href="mailto:andrewsottiaux@gmail.com"
-              className="relative z-10 inline-flex items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-[15px] font-semibold tracking-tight transition-all hover:gap-2.5 sm:text-[16px] md:gap-1.5 md:px-3 md:py-[clamp(0.25rem,0.7dvh,0.375rem)] md:text-[clamp(10px,1.15dvh,12px)] md:hover:gap-2"
+              className="relative z-10 inline-flex min-h-8 items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-base font-semibold tracking-tight transition-all hover:gap-2.5 lg:gap-1 lg:px-1.5 lg:py-1 lg:text-xs xl:px-2 xl:text-sm"
               style={{
                 color: isLight ? '#0a8aa8' : 'rgb(103, 232, 249)',
                 background: isLight
@@ -78,7 +77,7 @@ export default function IdentityTile({ onOpen }: { onOpen?: () => void }) {
               }}
             >
               Get in touch
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <svg className="w-3.5 h-3.5 lg:hidden 2xl:block" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </a>

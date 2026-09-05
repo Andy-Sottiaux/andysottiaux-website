@@ -21,15 +21,15 @@ export default function ProjectsTile({ onOpen }: { onOpen?: () => void }) {
         modalLabel="Open Projects"
         className="min-h-[270px] sm:min-h-[235px] lg:min-h-0"
       >
-        <div className="px-4 sm:px-5 md:px-[clamp(1rem,1.7vw,1.5rem)] pt-2 md:pt-[clamp(0.25rem,0.9dvh,0.75rem)] pb-3 md:pb-[clamp(0.5rem,1.4dvh,1.25rem)] flex-1 min-h-0 flex flex-col overflow-hidden">
-          <div className="flex-1 min-h-0 flex flex-col justify-evenly gap-2 lg:gap-[clamp(0.1rem,0.45dvh,0.4rem)]">
+        <div className="px-4 sm:px-5 md:px-[clamp(1rem,1.7vw,1.5rem)] pt-2 pb-3 lg:py-1 flex-1 min-h-0 flex flex-col overflow-hidden">
+          <div className="flex-1 min-h-0 flex flex-col justify-evenly gap-2 lg:gap-0.5">
             {PROJECT_ITEMS.map((p) => (
               <Link
                 key={p.name}
                 href={p.url}
                 target={p.external ? '_blank' : undefined}
                 rel={p.external ? 'noopener noreferrer' : undefined}
-                className="relative z-10 group min-h-0 flex items-center gap-2.5 md:gap-3 rounded-xl px-2.5 py-2 lg:px-[clamp(0.35rem,0.75dvh,0.55rem)] lg:py-[clamp(0.1rem,0.32dvh,0.3rem)] transition-all"
+                className="relative z-10 group min-h-0 flex items-center gap-2.5 md:gap-3 rounded-xl px-2.5 py-2 lg:px-2 lg:py-px transition-all"
                 style={{
                   background: isLight ? 'rgba(0,0,0,0.025)' : 'rgba(255,255,255,0.035)',
                   border: palette.hairline ? `1px solid ${palette.hairline}` : palette.cardBorder,
@@ -52,13 +52,13 @@ export default function ProjectsTile({ onOpen }: { onOpen?: () => void }) {
               </div>
               <div className="flex-1 min-w-0">
                 <div
-                  className="text-[13px] md:text-[clamp(11.5px,1.45dvh,14px)] font-semibold leading-tight tracking-tight truncate"
+                  className="text-sm font-semibold leading-tight tracking-tight truncate"
                   style={{ color: isLight ? '#1c1a1c' : '#fff' }}
                 >
                   {p.name}
                 </div>
                   <div
-                    className="line-clamp-2 text-[11px] md:text-[clamp(10px,1.25dvh,12px)] leading-tight tracking-tight"
+                    className="line-clamp-2 text-xs leading-tight tracking-tight lg:line-clamp-1"
                     style={{ color: palette.bodyText }}
                   >
                   {p.desc}
@@ -77,22 +77,6 @@ export default function ProjectsTile({ onOpen }: { onOpen?: () => void }) {
             </Link>
           ))}
         </div>
-          <a
-          href="https://www.hatchingpoint.com/"
-          target="_blank"
-          rel="noopener noreferrer"
-            className="relative z-10 mt-2 md:mt-[clamp(0.25rem,0.7dvh,0.5rem)] inline-flex items-center gap-1 self-start rounded-full px-2.5 py-1 text-[10px] md:text-[clamp(9.5px,1.15dvh,11px)] leading-none tracking-tight hover:opacity-100 opacity-80 transition-opacity"
-            style={{
-              color: palette.mutedText,
-              background: isLight ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.045)',
-              border: palette.hairline ? `1px solid ${palette.hairline}` : palette.cardBorder,
-            }}
-          >
-          More on the App Store
-          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </a>
       </div>
     </Tile>
   )

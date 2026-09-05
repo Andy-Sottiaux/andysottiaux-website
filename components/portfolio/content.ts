@@ -26,6 +26,7 @@ type ExperienceItem = {
   title: string
   company: string
   period: string
+  shortPeriod: string
   url: string
   current?: boolean
   logo: string
@@ -59,7 +60,7 @@ export const SPOTLIGHT_ITEMS: SpotlightItem[] = [
     title: 'E-Paper Dashboard',
     railLabel: 'E-Paper',
     subtitle: 'Runner-first command center',
-    description: 'A four-color dashboard for Runna, Strava, race day, weather, and focused work—driven by a custom partial-refresh stack.',
+    description: 'Runna, Strava, weather, and race day on a four-color display.',
     accent: { light: '#b4232d', dark: 'rgba(248, 113, 113, 0.95)' },
     halo: { light: 'rgba(244, 194, 13, 0.2)', dark: 'rgba(244, 194, 13, 0.17)' },
     modal: 'projects',
@@ -76,7 +77,7 @@ export const SPOTLIGHT_ITEMS: SpotlightItem[] = [
     title: 'Travel Agent AI',
     railLabel: 'Travel',
     subtitle: 'AI-powered trip planner',
-    description: 'Production iOS app for booking capture, review, shared itineraries, packing lists, and calendar sync.',
+    description: 'Capture bookings, review the details, and share an itinerary.',
     accent: { light: '#2563eb', dark: 'rgba(147, 197, 253, 0.95)' },
     halo: { light: 'rgba(37, 99, 235, 0.16)', dark: 'rgba(147, 197, 253, 0.18)' },
     modal: 'projects',
@@ -91,7 +92,7 @@ export const SPOTLIGHT_ITEMS: SpotlightItem[] = [
     eyebrow: 'Clean live',
     title: 'Cam 1',
     subtitle: 'Edge-AI field camera',
-    description: 'Solar-powered edge camera with live telemetry, on-device inference, health monitoring, and browser-safe streaming.',
+    description: 'Solar-powered edge AI, live video, and system telemetry.',
     accent: { light: '#0a8aa8', dark: 'rgba(103, 232, 249, 0.9)' },
     modal: 'live',
     camera: 'field',
@@ -103,7 +104,7 @@ export const SPOTLIGHT_ITEMS: SpotlightItem[] = [
     title: 'WYZECAR',
     railLabel: 'WYZECAR',
     subtitle: 'Vision RC autonomy',
-    description: 'Vision-to-control robotics testbed with YOLOv8 perception, live video, browser control, and visual-servoing motion tuning.',
+    description: 'YOLOv8 vision, browser control, and visual-servoing experiments.',
     accent: { light: '#b45309', dark: 'rgba(252, 211, 77, 0.95)' },
     halo: { light: 'rgba(180, 83, 9, 0.16)', dark: 'rgba(252, 211, 77, 0.18)' },
     modal: 'projects',
@@ -119,7 +120,7 @@ export const SPOTLIGHT_ITEMS: SpotlightItem[] = [
     eyebrow: 'PTZ relay',
     title: 'Cam 2',
     subtitle: 'Thingino pan / tilt',
-    description: 'Thingino PTZ camera routed through Cloudflare with high-quality WebRTC video and vector pan/tilt controls.',
+    description: 'Thingino camera with browser pan and tilt.',
     accent: { light: '#10a366', dark: 'rgba(134, 239, 172, 0.92)' },
     modal: 'live',
     camera: 'thingino',
@@ -131,6 +132,7 @@ export const EXPERIENCE_ITEMS: ExperienceItem[] = [
     title: 'Senior Engineer',
     company: 'AVX Aircraft',
     period: 'Sep 2023 — Present',
+    shortPeriod: '2023–now',
     url: 'https://www.avxaircraft.com/',
     current: true,
     logo: '/images/avx.png',
@@ -140,6 +142,7 @@ export const EXPERIENCE_ITEMS: ExperienceItem[] = [
     title: 'Founder',
     company: 'HatchingPoint',
     period: '2021 — Present',
+    shortPeriod: '2021–now',
     url: 'https://www.hatchingpoint.com',
     logo: '/images/hatchingpoint-logo.jpeg',
     scale: 1.05,
@@ -148,6 +151,7 @@ export const EXPERIENCE_ITEMS: ExperienceItem[] = [
     title: 'Rotor Systems',
     company: 'Bell Flight',
     period: '2020 — 2023',
+    shortPeriod: '2020–2023',
     url: 'https://www.bellflight.com',
     logo: '/images/bell.svg',
     scale: 1.05,
@@ -156,6 +160,7 @@ export const EXPERIENCE_ITEMS: ExperienceItem[] = [
     title: 'Project Manager',
     company: 'Texas Air Systems',
     period: '2016 — 2020',
+    shortPeriod: '2016–2020',
     url: 'https://www.texasairsystems.com/',
     logo: '/images/texasairsystems-logo.jpeg',
     scale: 1.0,
@@ -165,20 +170,20 @@ export const EXPERIENCE_ITEMS: ExperienceItem[] = [
 export const PROJECT_ITEMS: ProjectItem[] = [
   {
     name: 'Travel Agent AI',
-    desc: 'AI trip-planning assistant · iOS',
+    desc: 'Bookings & shared trips · iOS',
     url: '/work/travel-agent-ai',
     icon: '/images/travelagentai-icon.png',
   },
   {
     name: 'WYZECAR',
-    desc: 'Vision-based autonomous RC car · YOLOv8 · ROS2',
+    desc: 'Vision-guided RC car · YOLOv8',
     url: '/work/wyzecar',
     icon: '/images/wyzecar.png',
     round: true,
   },
   {
     name: 'Record + Transcribe',
-    desc: 'Voice notes with AI summary · iOS',
+    desc: 'Voice notes with AI summaries',
     url: 'https://apps.apple.com/app/record-transcribe/id6758643630',
     icon: '/images/recordtranscribe-icon.png',
     external: true,
