@@ -18,7 +18,6 @@ export default async function DashboardPreview() {
   return (
     <ControlAuthProvider>
       <CompactPortfolio
-        initialBoardLive={initialHealthPoll.digest?.ok === true}
         initialHealthPoll={initialHealthPoll}
       />
     </ControlAuthProvider>

@@ -17,6 +17,7 @@
 import { LockKeyhole } from 'lucide-react'
 import { type CSSProperties, useEffect, useRef, useState } from 'react'
 import { fetchWithTimeout } from '@/lib/fetchWithTimeout'
+import { useSharedPoll } from '@/lib/useSharedPoll'
 import {
   buildHealthDigest,
   type HealthDigest,
@@ -40,11 +41,9 @@ async function fetchHealthDigest(signal: AbortSignal): Promise<HealthPollResult>
 
   try {
     const res = await fetchWithTimeout(HEALTH_URL, { signal, cache: 'no-store' }, 8_000)
-    const rttMs = Math.round(performance.now() - t0)
-    if (!res.ok) return { digest: null }
-
     const parsed = (await res.json()) as HealthLoose
-    if (!parsed || 'error' in (parsed as object)) return { digest: null }
+    const rttMs = Math.round(performance.now() - t0)
+    if (!parsed || typeof parsed.ok !== 'boolean' || parsed.error) return { digest: null }
 
     return { digest: buildHealthDigest(parsed, rttMs) }
   } catch {
@@ -174,7 +173,8 @@ export default function FieldHealthCard({
   const { unlocked, requestUnlock, markLocked } = useControlAuth()
   const isLight = palette.mode === 'light'
   const compact = variant === 'compact'
-  const [healthPoll, setHealthPoll] = useState<HealthPollResult | undefined>(initialHealthPoll)
+  const healthPoll = useSharedPoll(HEALTH_URL, fetchHealthDigest, HEALTH_POLL_MS, initialHealthPoll?.digest?.ok && !initialHealthPoll.digest.stale ? initialHealthPoll : undefined)
+  const [fanOverride, setFanOverride] = useState<SystemLoose['argon_fan'] | null>(null)
 
   const [, forceTick] = useState(0) // re-render every 30s for "X min ago"
   const [fanDraft, setFanDraft] = useState<number | null>(null)
@@ -194,42 +194,19 @@ export default function FieldHealthCard({
   }, [])
 
   useEffect(() => {
-    let cancelled = false
-    let ctrl: AbortController | null = null
-
-    const poll = async () => {
-      ctrl?.abort()
-      ctrl = new AbortController()
-      const next = await fetchHealthDigest(ctrl.signal)
-      if (!cancelled) setHealthPoll(next)
-    }
-
-    const firstDelay = initialHealthPoll?.digest ? HEALTH_POLL_MS : 0
-    let interval: number | null = null
-    const firstTimer = window.setTimeout(() => {
-      poll()
-      interval = window.setInterval(poll, HEALTH_POLL_MS)
-    }, firstDelay)
-
-    return () => {
-      cancelled = true
-      ctrl?.abort()
-      window.clearTimeout(firstTimer)
-      if (interval) window.clearInterval(interval)
-    }
-  }, [initialHealthPoll])
-
-  useEffect(() => {
-    if (digest) lastOkRef.current = digest
+    if (digest?.ok && !digest.stale) lastOkRef.current = digest
+    setFanOverride(null)
   }, [digest])
 
   const connecting = phase === 'connecting'
-  const online = digest != null && digest.ok
+  const stale = Boolean(digest && (digest.stale || digest.observedAt == null || Date.now() - digest.observedAt > 45_000))
+  const online = digest != null && digest.ok && !stale
   const lastOk = lastOkRef.current
+  const displayStale = stale || (!digest && Boolean(lastOk))
   // Degraded = critical-subsystems healthy but at least one informational
   // service is down (detector / recorder, etc.). UI shows green dot but
   // notes the names below.
-  const degraded = digest != null && digest.ok && digest.servicesDown.length > 0
+  const degraded = online && (digest.servicesDown.length > 0 || ['watch', 'degraded'].includes(digest.system?.performance?.status ?? ''))
   const sys = digest?.system ?? lastOk?.system
 
   const onlineHeadline = palette.headlineGradient
@@ -240,23 +217,23 @@ export default function FieldHealthCard({
     ? 'linear-gradient(180deg, #1c1a1c 0%, #6e6e73 100%)'
     : 'linear-gradient(180deg, #f5f5f7 0%, #8e8e93 100%)'
 
-  const headlineLabel = connecting ? 'Connecting' : online ? 'Online' : 'Offline'
+  const headlineLabel = connecting ? 'Connecting' : stale ? 'Stale' : degraded ? 'Watch' : online ? 'Online' : 'Unavailable'
   const headlineGradient = connecting
     ? connectingHeadline
     : online
       ? onlineHeadline
       : offlineHeadline
-  const dotColor = connecting ? '#8e8e93' : online ? '#30d158' : '#ff453a'
+  const dotColor = connecting ? '#8e8e93' : stale || degraded ? '#fbbf24' : online ? '#30d158' : '#ff453a'
   const dotGlow = connecting
     ? '0 0 6px rgba(142,142,147,0.45)'
-    : online
+    : stale || degraded ? '0 0 8px rgba(251,191,36,0.35)' : online
       ? '0 0 12px rgba(48,209,88,0.6)'
       : '0 0 8px rgba(255,69,58,0.5)'
 
   const valueColor = isLight ? '#1c1a1c' : '#fff'
   const mediaWorking = sys?.media_graph?.working
   const mediaQuality = sys?.media_graph?.visual_quality
-  const cameraLabel = mediaWorking
+  const cameraLabel = displayStale ? 'Last reported' : mediaWorking
     ? mediaQuality === 'calibrated'
       ? 'Calibrated'
       : 'Working'
@@ -275,7 +252,7 @@ export default function FieldHealthCard({
   const ramColor = ramAvailMB != null && ramAvailMB < 32
     ? (isLight ? '#b45309' : '#fcd34d')
     : valueColor
-  const fan = sys?.argon_fan
+  const fan = fanOverride ?? sys?.argon_fan
   const fanPct = typeof fan?.speed === 'number' && Number.isFinite(fan.speed)
     ? Math.max(0, Math.min(100, Math.round(fan.speed)))
     : null
@@ -318,7 +295,8 @@ export default function FieldHealthCard({
   const uptimeText = digest
     ? fmtUptime(digest.uptimeSec)
     : (lastOk ? fmtUptime(lastOk.uptimeSec) : '—')
-  const checkedText = digest ? 'now' : (lastOk ? fmtAge(Date.now() - lastOk.fetchedAt) : '—')
+  const observedAt = digest?.observedAt ?? lastOk?.observedAt
+  const checkedText = observedAt != null ? fmtAge(Date.now() - observedAt) : 'age unknown'
   const tailnetText = typeof sys?.tailscale_kicks_4h === 'number' && sys.tailscale_kicks_4h > 0
     ? `${sys.tailscale_kicks_4h} kicks`
     : sys?.tailnet?.ok === true
@@ -343,7 +321,7 @@ export default function FieldHealthCard({
   const rknnWaitingForRelay = (
     rknn?.state === 'starting' ||
     rknn?.status === 'starting'
-  ) && typeof rknn?.message === 'string' && rknn.message.toLowerCase().includes('relay stream')
+  ) && rknn?.waiting_for_stream === true
   const rknnWaiting = rknnWaitingForRelay || (
     (rknn?.state === 'starting' || rknn?.status === 'starting') &&
     rknn?.ok !== true &&
@@ -352,9 +330,8 @@ export default function FieldHealthCard({
   )
   const rknnFps = typeof rknn?.actual_fps === 'number' && Number.isFinite(rknn.actual_fps)
     ? rknn.actual_fps
-    : typeof rknn?.target_fps === 'number' && Number.isFinite(rknn.target_fps)
-      ? rknn.target_fps
-      : null
+    : null
+  const belowTarget = rknnFps != null && typeof rknn?.target_fps === 'number' && rknn.target_fps > 0 && rknnFps < rknn.target_fps * 0.9
   const rknnText = rknn?.available === false
     ? 'off'
     : rknnWaiting
@@ -362,7 +339,7 @@ export default function FieldHealthCard({
       : rknn?.stale === true
         ? 'stale'
         : rknnOk
-          ? `${rknnFps != null ? rknnFps.toFixed(rknnFps >= 10 ? 0 : 1) : '1.0'} FPS`
+          ? rknnFps != null ? `${rknnFps.toFixed(rknnFps >= 10 ? 0 : 2)} inf/s` : 'Not measured'
           : rknn?.state || 'check'
   const rknnDetail = rknnWaitingForRelay
     ? 'relay stream'
@@ -381,18 +358,20 @@ export default function FieldHealthCard({
     : 0
   const systemHeadline = connecting
     ? 'Checking board'
-    : online
-      ? 'Hardware online'
+    : stale
+      ? 'Last reported state'
+      : online
+      ? degraded ? 'Online · needs attention' : 'Hardware online'
       : lastOk
         ? 'Last seen'
-        : 'Board offline'
+        : 'Health unavailable'
   const systemSubline = connecting
     ? 'Polling live system health'
     : online
-      ? `Uptime ${uptimeText} · checked ${checkedText}`
+      ? `Uptime ${uptimeText} · sample ${checkedText}`
       : lastOk
         ? `Last healthy ${checkedText}`
-        : 'Health relay unavailable'
+        : stale ? `Sample ${checkedText} · not live` : 'Health relay unavailable'
   const fanModeText = fanPending
     ? 'Setting'
     : fan?.override_active
@@ -403,26 +382,26 @@ export default function FieldHealthCard({
     : fanModeText
   const aiState = rknn?.available === false
     ? 'Unavailable'
-    : rknnOk && !rknnWaiting && rknn?.stale !== true
-      ? 'Active'
-      : online || connecting
-        ? 'Standby'
-        : 'Offline'
-  const aiDetail = aiState === 'Active'
-    ? `${rknnFps != null ? rknnFps.toFixed(rknnFps >= 10 ? 0 : 1) : '1.0'} fps`
+    : displayStale || rknn?.stale === true
+      ? 'Stale'
+      : online && rknnOk && !rknnWaiting
+        ? belowTarget ? 'Below target' : 'Active'
+        : rknnWaiting ? 'Standby' : rknn?.ok === false ? 'Check' : 'Unknown'
+  const aiDetail = aiState === 'Active' || aiState === 'Below target'
+    ? rknnFps != null ? `${rknnFps.toFixed(2)} inf/s` : 'not measured'
     : rknnWaitingForRelay
       ? 'wakes on stream'
       : aiState === 'Standby'
-        ? 'ready on play'
+        ? 'waiting for stream'
         : 'not reporting'
-  const cameraSummary = mediaWorking
+  const cameraSummary = displayStale ? 'Stale' : mediaWorking && online
     ? mediaQuality === 'calibrated'
       ? 'Calibrated'
       : 'Ready'
     : online || connecting
       ? 'Checking'
       : 'Offline'
-  const cameraDetail = sys?.media_graph?.output_size || sys?.media_graph?.input_size || '1280x960'
+  const cameraDetail = sys?.media_graph?.output_size || sys?.media_graph?.input_size || 'not reported'
   const thermalDetail = typeof sys?.cpu_temp_c === 'number'
     ? sys.cpu_temp_c >= 70
       ? 'warm'
@@ -430,15 +409,14 @@ export default function FieldHealthCard({
     : connecting
       ? 'checking'
       : 'awaiting'
-  const powerOk = online && sys?.victron_hearing !== false
+  const powerOk = online && sys?.victron_hearing === true
   const relayOk = online && (
     sys?.tailnet?.ok === true ||
     sys?.tailnet?.tailnet_route_ok === true ||
-    tailnetText === 'ok' ||
-    tailnetText === '—'
+    tailnetText === 'ok'
   )
   const compactSignals = [
-    { label: 'Camera', ok: cameraSummary === 'Calibrated' || cameraSummary === 'Ready' },
+    { label: 'Camera', ok: online && (cameraSummary === 'Calibrated' || cameraSummary === 'Ready') },
     { label: 'AI', ok: aiState === 'Active', standby: aiState === 'Standby' },
     { label: 'Power', ok: powerOk, standby: online && !powerOk },
     { label: 'Relay', ok: relayOk, standby: online && !relayOk },
@@ -476,19 +454,7 @@ export default function FieldHealthCard({
       }
       if (data?.fan) {
         applied = true
-        setHealthPoll((prev) => {
-          if (!prev?.digest) return prev
-          return {
-            ...prev,
-            digest: {
-              ...prev.digest,
-              system: {
-                ...(prev.digest.system ?? {}),
-                argon_fan: data.fan,
-              },
-            },
-          }
-        })
+        setFanOverride(data.fan)
       }
     } catch {
       setFanError('Retry')
@@ -533,8 +499,8 @@ export default function FieldHealthCard({
           <div
             className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[9px] md:text-[clamp(7.5px,0.9dvh,9px)] font-bold uppercase tracking-[0.18em]"
             style={{
-              color: online ? (isLight ? '#0f9d4f' : '#86efac') : connecting ? palette.mutedText : '#ff8a80',
-              background: online
+              color: stale || degraded ? (isLight ? '#b45309' : '#fcd34d') : online ? (isLight ? '#0f9d4f' : '#86efac') : connecting ? palette.mutedText : '#ff8a80',
+              background: stale || degraded ? 'rgba(251,191,36,0.1)' : online
                 ? (isLight ? 'rgba(15,157,79,0.08)' : 'rgba(134,239,172,0.10)')
                 : (isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.06)'),
               border: palette.cardBorder,
@@ -626,7 +592,7 @@ export default function FieldHealthCard({
               )
             })}
           </div>
-          {degraded && digest && (
+          {degraded && digest && !compact && (
             <div
               className="mt-1.5 truncate text-[9.5px] md:text-[clamp(7.8px,0.9dvh,9.5px)]"
               style={{ color: isLight ? '#b45309' : '#fcd34d' }}
@@ -683,8 +649,8 @@ export default function FieldHealthCard({
           <div
             className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 md:py-[clamp(0.2rem,0.55dvh,0.25rem)] text-[9px] md:text-[clamp(7.5px,0.9dvh,9px)] font-bold uppercase tracking-[0.18em]"
             style={{
-              color: online ? (isLight ? '#0f9d4f' : '#86efac') : connecting ? palette.mutedText : '#ff8a80',
-              background: online
+              color: stale || degraded ? (isLight ? '#b45309' : '#fcd34d') : online ? (isLight ? '#0f9d4f' : '#86efac') : connecting ? palette.mutedText : '#ff8a80',
+              background: stale || degraded ? 'rgba(251,191,36,0.1)' : online
                 ? (isLight ? 'rgba(15,157,79,0.08)' : 'rgba(134,239,172,0.10)')
                 : (isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.06)'),
               border: palette.cardBorder,
@@ -747,8 +713,8 @@ export default function FieldHealthCard({
             opacity: 0.9,
           }}
         >
-          <span style={{ fontWeight: 600 }}>Degraded:</span>{' '}
-          {digest.servicesDown.join(', ')}
+          <span style={{ fontWeight: 600 }}>Attention:</span>{' '}
+          {digest.servicesDown.join(', ') || 'Performance watch. See measured inference and memory below.'}
         </div>
       )}
 
@@ -829,6 +795,16 @@ export default function FieldHealthCard({
           </div>
         )}
       </dl>
+
+      {sys && !compact && (
+        <dl className="mt-5 grid grid-cols-2 gap-4 rounded-xl border border-white/10 p-4 text-sm">
+          <div><dt style={{ color: palette.mutedText }}>Measured inference</dt><dd className="mt-1 text-lg font-semibold">{rknnFps != null ? `${rknnFps.toFixed(2)} inf/s` : 'Not reported'}</dd></div>
+          <div><dt style={{ color: palette.mutedText }}>Inference target</dt><dd className="mt-1 text-lg font-semibold">{rknn?.target_fps != null ? `${rknn.target_fps.toFixed(2)} inf/s` : 'Not reported'}</dd></div>
+          <div><dt style={{ color: palette.mutedText }}>Configured video</dt><dd className="mt-1">{sys.media_graph?.stream_profile?.fps != null ? `${sys.media_graph.stream_profile.fps} FPS` : 'Not reported'}</dd></div>
+          <div><dt style={{ color: palette.mutedText }}>Swap used</dt><dd className="mt-1">{sys.performance?.swap_used_pct != null ? `${sys.performance.swap_used_pct}%` : 'Not reported'}</dd></div>
+          <div className="col-span-2" style={{ color: palette.bodyText }}><dt className="sr-only">Interpretation</dt><dd>{belowTarget ? 'Inference is below its configured target. ' : ''}Video delivery is measured separately during playback.</dd></div>
+        </dl>
+      )}
 
       {sys && !compact && (
         <div
@@ -920,7 +896,7 @@ export default function FieldHealthCard({
               className="text-[8px] font-semibold uppercase tracking-[0.18em]"
               style={{ color: palette.mutedText }}
             >
-              Checked
+              Sample age
             </div>
             <div
               className={`${compact ? 'text-[11px]' : 'text-[12px]'} mt-1 truncate font-semibold`}

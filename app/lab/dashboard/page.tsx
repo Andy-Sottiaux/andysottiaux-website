@@ -17,7 +17,6 @@ export const metadata: Metadata = {
 
 export default async function Home() {
   const initialHealthPoll = await probeInitialHealth()
-  const initialBoardLive = initialHealthPoll.digest?.ok === true
 
-  return <CompactPortfolio initialBoardLive={initialBoardLive} initialHealthPoll={initialHealthPoll} />
+  return <CompactPortfolio initialHealthPoll={initialHealthPoll} />
 }

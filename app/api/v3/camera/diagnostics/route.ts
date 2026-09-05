@@ -127,42 +127,6 @@ async function readJsonCheck(url: string, authorization: string, timeoutMs = 600
   }
 }
 
-async function readImageCheck(url: string, authorization: string, timeoutMs = 8000): Promise<CheckResult> {
-  const started = performance.now()
-  const { controller, timeout } = timeoutSignal(timeoutMs)
-  try {
-    const response = await fetch(url, {
-      cache: 'no-store',
-      signal: controller.signal,
-      headers: {
-        Authorization: authorization,
-        'User-Agent': 'andysottiaux.com/camera-diagnostics',
-      },
-    })
-    const contentType = response.headers.get('content-type') || ''
-    const bytes = new Uint8Array(await response.arrayBuffer())
-    const jpeg = bytes.length > 2 && bytes[0] === 0xff && bytes[1] === 0xd8
-    return {
-      ok: response.ok && (jpeg || contentType.includes('image/jpeg')),
-      status: response.status,
-      latency_ms: elapsed(started),
-      data: {
-        bytes: bytes.length,
-        content_type: contentType,
-        jpeg,
-      },
-    }
-  } catch (error) {
-    return {
-      ok: false,
-      latency_ms: elapsed(started),
-      error: error instanceof Error ? error.message : String(error),
-    }
-  } finally {
-    clearTimeout(timeout)
-  }
-}
-
 function asObject<T>(check: CheckResult): T | null {
   if (!check.data || typeof check.data !== 'object') return null
   return check.data as T
@@ -181,10 +145,9 @@ export async function GET(request: NextRequest) {
   }
 
   const base = RELAY_BASE.trim().replace(/\/+$/, '')
-  const [health, quality, snapshot, training, detections] = await Promise.all([
+  const [health, quality, training, detections] = await Promise.all([
     readJsonCheck(`${base}/api/health`, authorization),
     readJsonCheck(`${base}/api/camera/quality`, authorization),
-    readImageCheck(`${base}/api/camera/sanitized.jpeg`, authorization),
     readJsonCheck(`${base}/api/training/status`, authorization),
     readJsonCheck(`${base}/api/detections`, authorization),
   ])
@@ -225,7 +188,6 @@ export async function GET(request: NextRequest) {
       },
     },
     sanitizer: quality,
-    snapshot,
     training,
     detections,
   }
@@ -235,7 +197,6 @@ export async function GET(request: NextRequest) {
     health.ok &&
     checks.stream_config.ok &&
     quality.ok &&
-    snapshot.ok &&
     training.ok &&
     detections.ok
 

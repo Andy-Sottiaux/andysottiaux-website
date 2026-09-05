@@ -15,17 +15,21 @@ export default function HealthTile({
 }) {
   if (onOpen) {
     return (
-      <div
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-label="Open system diagnostics"
+        aria-haspopup="dialog"
         data-card-hover="true"
         className="block w-full h-full min-h-[260px] lg:min-h-0 [&>div]:h-full text-left"
       >
         <FieldHealthCard initialHealthPoll={initialHealthPoll} variant="compact" />
-      </div>
+      </button>
     )
   }
   return (
     <Link
-      href="/#now"
+      href="/lab"
       aria-label="Open Field Live on the full site"
       data-card-hover="true"
       className="block h-full min-h-[260px] lg:min-h-0 [&>div]:h-full"

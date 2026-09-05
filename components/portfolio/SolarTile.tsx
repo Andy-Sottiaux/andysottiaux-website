@@ -16,7 +16,7 @@ export default function SolarTile({ onOpen }: { onOpen?: () => void }) {
         type="button"
         onClick={() => { haptic('open'); onOpen() }}
         aria-haspopup="dialog"
-        aria-label="Open Field Live"
+        aria-label="Open power details"
         data-card-hover="true"
         className="block w-full h-full min-h-[520px] sm:min-h-[430px] lg:min-h-0 [&>div]:h-full text-left"
       >

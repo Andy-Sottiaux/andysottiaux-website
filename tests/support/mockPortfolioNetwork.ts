@@ -37,7 +37,8 @@ export async function mockPortfolioNetwork(page: Page) {
   await page.route('**/api/v3/health', (route) => json(route, {
     ok: true,
     uptime_s: 172800,
-    service_count: 6,
+    service_count: 2,
+    telemetry: { observed_at: Date.now(), received_at: Date.now(), age_seconds: 0, stale: false },
     services_down: [],
     services: [
       { name: 'camera', status: 'running', ok: true },
@@ -76,7 +77,7 @@ export async function mockPortfolioNetwork(page: Page) {
 
   await page.route('**/api/fundraising', (route) => json(route, { raised: 2756, goal: 3000 }))
   await page.route('**/api/v3/camera/quality**', (route) => json(route, { ok: true, sanitizer: { latest_clean_age_s: 1, hls_ok: true } }))
-  await page.route('**/api/v3/training/status**', (route) => json(route, {
+  const training = {
     ok: true,
     source: 'mock',
     state: 'waiting_for_labels',
@@ -117,17 +118,20 @@ export async function mockPortfolioNetwork(page: Page) {
         current_classes: { package: 23 },
       },
     },
-  }))
-  await page.route('**/api/v3/detections**', (route) => json(route, {
+  }
+  await page.route('**/api/v3/training/status**', (route) => json(route, training))
+  const detections = {
     ok: true,
     counts: { package: 3 },
     recent: [],
     window_sec: 900,
     relay: { stale: false, cache_age_s: 0.1, type: 'board_detections' },
-  }))
+  }
+  await page.route('**/api/v3/detections**', (route) => json(route, detections))
   await page.route('**/api/v3/camera/diagnostics**', (route) => json(route, {
     ok: true,
     camera: 'cam1',
+    checks: { training: { data: training }, detections: { data: detections } },
     relay_base: 'https://cam1.andysottiaux.com',
     summary: {
       resolution: '1280x960',

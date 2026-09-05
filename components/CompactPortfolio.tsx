@@ -1,34 +1,9 @@
 'use client'
 
 /**
- * CompactPortfolio — single-viewport bento home page.
- *
- * Two upgrades layered on top of the original bento:
- *
- *   1. Smart fallback tiles. The board (`/api/v3/health`) is polled by a
- *      single shared `useBoardLive()` hook with hysteresis (see lib).
- *      Camera stays visible even when health is unreachable, so visitors see
- *      the stream's own offline state instead of the feed disappearing. Solar
- *      is independent now because it comes from the Raspberry Pi/Victron path;
- *      only health swaps to fallback content when the camera board is stale.
- *
- *   2. Modal expansion. Clicking a tile body opens an in-place modal with
- *      an expanded view of that section instead of navigating off to
- *      `/#section`. The deep-link `<a>` is still rendered as a fallback,
- *      but `onOpen` takes precedence when provided.
- *
- * Layout (1440×900 desktop, viewport-filling bento):
- *   ┌────────────┬─────────────────────────┬────────────┐
- *   │ identity   │ camera                  │ solar      │
- *   ├────────────┤                         │            │
- *   │ health     │                         │            │
- *   ├────────────┴──────────────┬──────────┴────────────┤
- *   │ experience                │ marathon │ contact    │
- *   ├───────────────────────────┤          │            │
- *   │ projects                  │          │            │
- *   └───────────────────────────┴──────────┴────────────┘
- *
- * Mobile: stacks vertically. Modal renders full-bleed-ish.
+ * Personal, single-screen desktop dashboard with focused detail dialogs.
+ * Health remains visible during faults; camera playback is always opt-in.
+ * Public telemetry is shared across tiles and their expanded views.
  */
 
 import { useState } from 'react'
@@ -36,47 +11,43 @@ import { FieldThemeProvider, useFieldTheme } from './fieldTheme'
 import type { ModalKey } from './CompactModals'
 import BentoGrid from './portfolio/BentoGrid'
 import PortfolioModals from './portfolio/PortfolioModals'
-import { useBoardLive } from '@/lib/useBoardLive'
+import type { LiveSection } from './live/LiveSystemDashboard'
 import type { FieldCameraSource } from '@/lib/fieldCameraConfig'
 import type { HealthPollResult } from '@/lib/fieldHealth'
 
 export default function CompactPortfolio({
-  initialBoardLive = true,
   initialHealthPoll,
 }: {
-  /** SSR-resolved board liveness, passed in from app/compact/page.tsx
-   *  so the initial HTML already shows the correct (live or fallback)
-   *  tiles — no fallback-then-live flicker for visitors arriving while
-   *  the board is down. */
-  initialBoardLive?: boolean
+  /** Sanitized server-rendered reading, if available. */
   initialHealthPoll?: HealthPollResult
 }) {
   return (
     <FieldThemeProvider>
-      <CompactInner initialBoardLive={initialBoardLive} initialHealthPoll={initialHealthPoll} />
+      <CompactInner initialHealthPoll={initialHealthPoll} />
     </FieldThemeProvider>
   )
 }
 
 function CompactInner({
-  initialBoardLive,
   initialHealthPoll,
 }: {
-  initialBoardLive: boolean
   initialHealthPoll?: HealthPollResult
 }) {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
-  const boardLive = useBoardLive(initialBoardLive)
 
   const [openModal, setOpenModal] = useState<ModalKey | null>(null)
+  const [liveSection, setLiveSection] = useState<LiveSection>('overview')
   const [selectedCamera, setSelectedCamera] = useState<FieldCameraSource>('field')
   const [cameraSessionId, setCameraSessionId] = useState(0)
   const close = () => {
     setOpenModal(null)
     setCameraSessionId((current) => current + 1)
   }
-  const open = (key: ModalKey) => setOpenModal(key)
+  const open = (key: ModalKey, section: LiveSection = 'overview') => {
+    setLiveSection(section)
+    setOpenModal(key)
+  }
 
   return (
     <main
@@ -104,7 +75,6 @@ function CompactInner({
       >
         <div className="w-full max-w-[1380px] mx-auto lg:flex-1 lg:flex lg:flex-col lg:min-h-0">
           <BentoGrid
-            boardLive={boardLive}
             cameraEnabled={openModal === null}
             cameraSessionId={cameraSessionId}
             initialHealthPoll={initialHealthPoll}
@@ -118,6 +88,7 @@ function CompactInner({
       <PortfolioModals
         initialHealthPoll={initialHealthPoll}
         openModal={openModal}
+        initialSection={liveSection}
         selectedCamera={selectedCamera}
         onCameraChange={setSelectedCamera}
         onClose={close}

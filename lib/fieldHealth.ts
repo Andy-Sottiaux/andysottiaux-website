@@ -1,3 +1,5 @@
+import { publicFreshness } from './publicTelemetry'
+
 export type ServiceLoose = {
   name?: string
   Name?: string
@@ -21,6 +23,7 @@ export type SystemLoose = {
     cma_allocated_pct?: number
     swap_used_pct?: number
     status?: string
+    degraded?: boolean
   }
   media_graph?: {
     state?: string
@@ -28,6 +31,7 @@ export type SystemLoose = {
     visual_quality?: string
     input_size?: string
     output_size?: string
+    stream_profile?: { width?: number; height?: number; fps?: number; codec?: string; bitrate_kbps?: number; bitrate_mbps?: number; output_size?: string }
   }
   tailnet?: {
     ok?: boolean
@@ -65,6 +69,7 @@ export type SystemLoose = {
     age_s?: number
     interval_sec?: number
     message?: string
+    waiting_for_stream?: boolean
   }
   victron_advert_age_s?: number
   victron_hearing?: boolean
@@ -79,6 +84,8 @@ export type HealthLoose = {
   services?: ServiceLoose[]
   services_down?: string[] | null
   system?: SystemLoose
+  relay?: { cache_age_s?: number; stale?: boolean }
+  telemetry?: { observed_at: number | null; received_at: number; age_seconds: number | null; stale: boolean }
 }
 
 export type HealthDigest = {
@@ -89,6 +96,8 @@ export type HealthDigest = {
   servicesDown: string[]
   rttMs: number
   fetchedAt: number
+  observedAt: number | null
+  stale: boolean
   system?: SystemLoose
 }
 
@@ -118,17 +127,19 @@ export function buildHealthDigest(
   const up = Math.max(0, total - down)
 
   return {
-    ok: parsed.ok ?? (down === 0),
+    ok: parsed.ok === true && !parsed.error,
     uptimeSec: parsed.uptime_s ?? 0,
     servicesUp: up,
     servicesTotal: total,
     servicesDown: downList ?? [],
     rttMs,
     fetchedAt,
+    observedAt: publicFreshness(parsed, fetchedAt).observed_at,
+    stale: publicFreshness(parsed, fetchedAt).stale,
     system: parsed.system,
   }
 }
 
 export function healthLooksLive(parsed: HealthLoose | null): boolean {
-  return Boolean(parsed && parsed.ok !== false && !parsed.error)
+  return Boolean(parsed && parsed.ok === true && !parsed.error && !publicFreshness(parsed).stale)
 }

@@ -278,7 +278,7 @@ test('opens and closes primary modals', async ({ page }) => {
   await openDashboard(page)
   await page.waitForLoadState('networkidle')
 
-  await page.getByRole('button', { name: 'Open Field Live' }).click()
+  await page.getByRole('button', { name: 'Open power details' }).click()
   await expect(page.locator('dialog[open]')).toBeVisible()
   await expect(page.locator('dialog[open] h2')).toHaveText('Field Live')
   await page.keyboard.press('Escape')
@@ -326,8 +326,8 @@ test('requires a new camera opt-in after closing a modal', async ({ page }) => {
 test('surfaces Cam1 AI readiness and project validation proof', async ({ page }) => {
   await openDashboard(page)
 
-  await page.getByRole('button', { name: 'Open Field Live' }).click()
-  await page.getByRole('button', { name: 'Unlock Cam 1 live stream' }).click()
+  await page.getByRole('button', { name: 'Open system diagnostics' }).click()
+  await page.getByRole('button', { name: 'Unlock', exact: true }).click()
   const authDialog = page.getByRole('dialog', { name: 'Camera & device access' })
   await authDialog.getByLabel('Access password').fill(TEST_PASSWORD)
   await authDialog.getByRole('button', { name: 'Unlock', exact: true }).click()

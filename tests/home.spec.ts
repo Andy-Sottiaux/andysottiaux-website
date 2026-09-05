@@ -116,6 +116,7 @@ test('keeps device API traffic out of the public homepage', async ({ page }) => 
 test('stops private-session checks after returning from the unlocked lab', async ({ page }) => {
   await mockPortfolioNetwork(page)
   await page.goto('/lab')
+  await page.getByRole('tab', { name: 'camera', exact: true }).click()
   await page.getByRole('button', { name: 'Unlock Cam 1 live stream' }).click()
 
   const authDialog = page.getByRole('dialog', { name: 'Camera & device access' })

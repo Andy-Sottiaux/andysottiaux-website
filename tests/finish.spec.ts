@@ -70,6 +70,7 @@ test('lab guide works with every device source unavailable and does not start me
     await expect(button).toHaveAttribute('aria-pressed', 'true')
   }
   await expect(page.getByText('Make failure understandable.')).toBeVisible()
+  await page.getByRole('tab', { name: 'diagnostics', exact: true }).click()
   await expect(page.getByLabel('Cam1 AI training readiness')).toContainText('access-controlled')
   await expect(page.getByLabel('Cam1 AI training readiness')).not.toContainText('services healthy')
   expect(mediaRequests).toEqual([])
@@ -79,6 +80,7 @@ test('lab retains explicit stale reading state without presenting it as current'
   await mockPortfolioNetwork(page)
   await page.route('**/api/v3/solar', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ battery_voltage: 13.1, battery_soc: 65, solar_power: 12, live: false, stale: true, age_seconds: 3600, timestamp: Date.now() / 1000 - 3600 }) }))
   await page.goto('/lab')
+  await page.getByRole('tab', { name: 'power', exact: true }).click()
   await expect(page.getByText('stale', { exact: true }).last()).toBeVisible()
   await expect(page.getByText(/last seen/).last()).toBeVisible()
   await expect(page.locator('[aria-label="Solar power and battery"]')).not.toContainText('NaN')

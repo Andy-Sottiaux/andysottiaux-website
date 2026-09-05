@@ -6,14 +6,17 @@ import Modal from '../Modal'
 import { useFieldTheme } from '../fieldTheme'
 import type { FieldCameraSource } from '@/lib/fieldCameraConfig'
 import type { HealthPollResult } from '@/lib/fieldHealth'
+import type { LiveSection } from '../live/LiveSystemDashboard'
 
 type LiveModalContentProps = {
+  initialSection?: LiveSection
   initialHealthPoll?: HealthPollResult
   selectedCamera?: FieldCameraSource
   onCameraChange?: (value: FieldCameraSource) => void
 }
 
 type PortfolioModalsProps = {
+  initialSection?: LiveSection
   initialHealthPoll?: HealthPollResult
   openModal: ModalKey | null
   selectedCamera: FieldCameraSource
@@ -52,6 +55,7 @@ const AirpodsMountModalContent = dynamic(() => import('../CompactModals').then((
 
 export default function PortfolioModals({
   initialHealthPoll,
+  initialSection,
   openModal,
   selectedCamera,
   onCameraChange,
@@ -76,6 +80,7 @@ export default function PortfolioModals({
         size="lg"
       >
         <LiveModalContent
+          initialSection={initialSection}
           initialHealthPoll={initialHealthPoll}
           selectedCamera={selectedCamera}
           onCameraChange={onCameraChange}

@@ -105,7 +105,7 @@ test('preview never requests private media or controls when browsing locked came
     await page.getByRole('tab', { name }).click()
     await expect(page.getByRole('button', { name: `Unlock ${name} live stream` })).toBeVisible()
   }
-  await page.getByRole('button', { name: 'Open Field Live' }).click()
+  await page.getByRole('button', { name: 'Open power details' }).click()
   await expect(page.getByRole('dialog', { name: 'Field Live' })).toBeVisible()
   await page.keyboard.press('Escape')
   expect(privateRequests).toEqual([])

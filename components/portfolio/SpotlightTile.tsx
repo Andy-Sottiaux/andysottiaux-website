@@ -551,7 +551,6 @@ function SpotlightPreviewProjectPanel({
               alt={item.previewAlt ?? ''}
               fill
               priority
-              unoptimized
               sizes="(max-width: 640px) 88vw, 42vw"
               className="object-cover"
             />

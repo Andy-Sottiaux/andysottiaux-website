@@ -40,7 +40,8 @@ test('renders the live lab with camera selection and case-study navigation', asy
 
   await expect(page.getByRole('heading', { level: 1, name: 'Field systems and operational telemetry' })).toBeVisible()
   await expect(page.getByRole('link', { name: /Field-camera case study/ })).toHaveAttribute('href', '/work/field-camera')
-  await expect(page.getByText('Camera relay, telemetry, and edge-AI health in one surface.')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Inside the field system' })).toBeVisible()
+  await page.getByRole('tab', { name: 'camera', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Cam 1', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Cam 2', exact: true })).toBeVisible()
 })

@@ -13,6 +13,7 @@
 
 import { useEffect, useState, type ReactNode } from 'react'
 import { fetchWithTimeout } from '@/lib/fetchWithTimeout'
+import { useSharedPoll } from '@/lib/useSharedPoll'
 import { useFieldTheme } from './fieldTheme'
 
 const SOLAR_URL = '/api/v3/solar'
@@ -25,6 +26,7 @@ const SOLAR_HISTORY_POLL_MS = 5 * 60_000
 type Solar = {
   battery_voltage: number
   battery_soc?: number
+  battery_soc_estimated?: boolean
   charging_current: number
   solar_power: number
   yield_today: number
@@ -57,7 +59,7 @@ type SolarPollResult = {
   status: number
 }
 
-async function fetchSolarTelemetry(signal: AbortSignal): Promise<SolarPollResult> {
+async function fetchSolarTelemetry(signal: AbortSignal, previous?: SolarPollResult): Promise<SolarPollResult> {
   try {
     const res = await fetchWithTimeout(SOLAR_URL, { signal, cache: 'no-store' }, 8_000)
     let data: SolarPollResult['data'] = null
@@ -67,6 +69,9 @@ async function fetchSolarTelemetry(signal: AbortSignal): Promise<SolarPollResult
       data = null
     }
 
+    if (typeof data?.battery_voltage !== 'number' && typeof previous?.data?.battery_voltage === 'number') {
+      data = { ...previous.data, live: false, stale: true }
+    }
     return {
       data,
       ok: res.ok,
@@ -75,13 +80,15 @@ async function fetchSolarTelemetry(signal: AbortSignal): Promise<SolarPollResult
     }
   } catch {
     return {
-      data: null,
+      data: previous?.data ? { ...previous.data, live: false, stale: true } : null,
       ok: false,
       offline: true,
       status: 0,
     }
   }
 }
+
+const fetchSharedSolarHistory = (signal: AbortSignal) => fetchSolarHistory({ signal, points: FULL_HISTORY_POINTS })
 
 async function fetchSolarHistory({
   signal,
@@ -145,55 +152,18 @@ export default function FieldSolarCard({
   const isLight = palette.mode === 'light'
   const compact = variant === 'compact'
   const requestedHistoryPoints = historyPoints ?? (compact ? COMPACT_HISTORY_POINTS : FULL_HISTORY_POINTS)
-  const [solarPoll, setSolarPoll] = useState<SolarPollResult | null>(null)
-  const [history, setHistory] = useState<SolarHistoryPoint[]>([])
-
-  useEffect(() => {
-    let cancelled = false
-    let ctrl: AbortController | null = null
-
-    const poll = async () => {
-      ctrl?.abort()
-      ctrl = new AbortController()
-      const next = await fetchSolarTelemetry(ctrl.signal)
-      if (!cancelled) setSolarPoll(next)
-    }
-
-    poll()
-    const timer = window.setInterval(poll, SOLAR_POLL_MS)
-    return () => {
-      cancelled = true
-      ctrl?.abort()
-      window.clearInterval(timer)
-    }
-  }, [])
-
-  useEffect(() => {
-    let cancelled = false
-    let ctrl: AbortController | null = null
-
-    const poll = async () => {
-      ctrl?.abort()
-      ctrl = new AbortController()
-      const next = await fetchSolarHistory({ signal: ctrl.signal, points: requestedHistoryPoints })
-      if (!cancelled) setHistory(next)
-    }
-
-    poll()
-    const timer = window.setInterval(poll, SOLAR_HISTORY_POLL_MS)
-    return () => {
-      cancelled = true
-      ctrl?.abort()
-      window.clearInterval(timer)
-    }
-  }, [requestedHistoryPoints])
+  const solarPoll = useSharedPoll(SOLAR_URL, fetchSolarTelemetry, SOLAR_POLL_MS)
+  const sharedHistory = useSharedPoll(SOLAR_HISTORY_URL, fetchSharedSolarHistory, SOLAR_HISTORY_POLL_MS) ?? []
+  const history = sharedHistory.filter((_, index) => index % Math.max(1, Math.floor(sharedHistory.length / requestedHistoryPoints)) === 0 || index === sharedHistory.length - 1)
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 15_000); return () => clearInterval(timer) }, [])
 
   const solarData = solarPoll?.data ?? null
   const solar = solarData && typeof solarData.battery_voltage === 'number' && Number.isFinite(solarData.battery_voltage) && !solarData.error
     ? solarData as Solar
     : null
   const state: CardState = solar
-    ? (solar.live === false || solar.stale === true ? 'stale' : 'live')
+    ? (solar.live === false || solar.stale === true || !Number.isFinite(solar.timestamp) || now / 1000 - solar.timestamp > 90 || solar.timestamp > now / 1000 + 5 ? 'stale' : 'live')
     : solarPoll == null
       ? 'loading'
       : solarPoll?.offline || solarPoll?.ok === false && solarPoll?.status !== 503 && !solarPoll?.data?.error
@@ -226,7 +196,7 @@ export default function FieldSolarCard({
 
   return (
     <div
-      className={`relative rounded-2xl h-full min-h-0 flex flex-col overflow-hidden ${compact ? 'p-4 md:p-[clamp(0.7rem,1.35dvh,1.1rem)] xl:p-[clamp(0.8rem,1.45dvh,1.25rem)]' : 'p-7 md:p-8'}`}
+      className={`relative rounded-2xl h-full min-h-0 flex flex-col overflow-hidden ${compact ? 'p-4 md:p-[clamp(0.7rem,1.35dvh,1.1rem)] xl:p-[clamp(0.8rem,1.45dvh,1.25rem)]' : 'p-4 sm:p-7 md:p-8'}`}
       data-field-card="true"
       style={{
         background: palette.cardBackground,
@@ -274,7 +244,7 @@ export default function FieldSolarCard({
         )}
       </div>
 
-      {/* Hero number — battery voltage */}
+      {/* Battery state first; voltage remains visible in the supporting line. */}
       <div className="flex items-baseline gap-2 mb-1">
         <div
           className={`${compact ? 'text-[44px] md:text-[clamp(32px,4.9dvh,48px)]' : 'text-[56px] sm:text-[68px]'} font-semibold leading-none tracking-tight tabular-nums`}
@@ -288,13 +258,13 @@ export default function FieldSolarCard({
             backgroundClip: 'text',
           }}
         >
-          {hasValues ? solar.battery_voltage.toFixed(2) : '—'}
+          {hasValues ? soc ?? '—' : '—'}
         </div>
         <div
           className={`${compact ? 'text-[20px] md:text-[clamp(15px,2.2dvh,20px)]' : 'text-[20px] sm:text-[24px]'} font-medium tracking-tight`}
           style={{ color: palette.mutedText }}
         >
-          V
+          %
         </div>
       </div>
       <div
@@ -304,14 +274,15 @@ export default function FieldSolarCard({
         {hasValues ? (
           <>
             <span>
-              Battery <span className="tabular-nums" style={{ color: valueColor, opacity: 0.85 }}>{soc ?? '—'}%</span>
+              <span className="tabular-nums" style={{ color: valueColor, opacity: 0.85 }}>{solar.battery_voltage.toFixed(2)} V</span>
               <span className="mx-2" style={{ color: palette.fadedText }}>·</span>
-              <span className="capitalize">{solar.charge_state}</span>
-              {state === 'stale' && solar.age_seconds != null && (
+              <span className="capitalize">{solar.charge_state || 'state unknown'}</span>
+              <span className="ml-2">{solar.battery_soc_estimated !== false ? 'Est. charge' : 'Charge'}</span>
+              {state === 'stale' && !compact && Number.isFinite(solar.timestamp) && (
                 <>
                   <span className="mx-2" style={{ color: palette.fadedText }}>·</span>
                   <span style={{ color: isLight ? '#b45309' : '#fcd34d' }}>
-                    last seen {fmtAge(solar.age_seconds)}
+                    last seen {fmtAge(Math.max(0, now / 1000 - solar.timestamp))}
                   </span>
                 </>
               )}
@@ -341,7 +312,14 @@ export default function FieldSolarCard({
         )}
       </div>
 
-      {/* SOC bar — bigger, with depth */}
+      {!compact && <div className="mb-5 grid grid-cols-1 gap-2 text-center text-sm sm:grid-cols-3" aria-label="Energy flow">
+        <div className="rounded-xl border border-amber-300/20 bg-amber-300/5 p-3"><div className="text-amber-200">Solar →</div><div className="mt-1 font-semibold">{hasValues && Number.isFinite(solar.solar_power) ? `${Math.round(solar.solar_power)} W` : 'Not reported'}</div></div>
+        <div className="rounded-xl border border-emerald-300/20 bg-emerald-300/5 p-3"><div className="text-emerald-200">Battery →</div><div className="mt-1 font-semibold">{hasValues ? solar.charge_state || 'Unknown' : 'Not reported'}</div></div>
+        <div className="rounded-xl border border-cyan-300/20 bg-cyan-300/5 p-3"><div className="text-cyan-200">Load</div><div className="mt-1 font-semibold">{hasValues && loadWatts != null ? `${loadWatts.toFixed(1)} W` : 'Not reported'}</div></div>
+        <p className="mt-2 text-left sm:col-span-3" style={{ color: palette.bodyText }}>Charge is estimated from voltage and charging current unless a measured state of charge is supplied. Load is the controller reading, not a remaining-runtime estimate. {hasValues && Number.isFinite(solar.timestamp) ? `Sample ${fmtAge(Math.max(0, now / 1000 - solar.timestamp))}.` : 'Sample age unknown.'}</p>
+      </div>}
+
+      {/* SOC bar */}
       <div className={`relative ${compact ? 'mb-3 md:mb-[clamp(0.3rem,0.75dvh,0.65rem)]' : 'mb-7'}`}>
         <div
           className="h-2.5 md:h-[clamp(0.4rem,0.9dvh,0.625rem)] w-full rounded-full overflow-hidden"
@@ -462,7 +440,14 @@ export default function FieldSolarCard({
             </div>
           </div>
           {hasHistory ? (
-            <Sparkline data={solarHistory} isLight={isLight} />
+            <div className="grid gap-4 sm:grid-cols-2">
+              {([{ title: 'Solar input', data: solarHistory, tone: 'solar' }, { title: 'Battery voltage', data: voltageHistory, tone: 'battery' }] as const).map((chart) => (
+                <figure key={chart.tone} className="min-w-0 rounded-xl border border-white/10 p-3">
+                  <figcaption className="mb-3 text-sm font-semibold" style={{ color: palette.bodyText }}>{chart.title} · 24h</figcaption>
+                  <div className="h-40 [&_span]:!text-xs"><MiniTrendChart data={chart.data} isLight={isLight} tone={chart.tone} /></div>
+                </figure>
+              ))}
+            </div>
           ) : (
             <HistoryPlaceholder isLight={isLight} label="Pi 24h history pending" />
           )}
@@ -805,141 +790,6 @@ function CombinedEnergyChart({
       <path d={voltPath} fill="none" stroke={voltColor} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
       <circle cx={currentX} cy={currentSolarY} r="2.8" fill={solarColor} stroke={isLight ? 'rgba(255,255,255,0.92)' : 'rgba(12,12,14,0.92)'} strokeWidth="1.2" />
       <circle cx={currentX} cy={currentVoltY} r="2.8" fill={voltColor} stroke={isLight ? 'rgba(255,255,255,0.92)' : 'rgba(12,12,14,0.92)'} strokeWidth="1.2" />
-    </svg>
-  )
-}
-
-function Sparkline({
-  data,
-  isLight,
-  className = 'w-full h-24',
-  gradientId = 'solarSparkArea',
-  tone = 'solar',
-}: {
-  data: number[]
-  isLight: boolean
-  className?: string
-  gradientId?: string
-  tone?: 'solar' | 'battery'
-}) {
-  const W = 320
-  const H = 112
-  const PAD_L = 38
-  const PAD_R = 8
-  const PAD_T = 10
-  const PAD_B = 24
-  const innerW = W - PAD_L - PAD_R
-  const innerH = H - PAD_T - PAD_B
-  const strokeColor = tone === 'battery'
-    ? (isLight ? '#0a8aa8' : '#67e8f9')
-    : (isLight ? '#c2410c' : '#ffb84d')
-  const areaTop = tone === 'battery'
-    ? (isLight ? 'rgba(10,138,168,0.24)' : 'rgba(103,232,249,0.30)')
-    : (isLight ? 'rgba(194,65,12,0.30)' : 'rgba(255,184,77,0.4)')
-  const areaBottom = tone === 'battery'
-    ? (isLight ? 'rgba(10,138,168,0)' : 'rgba(103,232,249,0)')
-    : (isLight ? 'rgba(194,65,12,0)' : 'rgba(255,184,77,0)')
-  const baselineColor = isLight ? 'rgba(0,0,0,0.18)' : 'rgba(255,255,255,0.12)'
-  const axisColor = isLight ? 'rgba(28,26,28,0.45)' : 'rgba(255,255,255,0.42)'
-  const gridColor = isLight ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.10)'
-
-  if (data.length < 2) {
-    return (
-      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet" className={className}>
-        <line x1={PAD_L} y1={PAD_T + innerH} x2={W - PAD_R} y2={PAD_T + innerH} stroke={baselineColor} strokeWidth="1" />
-      </svg>
-    )
-  }
-
-  const rawMax = Math.max(...data)
-  const rawMin = Math.min(...data)
-  const yMin = tone === 'solar'
-    ? 0
-    : Math.floor((rawMin - 0.02) * 20) / 20
-  const yMax = tone === 'solar'
-    ? niceCeil(Math.max(5, rawMax))
-    : Math.ceil((rawMax + 0.02) * 20) / 20
-  const range = Math.max(tone === 'solar' ? 1 : 0.05, yMax - yMin)
-  const stepX = innerW / (data.length - 1)
-  const yFor = (v: number) => PAD_T + innerH - ((v - yMin) / range) * innerH
-  const linePath = buildSmoothPath(data.map((v, i) => [
-    PAD_L + i * stepX,
-    yFor(v),
-  ]))
-  const areaPath = `${linePath} L ${PAD_L + innerW} ${PAD_T + innerH} L ${PAD_L} ${PAD_T + innerH} Z`
-  const tickValues = tone === 'solar'
-    ? [yMax, yMax / 2, 0]
-    : [yMax, yMin + range / 2, yMin]
-  const current = data[data.length - 1]
-  const currentX = PAD_L + innerW
-  const currentY = yFor(current)
-
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet" className={className} aria-hidden="true">
-      <defs>
-        <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={areaTop} />
-          <stop offset="100%" stopColor={areaBottom} />
-        </linearGradient>
-      </defs>
-      {tickValues.map((value, index) => {
-        const y = yFor(value)
-        return (
-          <g key={`${value}-${index}`}>
-            <line
-              x1={PAD_L}
-              y1={y}
-              x2={W - PAD_R}
-              y2={y}
-              stroke={gridColor}
-              strokeWidth={index === tickValues.length - 1 ? 1.1 : 0.8}
-            />
-            <text
-              x={PAD_L - 5}
-              y={y + 3}
-              textAnchor="end"
-              fontSize="9"
-              fontWeight="650"
-              fill={axisColor}
-            >
-              {formatTick(value, tone)}
-            </text>
-          </g>
-        )
-      })}
-      {['24h', '12h', 'now'].map((label, index) => {
-        const x = PAD_L + (index / 2) * innerW
-        return (
-          <text
-            key={label}
-            x={x}
-            y={H - 5}
-            textAnchor={index === 0 ? 'start' : index === 2 ? 'end' : 'middle'}
-            fontSize="9"
-            fontWeight="650"
-            fill={axisColor}
-          >
-            {label}
-          </text>
-        )
-      })}
-      <path d={areaPath} fill={`url(#${gradientId})`} />
-      <path
-        d={linePath}
-        fill="none"
-        stroke={strokeColor}
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <circle
-        cx={currentX}
-        cy={currentY}
-        r="3"
-        fill={strokeColor}
-        stroke={isLight ? 'rgba(255,255,255,0.92)' : 'rgba(12,12,14,0.92)'}
-        strokeWidth="1.4"
-      />
     </svg>
   )
 }

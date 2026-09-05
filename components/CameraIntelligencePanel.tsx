@@ -93,6 +93,7 @@ type DetectionPayload = {
 }
 
 type CameraDiagnostics = {
+  checks?: { training?: { data?: TrainingStatus }; detections?: { data?: DetectionPayload } }
   ok?: boolean
   summary?: {
     resolution?: string | null
@@ -181,23 +182,17 @@ function useCameraIntelligence(enabled: boolean): IntelligenceState {
     let activeController: AbortController | null = null
 
     const load = async () => {
+      if (document.visibilityState === 'hidden') return
       activeController?.abort()
       const controller = new AbortController()
       activeController = controller
 
       setState((current) => ({ ...current, loading: current.updatedAt === null, error: null }))
 
-      const [training, detections, diagnostics] = await Promise.allSettled([
-        readJson<TrainingStatus>('/api/v3/training/status', controller.signal),
-        readJson<DetectionPayload>('/api/v3/detections?window_sec=900', controller.signal),
-        readJson<CameraDiagnostics>('/api/v3/camera/diagnostics', controller.signal),
-      ])
-
+      const nextDiagnostics = await readJson<CameraDiagnostics>('/api/v3/camera/diagnostics', controller.signal).catch(() => null)
       if (cancelled || controller.signal.aborted) return
-
-      const nextTraining = training.status === 'fulfilled' ? training.value : null
-      const nextDetections = detections.status === 'fulfilled' ? detections.value : null
-      const nextDiagnostics = diagnostics.status === 'fulfilled' ? diagnostics.value : null
+      const nextTraining = nextDiagnostics?.checks?.training?.data ?? null
+      const nextDetections = nextDiagnostics?.checks?.detections?.data ?? null
       const anyData = Boolean(nextTraining || nextDetections || nextDiagnostics)
 
       setState({
@@ -210,11 +205,17 @@ function useCameraIntelligence(enabled: boolean): IntelligenceState {
       })
     }
 
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') activeController?.abort()
+      else void load()
+    }
+    document.addEventListener('visibilitychange', onVisibility)
     void load()
     const interval = window.setInterval(() => void load(), POLL_MS)
 
     return () => {
       cancelled = true
+      document.removeEventListener('visibilitychange', onVisibility)
       activeController?.abort()
       window.clearInterval(interval)
     }
@@ -410,7 +411,7 @@ export default function CameraIntelligencePanel({ enabled = true }: { enabled?: 
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-4">
-        <MetricCard label="Stream" value={`${summary?.resolution || '—'}`} detail={`${formatNumber(summary?.fps)} FPS`} />
+        <MetricCard label="Stream configuration" value={`${summary?.resolution || '—'}`} detail={`${formatNumber(summary?.fps)} FPS configured`} />
         <MetricCard label="RKNN" value={formatState(summary?.rknn_state)} detail={`${formatNumber(summary?.rknn_latency_ms)} ms`} />
         <MetricCard label="Detections" value={detectionsAvailable ? String(detTotal) : '—'} detail={detectionsAvailable ? `last ${Math.round((detections?.window_sec ?? 900) / 60)} min` : 'unavailable'} />
         <MetricCard label="Sanitizer" value={summary?.sanitizer_age_s == null ? '—' : `${formatNumber(summary.sanitizer_age_s)}s`} detail="clean-frame age" />

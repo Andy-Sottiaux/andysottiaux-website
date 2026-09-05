@@ -1,13 +1,9 @@
 import { NextResponse } from 'next/server'
+import { publicSolarHistory } from '@/lib/publicTelemetry'
+import { readFieldTelemetry } from '@/lib/server/fieldTelemetry'
 
 export const runtime = 'edge'
 export const dynamic = 'force-dynamic'
-
-const UPSTREAM =
-  process.env.V3_SOLAR_HISTORY_UPSTREAM_HOST ||
-  process.env.V3_SOLAR_UPSTREAM_HOST ||
-  process.env.V3_UPSTREAM_HOST ||
-  'https://cayley-relay.tailc7d6b6.ts.net'
 
 type HistoryShape = {
   points?: unknown
@@ -26,58 +22,11 @@ export async function GET(request: Request) {
   const hours = clampInt(requestUrl.searchParams.get('hours'), 1, 48, DEFAULT_HOURS)
   const requestedPoints = clampOptionalInt(requestUrl.searchParams.get('points'), MIN_POINTS, MAX_POINTS)
 
-  try {
-    const ctrl = new AbortController()
-    const timeoutId = setTimeout(() => ctrl.abort(), 8000)
-    const r = await fetch(`${UPSTREAM}/api/solar/history?hours=${hours}`, {
-      cache: 'no-store',
-      signal: ctrl.signal,
-      headers: { 'User-Agent': 'andysottiaux.com/solar-history-proxy' },
-    })
-    clearTimeout(timeoutId)
-
-    const body = await r.text()
-    const upstreamCt = r.headers.get('content-type') || 'application/json'
-    if (!requestedPoints || !r.ok) {
-      return new NextResponse(body, {
-        status: r.status,
-        headers: {
-          'Content-Type': upstreamCt,
-          'Cache-Control': 'no-store',
-        },
-      })
-    }
-
-    try {
-      const parsed = JSON.parse(body) as unknown
-      const sampled = sampleHistoryPayload(parsed, requestedPoints)
-      return NextResponse.json(sampled, {
-        status: r.status,
-        headers: {
-          'Cache-Control': 'no-store',
-        },
-      })
-    } catch {
-      // If the upstream shape changes or sends non-JSON, keep the previous
-      // pass-through behavior rather than breaking the card.
-    }
-
-    return new NextResponse(body, {
-      status: r.status,
-      headers: {
-        'Content-Type': upstreamCt,
-        'Cache-Control': 'no-store',
-      },
-    })
-  } catch {
-    return NextResponse.json(
-      { error: 'history_unavailable' },
-      {
-        status: 502,
-        headers: { 'Cache-Control': 'no-store' },
-      },
-    )
-  }
+  const result = await readFieldTelemetry('history', `/api/solar/history?hours=${hours}`)
+  const headers = { 'Cache-Control': 'no-store' }
+  if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status, headers })
+  const body = publicSolarHistory(result.body)
+  return NextResponse.json(sampleHistoryPayload(body, requestedPoints ?? MAX_POINTS), { headers })
 }
 
 function clampOptionalInt(value: string | null, min: number, max: number): number | null {

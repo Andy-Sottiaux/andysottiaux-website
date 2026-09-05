@@ -1,11 +1,10 @@
 'use client'
 
-import type { ReactNode } from 'react'
+import type { LiveSection } from '../live/LiveSystemDashboard'
 import type { ModalKey } from '../CompactModals'
 import type { FieldCameraSource } from '@/lib/fieldCameraConfig'
 import type { HealthPollResult } from '@/lib/fieldHealth'
 import ContactTile from './ContactTile'
-import EducationTile from './EducationTile'
 import ExperienceTile from './ExperienceTile'
 import HealthTile from './HealthTile'
 import IdentityTile from './IdentityTile'
@@ -17,7 +16,6 @@ import SpotlightTile from './SpotlightTile'
 /* ─────────────────────────── Bento ──────────────────────────── */
 
 export default function BentoGrid({
-  boardLive,
   cameraEnabled,
   cameraSessionId,
   initialHealthPoll,
@@ -25,13 +23,12 @@ export default function BentoGrid({
   onCameraChange,
   onOpen,
 }: {
-  boardLive: boolean
   cameraEnabled: boolean
   cameraSessionId: number
   initialHealthPoll?: HealthPollResult
   modalOpen: boolean
   onCameraChange: (value: FieldCameraSource) => void
-  onOpen: (key: ModalKey) => void
+  onOpen: (key: ModalKey, section?: LiveSection) => void
 }) {
   return (
     <div
@@ -52,20 +49,16 @@ export default function BentoGrid({
           streamSessionId={cameraSessionId}
           modalOpen={modalOpen}
           onCameraChange={onCameraChange}
-          onOpen={onOpen}
+          onOpen={(key) => onOpen(key, key === 'live' ? 'camera' : undefined)}
         />
       </div>
 
       <div className="order-7 col-span-12 lg:order-none lg:col-span-3 lg:col-start-10 lg:row-start-1 lg:row-span-2">
-        <SolarTile onOpen={() => onOpen('live')} />
+        <SolarTile onOpen={() => onOpen('live', 'power')} />
       </div>
 
       <div className="order-6 col-span-12 lg:order-none lg:col-span-3 lg:col-start-1 lg:row-start-2">
-        <StableSwapTile
-          showLive={boardLive}
-          live={<HealthTile initialHealthPoll={initialHealthPoll} onOpen={() => onOpen('live')} />}
-          fallback={<EducationTile />}
-        />
+        <HealthTile initialHealthPoll={initialHealthPoll} onOpen={() => onOpen('live', 'diagnostics')} />
       </div>
 
       <div id="experience" className="order-5 col-span-12 lg:order-none lg:col-span-5 lg:col-start-1 lg:row-start-3">
@@ -82,18 +75,4 @@ export default function BentoGrid({
       </div>
     </div>
   )
-}
-
-/* ─────────────────── Stable live/fallback wrapper ──────────────────────── */
-
-function StableSwapTile({
-  showLive,
-  live,
-  fallback,
-}: {
-  showLive: boolean
-  live: ReactNode
-  fallback: ReactNode
-}) {
-  return <>{showLive ? live : fallback}</>
 }

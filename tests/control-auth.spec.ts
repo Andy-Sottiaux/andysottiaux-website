@@ -133,7 +133,7 @@ test('rejects cross-origin control authentication', async ({ request }) => {
 test('unlocks controls from the Field Live dialog', async ({ page }) => {
   await mockPortfolioNetwork(page)
   await page.goto('/lab/dashboard')
-  await page.getByRole('button', { name: 'Open Field Live' }).click()
+  await page.getByRole('button', { name: 'Open system diagnostics' }).click()
   await page.getByRole('button', { name: 'Unlock', exact: true }).click()
 
   const authDialog = page.getByRole('dialog', { name: 'Camera & device access' })
@@ -145,6 +145,7 @@ test('unlocks controls from the Field Live dialog', async ({ page }) => {
 
   await page.getByRole('button', { name: 'Lock camera access' }).click()
   await expect(page.getByRole('slider', { name: 'Fan speed override' })).toBeDisabled()
+  await page.getByRole('tab', { name: 'camera', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Unlock Cam 1 live stream' })).toBeVisible()
   await expect.poll(async () => {
     const response = await page.request.get('/api/v3/control-auth')
@@ -184,6 +185,7 @@ test('keeps the live lab locked until the viewer authenticates', async ({ page }
   })
   await mockPortfolioNetwork(page)
   await page.goto('/lab')
+  await page.getByRole('tab', { name: 'camera', exact: true }).click()
 
   await expect(page.getByRole('button', { name: 'Unlock Cam 1 live stream' })).toBeVisible()
   expect(protectedRequests).toEqual([])
