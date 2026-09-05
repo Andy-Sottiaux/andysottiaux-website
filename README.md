@@ -1,18 +1,19 @@
 # andysottiaux.com
 
 Andy Sottiaux's portfolio and live field-system dashboard. The site combines a
-static portfolio with opt-in Cam 1/Cam 2 streams, edge-AI diagnostics, solar
+personal portfolio with opt-in Cam 1/Cam 2 streams, edge-AI diagnostics, solar
 telemetry, health monitoring, and authenticated physical controls.
 
 ## Public Surfaces
 
-- `/` — editorial portfolio, selected projects, background, and contact
+- `/` — personal one-screen desktop dashboard, projects, running, and public telemetry
 - `/work/travel-agent-ai` — shipped iOS product case study
 - `/work/field-camera` — edge camera, relay, and operations case study
 - `/work/wyzecar` — robotics and autonomy case study
 - `/work/epaper-dashboard` — runner-first embedded display and partial-refresh case study
 - `/lab` — full live camera, inference, health, and solar dashboard
 - `/lab/dashboard` — compact portfolio and live-system dashboard
+- `/preview` — non-indexed dashboard preview
 
 ## Stack
 
@@ -67,10 +68,13 @@ reaches the browser. Fan, Cam 2 pan/tilt, and persistent settings use the same
 access boundary; low-latency Cam 2 WebSocket control receives only a 30-second
 signed ticket.
 
-The public homepage is static and makes no device API requests. Camera access
-state is scoped to the lab routes. The compact dashboard at `/lab/dashboard`
-is ISR-cached and probes relay health during regeneration with a short timeout;
-client polling updates live state after load.
+The public homepage and compact dashboard are server-rendered and probe sanitized
+relay health with a strict 1.2-second timeout. This uncached probe makes these
+routes dynamic even though they declare a revalidation interval. Shared client polling
+updates public health and solar readings and pauses in hidden tabs. Camera
+access stays opt-in and authenticated; the homepage never starts media simply
+because it loaded or a spotlight tab changed. Normal desktop windows fit one
+screen; mobile and short windows scroll naturally to keep controls accessible.
 
 Featured project content is defined once in `content/caseStudies.ts` and reused
 by the compact dashboard modal, route metadata, sitemap, and server-rendered case-study

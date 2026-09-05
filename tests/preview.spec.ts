@@ -111,7 +111,7 @@ test('preview never requests private media or controls when browsing locked came
   expect(privateRequests).toEqual([])
 })
 
-test('preview retains native sample captures and keeps the current homepage isolated', async ({ page }) => {
+test('preview retains native sample captures and the promoted homepage is indexable', async ({ page }) => {
   await openPreview(page)
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex, nofollow')
   await page.getByRole('tab', { name: 'Travel' }).click()
@@ -120,10 +120,12 @@ test('preview retains native sample captures and keeps the current homepage isol
   await expect(page.getByRole('img', { name: /native review screen with a selected sample/i }).first()).toBeVisible()
   await expect(page.getByText('Native-view captures · sample data.', { exact: false })).toBeVisible()
   const privateRequests: string[] = []
-  page.on('request', (request) => { if (request.url().includes('/api/v3/')) privateRequests.push(request.url()) })
+  page.on('request', (request) => { if (/\/api\/v3\/(?:camera|camera2|control-auth|fan|training|detections)/.test(request.url())) privateRequests.push(request.url()) })
   await page.goto('/')
-  await expect(page.getByRole('heading', { level: 1, name: /I build across the boundaries/i })).toBeVisible()
-  await expect(page.getByText('Sep 2023 — Present', { exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Andy Sottiaux' })).toBeVisible()
+  await expect(page.locator('.portfolio-grid')).toBeVisible()
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'index, follow')
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', 'https://andysottiaux.com')
   await page.waitForLoadState('networkidle')
   expect(privateRequests).toEqual([])
 })

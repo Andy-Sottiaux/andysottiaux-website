@@ -11,11 +11,16 @@ for (const width of [320, 360, 768, 1440]) {
     for (const route of routes) {
       await page.goto(route)
       await expect(page.locator('h1')).toBeVisible()
-      await expect(page.locator('[data-site-navigation]')).toBeVisible()
+      if (route === '/') {
+        await expect(page.locator('.portfolio-grid')).toBeVisible()
+        await expect(page.getByRole('button', { name: 'Open About' })).toBeVisible()
+      } else {
+        await expect(page.locator('[data-site-navigation]')).toBeVisible()
+        const navigation = page.getByRole('navigation', { name: 'Main navigation' })
+        await expect(navigation.getByRole('link', { name: 'Selected work' })).toHaveAttribute('href', '/#projects')
+      }
       const size = await page.evaluate(() => ({ width: document.documentElement.clientWidth, scroll: document.documentElement.scrollWidth }))
       expect(size.scroll, route).toBeLessThanOrEqual(size.width)
-      const navigation = page.getByRole('navigation', { name: 'Main navigation' })
-      await expect(navigation.getByRole('link', { name: 'Selected work' })).toHaveAttribute('href', route === '/' ? '#projects' : '/#projects')
     }
   })
 }
@@ -87,7 +92,9 @@ test('lab retains explicit stale reading state without presenting it as current'
 })
 
 test('public background explicitly separates confidential professional work', async ({ page }) => {
+  await mockPortfolioNetwork(page)
   await page.goto('/')
+  await page.getByRole('button', { name: 'Open About' }).click()
   await expect(page.locator('#professional-context')).toContainText('collaborative and confidential')
   await expect(page.locator('#professional-context')).toContainText('independent projects and HatchingPoint products')
 })

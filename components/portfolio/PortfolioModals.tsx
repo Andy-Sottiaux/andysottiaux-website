@@ -136,7 +136,8 @@ function ModalLoading() {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
   return (
-    <div className="space-y-3" aria-label="Loading modal content">
+    <div className="space-y-3" role="status">
+      <span className="sr-only">Loading modal content</span>
       {[0, 1, 2].map((i) => (
         <div
           key={i}

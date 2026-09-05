@@ -148,6 +148,11 @@ export function AboutModalContent() {
             where I&apos;ve designed and developed 10+ production iPhone apps, built modern web applications,
             and architected robust back-end systems. I thrive at the intersection of hardware and software.
           </p>
+          <aside role="note" id="professional-context" className="clear-both pt-4 text-sm leading-relaxed">
+            My aerospace work is collaborative and confidential. Employer-owned designs, program details,
+            and performance data stay private. The detailed case studies here cover my independent projects
+            and HatchingPoint products.
+          </aside>
           <div className="clear-both flex flex-wrap gap-1.5 pt-4">
             {ABOUT_TAGS.map((tag) => (
               <Chip key={tag}>{tag}</Chip>

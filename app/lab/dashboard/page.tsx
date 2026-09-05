@@ -2,10 +2,8 @@ import CompactPortfolio from '@/components/CompactPortfolio'
 import type { Metadata } from 'next'
 import { probeInitialHealth } from '@/lib/initialBoardHealth'
 
-// Bento home page. Replaces the long scrolling layout. The board's live
-// state is probed server-side so the initial HTML already shows the
-// correct (live or fallback) tile set — visitors arriving while the
-// device is offline see the alternate set on first paint, no flicker.
+// Retained compact-dashboard URL. Server-rendered telemetry is sanitized;
+// the health tile stays visible when a device is offline.
 export const revalidate = 15
 
 export const metadata: Metadata = {

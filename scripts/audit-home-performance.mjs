@@ -3,7 +3,8 @@
 import { chromium } from 'playwright'
 
 const targetUrl = process.env.HOME_PERF_URL || process.argv[2] || 'https://andysottiaux.com'
-const maxTransferKb = Number.parseInt(process.env.HOME_PERF_MAX_TRANSFER_KB || '260', 10)
+// Compact dashboard baseline: ~318 KiB, including public telemetry and charts.
+const maxTransferKb = Number.parseInt(process.env.HOME_PERF_MAX_TRANSFER_KB || '400', 10)
 const maxHealthRequests = Number.parseInt(process.env.HOME_PERF_MAX_HEALTH_REQUESTS || '1', 10)
 const timeoutMs = Number.parseInt(process.env.HOME_PERF_TIMEOUT_MS || '45000', 10)
 
