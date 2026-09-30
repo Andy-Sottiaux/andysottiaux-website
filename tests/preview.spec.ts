@@ -70,13 +70,13 @@ test('short desktop windows allow scrolling instead of hiding controls', async (
   await expectControlsNotClipped(page)
 })
 
-test('minimal spotlight dots remain usable at narrow and desktop widths', async ({ page }) => {
-  await openPreview(page)
-  await page.emulateMedia({ reducedMotion: 'no-preference' })
-  await page.getByRole('button', { name: 'Pause spotlight rotation' }).click()
-
-  for (const width of [320, 390, 1024, 1440]) {
+for (const width of [320, 390, 1024, 1440]) {
+  test(`minimal spotlight dots remain usable at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 })
+    await openPreview(page)
+    await page.emulateMedia({ reducedMotion: 'no-preference' })
+    await page.getByRole('button', { name: 'Pause spotlight rotation' }).click()
+
     const tabs = page.getByRole('tablist', { name: 'Featured spotlight' }).getByRole('tab')
     for (const tab of await tabs.all()) {
       const target = await tab.boundingBox()
@@ -87,12 +87,17 @@ test('minimal spotlight dots remain usable at narrow and desktop widths', async 
       await tab.click()
       await expect(tab).toHaveAttribute('aria-selected', 'true')
       await expect(page.locator('[role="tab"][aria-selected="true"]')).toHaveCount(1)
+      const panelId = await tab.getAttribute('aria-controls')
+      const panel = page.locator(`#${panelId}`)
+      await expect(panel).toHaveAttribute('aria-hidden', 'false')
+      // Selection updates before the incoming slide finishes moving.
+      await expect(panel).toHaveAttribute('data-spotlight-animate', 'false')
       await expectControlsNotClipped(page)
     }
     await expect(page.getByRole('button', { name: 'Resume spotlight rotation' })).toBeVisible()
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width)
-  }
-})
+  })
+}
 
 test('preview stacks naturally on small screens and supports modal keyboard navigation', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
