@@ -19,7 +19,16 @@ for (const width of [320, 360, 768, 1440]) {
         const navigation = page.getByRole('navigation', { name: 'Main navigation' })
         await expect(navigation.getByRole('link', { name: 'Selected work' })).toHaveAttribute('href', '/#projects')
       }
-      await page.evaluate(() => document.fonts.ready)
+      // FontFaceSet.ready also waits for document completion and unrelated images.
+      // Load the fonts used by the text measured below without that load barrier.
+      await page.evaluate(async () => {
+        const text = document.querySelectorAll<HTMLElement>('body, h1, [data-site-navigation] a')
+        await Promise.all(Array.from(text, element => {
+          const style = getComputedStyle(element)
+          const font = style.font || `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`
+          return document.fonts.load(font, element.innerText || ' ')
+        }))
+      })
       const size = await page.evaluate(() => ({ width: document.documentElement.clientWidth, scroll: document.documentElement.scrollWidth }))
       expect(size.scroll, route).toBeLessThanOrEqual(size.width)
     }
