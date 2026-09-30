@@ -39,7 +39,7 @@ test('each project states dated evidence and limitations', async ({ page }) => {
 })
 
 test('native product capture tour loads both real view captures and labels sample data', async ({ page }) => {
-  await page.goto('/work/travel-agent-ai')
+  await page.goto('/work/travel-agent-ai', { waitUntil: 'domcontentloaded' })
   const story = page.getByRole('region', { name: /The important step is the review/ })
   await expect(story).toContainText('not a live AI demo')
   for (const name of ['Review before saving', 'Correct the details']) {
