@@ -7,7 +7,7 @@ telemetry, health monitoring, and authenticated physical controls.
 ## Public Surfaces
 
 - `/` — personal one-screen desktop dashboard, projects, running, and public telemetry
-- `/work/travel-agent-ai` — shipped iOS product case study
+- Travel Agent AI — links directly to its [App Store listing](https://apps.apple.com/us/app/travel-agent-ai/id6758284691); `/work/travel-agent-ai` permanently redirects there
 - `/work/field-camera` — edge camera, relay, and operations case study
 - `/work/wyzecar` — robotics and autonomy case study
 - `/work/epaper-dashboard` — runner-first embedded display and partial-refresh case study

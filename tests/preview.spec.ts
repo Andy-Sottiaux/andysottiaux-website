@@ -111,14 +111,14 @@ test('preview never requests private media or controls when browsing locked came
   expect(privateRequests).toEqual([])
 })
 
-test('preview retains native sample captures and the promoted homepage is indexable', async ({ page }) => {
+test('preview links Travel directly to the App Store and the promoted homepage is indexable', async ({ page }) => {
   await openPreview(page)
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex, nofollow')
   await page.getByRole('tab', { name: 'Travel' }).click()
-  await page.locator('[role="tabpanel"][aria-hidden="false"]').getByRole('link', { name: 'Case study' }).click()
-  await expect(page).toHaveURL(/\/work\/travel-agent-ai$/)
-  await expect(page.getByRole('img', { name: /native review screen with a selected sample/i }).first()).toBeVisible()
-  await expect(page.getByText('Native-view captures · sample data.', { exact: false })).toBeVisible()
+  const travelPanel = page.locator('[role="tabpanel"][aria-hidden="false"]')
+  await expect(travelPanel.getByRole('link', { name: 'App Store' })).toHaveAttribute('href', 'https://apps.apple.com/us/app/travel-agent-ai/id6758284691')
+  await expect(travelPanel.getByRole('link', { name: 'App Store' })).toHaveAttribute('target', '_blank')
+  await expect(travelPanel.getByRole('link', { name: 'Case study' })).toHaveCount(0)
   const privateRequests: string[] = []
   page.on('request', (request) => { if (/\/api\/v3\/(?:camera|camera2|control-auth|fan|training|detections)/.test(request.url())) privateRequests.push(request.url()) })
   await page.goto('/')

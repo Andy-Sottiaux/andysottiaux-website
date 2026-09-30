@@ -3,12 +3,13 @@
 import { useId, useState } from 'react'
 import { ArrowUpRight } from 'lucide-react'
 import Link from 'next/link'
+import productLinks from '@/content/productLinks.json'
 import styles from './portfolio.module.css'
 
 const LAYERS = [
   { name: 'Mechanical', label: 'Give an idea physical form.', detail: 'Rotor systems, CAD, and hardware built for the real world.', link: '/#professional-context', cta: 'The professional context', number: '01' },
   { name: 'Embedded', label: 'Make the physical intelligent.', detail: 'Custom display drivers, edge perception, and the software inside the system.', link: '/work/epaper-dashboard', cta: 'Explore an embedded system', number: '02' },
-  { name: 'Software', label: 'Bring it into people’s hands.', detail: 'Thoughtful interfaces and production apps that connect the whole experience.', link: '/work/travel-agent-ai', cta: 'Explore a shipped product', number: '03' },
+  { name: 'Software', label: 'Bring it into people’s hands.', detail: 'Thoughtful interfaces and production apps that connect the whole experience.', link: productLinks.travelAgentAI, cta: 'View on the App Store', number: '03' },
 ] as const
 
 export default function SystemExplorer() {
@@ -60,7 +61,7 @@ export default function SystemExplorer() {
       </fieldset>
       <section className={styles.layerDetail} id={`${id}-detail`} aria-label="System layer details" aria-live="polite" aria-atomic="true">
         <p>{layer.label}</p><span>{layer.detail}</span>
-        <Link href={layer.link} prefetch={false}>{layer.cta}<ArrowUpRight size={14} aria-hidden="true"/></Link>
+        <Link href={layer.link} prefetch={false} target={layer.link.startsWith('https://') ? '_blank' : undefined} rel={layer.link.startsWith('https://') ? 'noopener noreferrer' : undefined}>{layer.cta}<ArrowUpRight size={14} aria-hidden="true"/></Link>
       </section>
     </div>
   )

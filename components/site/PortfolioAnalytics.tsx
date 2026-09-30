@@ -15,10 +15,10 @@ export default function PortfolioAnalytics() {
       if (!control) return
       const href = control.getAttribute('href') ?? ''
       const path = window.location.pathname
-      if (!['/', '/lab', '/work/epaper-dashboard', '/work/amoled-dashboard', '/work/travel-agent-ai', '/work/field-camera', '/work/wyzecar'].includes(path)) return
+      if (!['/', '/lab', '/work/epaper-dashboard', '/work/amoled-dashboard', '/work/field-camera', '/work/wyzecar'].includes(path)) return
       let name: string | undefined
       let destination: string | undefined
-      if (/^\/work\/(epaper-dashboard|amoled-dashboard|travel-agent-ai|field-camera|wyzecar)$/.test(href)) {
+      if (/^\/work\/(epaper-dashboard|amoled-dashboard|field-camera|wyzecar)$/.test(href)) {
         name = 'Project opened'
         destination = href.split('/').pop()
       } else if (href === 'mailto:andrewsottiaux@gmail.com') {

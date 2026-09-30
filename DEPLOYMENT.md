@@ -27,7 +27,8 @@ values must remain encrypted in Vercel and must not be committed.
 Confirm the public pages and security headers after deployment:
 
 ```bash
-curl -fsSI https://andysottiaux.com/work/travel-agent-ai
+curl -fsSI https://andysottiaux.com/work/amoled-dashboard
+curl -fsSI https://andysottiaux.com/work/travel-agent-ai # 308 redirect to the App Store
 curl -fsSI https://andysottiaux.com/lab
 curl -fsS https://andysottiaux.com/sitemap.xml
 curl -fsS https://andysottiaux.com/api/v3/control-auth

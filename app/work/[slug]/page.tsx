@@ -9,8 +9,6 @@ import AmoledProductViewer from '@/components/AmoledProductViewer'
 import SiteNavigation from '@/components/site/SiteNavigation'
 import ProjectEvidence from '@/components/site/ProjectEvidence'
 import EpaperDriverTour from '@/components/site/EpaperDriverTour'
-import ProductScreens from '@/components/site/ProductScreens'
-import { TRAVEL_SCREENS } from '@/content/productScreens'
 import styles from './work.module.css'
 
 const FIELD_SYSTEM_NODES = ['Edge camera', 'Private relay', 'Public gateway', 'Portfolio UI']
@@ -72,8 +70,8 @@ export default async function WorkPage({ params }: WorkPageProps) {
         <div className={styles.heroMedia}>
           <div className={`${styles.visualFrame} ${project.heroMode === 'epaper' ? styles.epaperFrame : ''} ${project.heroMode === 'amoled' ? styles.amoledFrame : ''}`}><HeroVisual project={project} /></div>
           <div className={styles.visualCaption}>
-            <span>{project.heroMode === 'system' ? 'System topology' : project.heroMode === 'epaper' ? 'Interactive 3D visualization' : project.heroMode === 'amoled' ? 'CAD concept · example screen' : project.heroMode === 'gallery' ? 'Actual native views · sample data' : 'CAD rendering'}</span>
-            <span>{project.heroMode === 'system' ? 'Edge → interface' : project.heroMode === 'epaper' ? '1360 × 480 / four-color' : project.heroMode === 'amoled' ? 'Matte white / Perch' : project.heroMode === 'gallery' ? 'Native iOS' : 'Hardware + software'}</span>
+            <span>{project.heroMode === 'system' ? 'System topology' : project.heroMode === 'epaper' ? 'Interactive 3D visualization' : project.heroMode === 'amoled' ? 'CAD concept · example screen' : 'CAD rendering'}</span>
+            <span>{project.heroMode === 'system' ? 'Edge → interface' : project.heroMode === 'epaper' ? '1360 × 480 / four-color' : project.heroMode === 'amoled' ? 'Matte white / Perch' : 'Hardware + software'}</span>
           </div>
         </div>
       </section>
@@ -91,7 +89,6 @@ export default async function WorkPage({ params }: WorkPageProps) {
       </nav>
 
       {project.tour ? <CapabilityTour tour={project.tour} /> : null}
-      {project.slug === 'travel-agent-ai' && <div className={styles.productTour}><ProductScreens screens={TRAVEL_SCREENS} /></div>}
       {project.slug === 'amoled-dashboard' && <DeskBuddyStory />}
 
       <section id="overview" className={`${styles.section} ${styles.overview}`}>
@@ -166,18 +163,6 @@ function HeroVisual({ project }: { project: NonNullable<ReturnType<typeof getCas
   if (project.heroMode === 'amoled') {
     return <Image src={project.heroImage!} alt={project.heroImageAlt ?? ''} width={2000} height={1333} priority sizes="(max-width: 800px) 92vw, 55vw" className={styles.deskBuddyHero} />
   }
-  if (project.heroMode === 'gallery' && project.heroGallery?.length) {
-    return (
-      <div className={styles.gallery}>
-        {project.heroGallery.map((image, index) => (
-          <div key={image} className={styles.phone}>
-            <Image src={image} alt={TRAVEL_SCREENS[index]?.alt ?? `${project.title} product screen ${index + 1}`} fill priority={index === 0} sizes="(max-width: 640px) 36vw, (max-width: 1000px) 25vw, 230px" className={styles.screenImage} />
-          </div>
-        ))}
-      </div>
-    )
-  }
-
   if (project.heroMode === 'system') {
     return (
       <div className={styles.systemVisual}>

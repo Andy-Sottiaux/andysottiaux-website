@@ -1,3 +1,5 @@
+const productLinks = require('./content/productLinks.json')
+
 const securityHeaders = [
   { key: 'X-Content-Type-Options', value: 'nosniff' },
   { key: 'X-Frame-Options', value: 'DENY' },
@@ -10,6 +12,9 @@ const securityHeaders = [
 const nextConfig = {
   distDir: process.env.NEXT_DIST_DIR || '.next',
   poweredByHeader: false,
+  async redirects() {
+    return [{ source: '/work/travel-agent-ai', destination: productLinks.travelAgentAI, permanent: true }]
+  },
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }]
   },

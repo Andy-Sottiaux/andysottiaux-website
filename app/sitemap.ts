@@ -17,12 +17,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.9,
     },
     {
-      url: `${baseUrl}/work/travel-agent-ai`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.9,
-    },
-    {
       url: `${baseUrl}/work/wyzecar`,
       lastModified: new Date(),
       changeFrequency: 'monthly',

@@ -20,7 +20,7 @@ type ProjectTour = {
 
 export type ProjectCaseStudy = {
   title: string
-  slug?: 'field-camera' | 'travel-agent-ai' | 'wyzecar' | 'epaper-dashboard' | 'amoled-dashboard'
+  slug?: 'field-camera' | 'wyzecar' | 'epaper-dashboard' | 'amoled-dashboard'
   eyebrow?: string
   subtitle?: string
   role?: string
@@ -41,8 +41,7 @@ export type ProjectCaseStudy = {
   iconContain?: boolean
   heroImage?: string
   heroImageAlt?: string
-  heroGallery?: string[]
-  heroMode?: 'cover' | 'contain' | 'gallery' | 'system' | 'epaper' | 'amoled'
+  heroMode?: 'cover' | 'contain' | 'system' | 'epaper' | 'amoled'
 }
 
 export const PROJECT_CASE_STUDIES: ProjectCaseStudy[] = [
@@ -200,50 +199,6 @@ export const PROJECT_CASE_STUDIES: ProjectCaseStudy[] = [
     heroImage: '/images/desk-buddy/daylight.webp',
     heroImageAlt: 'CAD render of the matte-white Desk Buddy on a curved Perch at a modern oak desk, showing an example clock screen',
     heroMode: 'amoled',
-  },
-  {
-    title: 'Travel Agent AI',
-    slug: 'travel-agent-ai',
-    eyebrow: 'Shipped iOS product',
-    subtitle: 'Booking capture, structured itineraries, collaboration, and practical trip operations.',
-    role: 'Product design, iOS engineering, data modeling, AI workflow design, and release operations.',
-    problem: 'Make travel planning useful after the booking confirmation, not just during destination search.',
-    built: 'Built an iOS trip assistant for booking capture and review, packing lists, calendar sync, itinerary sharing, and trip cost tracking.',
-    outcome: 'A production consumer app that turns scattered travel details into one practical mobile planning surface.',
-    proof: 'Shows end-to-end mobile product execution across AI-assisted extraction, App Store delivery, subscriptions, cloud sync, and everyday utility.',
-    metrics: ['Public iOS release', 'Version 1.38', 'Released August 30, 2026', 'Editable booking import'],
-    architecture: ['SwiftUI product shell', 'Structured trip and booking model', 'AI document extraction', 'Calendar, weather, and sharing flows'],
-    validation: ['App Store version 1.38 checked on September 4, 2026', 'Native import review supports selection and editing before saving', 'Regression tests cover booking inputs and wall-clock itinerary behavior', 'Test coverage describes implementation intent; no extraction accuracy or time-saving benchmark is claimed'],
-    constraints: [
-      'Booking details arrive as screenshots, pasted text, email fragments, and manual notes.',
-      'Displayed itinerary times must remain stable for every collaborator rather than shifting by viewer timezone.',
-      'AI extraction must remain editable and understandable when source details are incomplete.',
-    ],
-    decisions: [
-      {
-        title: 'Structured after extraction',
-        detail: 'AI proposes typed booking fields, but the durable product model remains inspectable and editable by the traveler.',
-      },
-      {
-        title: 'Wall-clock itinerary time',
-        detail: 'Stored local date and time are the shared schedule truth, preventing collaborators from seeing different itinerary times.',
-      },
-      {
-        title: 'Utility over chat',
-        detail: 'The primary experience is a daily operational timeline, not an open-ended assistant transcript.',
-      },
-    ],
-    tech: ['iOS', 'SwiftUI', 'AI', 'Cloud sync', 'StoreKit', 'Calendar APIs'],
-    link: 'https://apps.apple.com/us/app/travel-agent-ai/id6758284691',
-    linkLabel: 'View on the App Store',
-    icon: '/images/travelagentai-icon.png',
-    heroImage: '/images/travel-review-native.webp',
-    heroImageAlt: 'Travel Agent AI native booking review with sample data',
-    heroGallery: [
-      '/images/travel-review-native.webp',
-      '/images/travel-edit-native.webp',
-    ],
-    heroMode: 'gallery',
   },
   {
     title: 'Edge-AI Field Camera',

@@ -3,7 +3,6 @@ import { expect, test } from '@playwright/test'
 import { mockPortfolioNetwork } from './support/mockPortfolioNetwork'
 
 const caseStudies = [
-  { path: '/work/travel-agent-ai', title: 'Travel Agent AI', proof: 'Wall-clock itinerary time' },
   { path: '/work/field-camera', title: 'Edge-AI Field Camera', proof: 'Private media edge' },
   { path: '/work/wyzecar', title: 'WYZECAR', proof: 'Separated ROS2 responsibilities' },
   { path: '/work/epaper-dashboard', title: "Runner's E-Paper Dashboard", proof: 'Design to the silicon' },
@@ -48,7 +47,7 @@ test('renders the live lab with camera selection and case-study navigation', asy
 })
 
 test('@a11y case study has no serious automated accessibility regressions', async ({ page }) => {
-  await page.goto('/work/travel-agent-ai')
+  await page.goto('/work/field-camera')
 
   const results = await new AxeBuilder({ page }).analyze()
 
@@ -61,4 +60,12 @@ test('@a11y e-paper case study has no serious automated accessibility regression
   const results = await new AxeBuilder({ page }).analyze()
 
   expect(results.violations).toEqual([])
+})
+
+test('retired Travel Agent AI case study redirects to its App Store listing', async ({ request }) => {
+  const response = await request.get('/work/travel-agent-ai', { maxRedirects: 0 })
+  expect(response.status()).toBe(308)
+  expect(response.headers().location).toBe('https://apps.apple.com/us/app/travel-agent-ai/id6758284691')
+  const sitemap = await request.get('/sitemap.xml')
+  expect(await sitemap.text()).not.toContain('/work/travel-agent-ai')
 })

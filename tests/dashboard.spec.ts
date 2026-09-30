@@ -286,8 +286,7 @@ test('opens and closes primary modals', async ({ page }) => {
   await page.keyboard.press('Escape')
   await expect(page.locator('dialog[open]')).toHaveCount(0)
 
-  await page.getByRole('tab', { name: 'Travel' }).click()
-  await page.getByRole('button', { name: 'Open Travel Agent AI' }).click()
+  await page.getByRole('button', { name: 'Open Projects' }).click()
   await expect(page.locator('dialog[open] h2')).toHaveText('Projects')
   await page.keyboard.press('Escape')
   await expect(page.locator('dialog[open]')).toHaveCount(0)
@@ -347,19 +346,38 @@ test('surfaces Cam1 AI readiness and project validation proof', async ({ page })
   await expect(page.locator('dialog[open]')).toContainText('FPS and bitrate budgets')
 })
 
-test('links featured projects to full case studies', async ({ page }) => {
+test('opens Travel Agent AI directly on the App Store from spotlight and Projects', async ({ page, context }) => {
   await openDashboard(page)
-
+  const appStore = 'https://apps.apple.com/us/app/travel-agent-ai/id6758284691'
   await page.getByRole('tab', { name: 'Travel' }).click()
   const activeSpotlight = page.locator('.spotlight-slide[aria-hidden="false"]')
-  await expect(activeSpotlight.getByRole('link', { name: 'Case study' })).toHaveAttribute('href', '/work/travel-agent-ai')
+  const appStoreLink = activeSpotlight.getByRole('link', { name: 'App Store' })
+  await expect(appStoreLink).toHaveAttribute('href', appStore)
+  await expect(activeSpotlight.getByRole('link', { name: 'Case study' })).toHaveCount(0)
+  await expect(page.getByRole('link', { name: 'Open Travel Agent AI on the App Store' })).toHaveAttribute('href', appStore)
 
-  const caseStudyLink = activeSpotlight.getByRole('link', { name: 'Case study' })
-  await Promise.all([
-    page.waitForURL(/\/work\/travel-agent-ai$/, { timeout: 15_000 }),
-    caseStudyLink.click({ force: true }),
-  ])
-  await expect(page.getByRole('heading', { level: 1, name: 'Travel Agent AI' })).toBeVisible()
+  await context.route(appStore, route => route.fulfill({ contentType: 'text/html', body: '<h1>App Store destination</h1>' }))
+  const popupPromise = page.waitForEvent('popup')
+  await appStoreLink.click()
+  const popup = await popupPromise
+  await expect(popup).toHaveURL(appStore)
+  await popup.close()
+
+  await page.getByRole('button', { name: 'Open Projects' }).click()
+  const travelCard = page.getByRole('dialog', { name: 'Projects' }).getByRole('link', { name: /Travel Agent AI/ })
+  await expect(travelCard).toHaveAttribute('href', appStore)
+  await expect(travelCard).toContainText('View on the App Store')
+  await expect(travelCard).not.toContainText('Architecture')
+})
+
+test('links featured hardware projects to full case studies', async ({ page }) => {
+  await openDashboard(page)
+  await page.getByRole('tab', { name: 'WYZECAR' }).click()
+  const caseStudyLink = page.locator('.spotlight-slide[aria-hidden="false"]').getByRole('link', { name: 'Case study' })
+  await expect(caseStudyLink).toHaveAttribute('href', '/work/wyzecar')
+  await caseStudyLink.click()
+  await expect(page).toHaveURL(/\/work\/wyzecar$/)
+  await expect(page.getByRole('heading', { level: 1, name: 'WYZECAR' })).toBeVisible()
 })
 
 test('@a11y dashboard has no serious automated accessibility regressions', async ({ page }) => {

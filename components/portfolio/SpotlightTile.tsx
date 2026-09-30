@@ -65,6 +65,7 @@ export default function SpotlightTile({
   const explicitResumeRef = useRef(false)
   const { activeIndex, previousIndex, direction, sequence, animating } = motion
   const active = SPOTLIGHT_ITEMS[activeIndex]
+  const directLink = active.kind === 'project' && !active.caseStudyHref ? active.href : undefined
   const activeAccent = isLight ? active.accent.light : active.accent.dark
   const transitionSurface = isLight ? '#f7f7f9' : '#0d0d10'
   const activeStreamEnabled = enabled &&
@@ -160,8 +161,9 @@ export default function SpotlightTile({
     <Tile
       label="Spotlight"
       accent={active.accent}
-      deepLink="/#now"
-      onOpen={openActive}
+      deepLink={directLink ?? '/#now'}
+      linkLabel={directLink ? `Open ${active.title} on the App Store` : undefined}
+      onOpen={directLink ? undefined : openActive}
       modalLabel={`Open ${active.title}`}
       className="min-h-[310px] lg:min-h-0"
     >

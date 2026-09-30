@@ -34,9 +34,11 @@ test('connects the restored homepage to every retained case study', async ({ pag
   await expect(page.locator('a[href="/work/epaper-dashboard"]').first()).toBeVisible()
   await page.getByRole('tab', { name: 'AMOLED' }).click()
   await expect(page.locator('a[href="/work/amoled-dashboard"]').first()).toBeVisible()
-  for (const path of ['/work/travel-agent-ai', '/work/wyzecar']) {
-    await expect(page.locator('#projects').locator('a[href="' + path + '"]')).toBeVisible()
-  }
+  await expect(page.locator('#projects a[href="/work/wyzecar"]')).toBeVisible()
+  const travel = page.locator('#projects').getByRole('link', { name: /Travel Agent AI/ })
+  await expect(travel).toHaveAttribute('href', 'https://apps.apple.com/us/app/travel-agent-ai/id6758284691')
+  await expect(travel).toHaveAttribute('target', '_blank')
+  await expect(page.locator('a[href="/work/travel-agent-ai"]')).toHaveCount(0)
   await page.getByRole('button', { name: 'Open system diagnostics' }).click()
   const dialog = page.getByRole('dialog', { name: 'Field Live' })
   await dialog.getByRole('tab', { name: 'overview', exact: true }).click()

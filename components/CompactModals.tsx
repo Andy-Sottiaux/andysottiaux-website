@@ -21,6 +21,7 @@ import type { CSSProperties, ReactNode } from 'react'
 import { useFieldTheme } from './fieldTheme'
 import { useFundraising } from '@/lib/useFundraising'
 import { PROJECT_CASE_STUDIES, SECONDARY_PROJECTS, caseStudyPath } from '@/content/caseStudies'
+import productLinks from '@/content/productLinks.json'
 
 const STLViewer = dynamic(() => import('./STLViewer'), {
   ssr: false,
@@ -450,6 +451,20 @@ export function ProjectsModalContent() {
         </div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <a
+          href={productLinks.travelAgentAI}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="group rounded-2xl p-3.5 sm:p-4 transition-all hover:scale-[1.01] flex items-center gap-3 sm:col-span-2"
+          style={polishedSurfaceStyle(isLight, palette.cardBorder)}
+        >
+          <Image src="/images/travelagentai-icon.png" alt="" width={56} height={56} className="rounded-xl" />
+          <div className="min-w-0 flex-1">
+            <h3 className="text-[15px] font-semibold" style={{ color: isLight ? '#1c1a1c' : '#fff' }}>Travel Agent AI</h3>
+            <p className="mt-1 text-[12.5px]" style={{ color: palette.bodyText }}>Bookings and shared trips for iOS.</p>
+            <span className="mt-2 inline-block text-[12px] font-semibold" style={{ color: palette.mutedText }}>View on the App Store ↗</span>
+          </div>
+        </a>
         {PROJECT_CASE_STUDIES.map((p) => {
           const href = caseStudyPath(p)
           const externalLink = /^https?:\/\//.test(href)

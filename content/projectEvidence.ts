@@ -41,19 +41,6 @@ export const PROJECT_EVIDENCE: Record<string, Evidence> = {
     },
     sources: [],
   },
-  'travel-agent-ai': {
-    status: 'Shipped iOS product',
-    reviewed: '2026-09-04',
-    basis: 'Public release + implementation review',
-    result: 'Apple’s public listing confirmed version 1.38, released August 30, 2026. The native booking review supports selecting and editing extracted entries before saving them into a trip.',
-    limitation: 'This demonstrates a shipped workflow, not a measured extraction-accuracy or time-saving result. Live flight status is not currently enabled. Native-view captures use sample booking data; the confidence indicator is a fixture value, not an accuracy benchmark.',
-    tradeoff: {
-      question: 'Save AI output immediately, or ask the traveler to review it?',
-      choice: 'Present structured, editable bookings with individual selection before committing them to the itinerary.',
-      cost: 'Review adds a step. In exchange, uncertain titles, locations, and local times can be corrected before they become part of the shared plan.',
-    },
-    sources: [{ title: 'Apple App Store listing', url: 'https://apps.apple.com/us/app/travel-agent-ai/id6758284691', detail: 'Public distribution, current product information, and version history.' }],
-  },
   'field-camera': {
     status: 'Operational lab / availability varies',
     reviewed: '2026-09-04',

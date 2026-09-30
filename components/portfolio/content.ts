@@ -1,5 +1,6 @@
 import type { ModalKey } from '../CompactModals'
 import type { FieldCameraSource } from '@/lib/fieldCameraConfig'
+import productLinks from '@/content/productLinks.json'
 
 export type SpotlightItem = {
   id: string
@@ -99,9 +100,8 @@ export const SPOTLIGHT_ITEMS: SpotlightItem[] = [
     halo: { light: 'rgba(37, 99, 235, 0.16)', dark: 'rgba(147, 197, 253, 0.18)' },
     modal: 'projects',
     icon: '/images/travelagentai-icon.png',
-    href: 'https://apps.apple.com/us/app/travel-agent-ai/id6758284691',
+    href: productLinks.travelAgentAI,
     cta: 'App Store',
-    caseStudyHref: '/work/travel-agent-ai',
   },
   {
     id: 'cam1',
@@ -188,8 +188,9 @@ export const PROJECT_ITEMS: ProjectItem[] = [
   {
     name: 'Travel Agent AI',
     desc: 'Bookings & shared trips · iOS',
-    url: '/work/travel-agent-ai',
+    url: productLinks.travelAgentAI,
     icon: '/images/travelagentai-icon.png',
+    external: true,
   },
   {
     name: 'WYZECAR',

@@ -2,7 +2,7 @@ import AxeBuilder from '@axe-core/playwright'
 import { expect, test } from '@playwright/test'
 import { mockPortfolioNetwork } from './support/mockPortfolioNetwork'
 
-const routes = ['/', '/work/epaper-dashboard', '/work/amoled-dashboard', '/work/travel-agent-ai', '/work/wyzecar', '/work/field-camera', '/lab']
+const routes = ['/', '/work/epaper-dashboard', '/work/amoled-dashboard', '/work/wyzecar', '/work/field-camera', '/lab']
 
 for (const width of [320, 360, 768, 1440]) {
   test(`finished routes fit ${width}px with working shared navigation`, async ({ page }) => {
@@ -45,19 +45,6 @@ test('each project states dated evidence and limitations', async ({ page }) => {
       : { date: '2026-09-04', label: 'Reviewed September 4, 2026' }
     await expect(page.locator(`time[datetime="${reviewed.date}"]`)).toHaveText(reviewed.label)
   }
-})
-
-test('native product capture tour loads both real view captures and labels sample data', async ({ page }) => {
-  await page.goto('/work/travel-agent-ai', { waitUntil: 'domcontentloaded' })
-  const story = page.getByRole('region', { name: /The important step is the review/ })
-  await expect(story).toContainText('not a live AI demo')
-  for (const name of ['Review before saving', 'Correct the details']) {
-    const button = story.getByRole('button', { name: new RegExp(name) })
-    await button.click()
-    await expect(button).toHaveAttribute('aria-pressed', 'true')
-    await expect.poll(() => story.locator('img').evaluate(image => image instanceof HTMLImageElement && image.complete && image.naturalWidth > 0)).toBe(true)
-  }
-  await expect(story.getByRole('link', { name: 'View full size' })).toHaveAttribute('href', '/images/travel-edit-native.webp')
 })
 
 test('e-paper explainer supports keyboard and never claims to be a physical recording', async ({ page }) => {

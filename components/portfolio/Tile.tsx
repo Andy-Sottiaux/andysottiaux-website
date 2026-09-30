@@ -17,6 +17,7 @@ type TileProps = {
   accent?: TileAccent
   label?: string
   deepLink?: string
+  linkLabel?: string
   onOpen?: () => void
   modalLabel?: string
 }
@@ -28,6 +29,7 @@ export default function Tile({
   accent,
   label,
   deepLink,
+  linkLabel,
   onOpen,
   modalLabel,
 }: TileProps) {
@@ -89,8 +91,10 @@ export default function Tile({
       ) : deepLink ? (
         <a
           href={deepLink}
-          aria-label={label ? `Open ${label} on the full site` : 'Open on the full site'}
-          title={label ? `Open ${label} on the full site` : 'Open on the full site'}
+          target={/^https?:\/\//.test(deepLink) ? '_blank' : undefined}
+          rel={/^https?:\/\//.test(deepLink) ? 'noopener noreferrer' : undefined}
+          aria-label={linkLabel ?? (label ? `Open ${label} on the full site` : 'Open on the full site')}
+          title={linkLabel ?? (label ? `Open ${label} on the full site` : 'Open on the full site')}
           className="absolute right-3 top-3 z-30 inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-[8px] transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
           style={{
             color: accentColor ?? palette.mutedText,
