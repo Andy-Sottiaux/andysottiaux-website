@@ -29,8 +29,8 @@ test('explores all seven firmware views while keeping the example-data boundary 
 
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', 'https://andysottiaux.com/work/amoled-dashboard')
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'index, follow')
-  await expect(page.getByText('Commissioned over USB', { exact: true })).toBeVisible()
-  await expect(page.getByText(/autonomous Wi-Fi operation have not been verified/)).toBeVisible()
+  await expect(page.getByText('Verified USB + local Wi-Fi', { exact: true })).toBeVisible()
+  await expect(page.getByText(/Private feeds require the Mac bridge to remain awake and reachable\. Battery runtime, the office network, and physical swipe\/tap behavior remain unverified/)).toBeVisible()
 })
 
 test('navigates the AMOLED widgets with keys independently of the outer Spotlight rail', async ({ page }) => {

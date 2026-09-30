@@ -4,59 +4,80 @@
       480,
       480
     ],
-    "bytes": 5928,
-    "sha256": "41510631892b491f38b85658c905e241131e5421b02625c4b6f54594753ea490"
+    "bytes": 4508,
+    "sha256": "4fc12ec33c3861dc34e9053e076f1df2b3b057cf24f9f3bbba12d315b42b842e",
+    "native_source_commit": "064d1ad4bca0a8be4ad71ce0ba0f4b33f43a8265",
+    "captured_at_utc": "2026-09-30T03:52:13.295916+00:00",
+    "example_payload_ts": 1790740333
   },
   "weather": {
     "dimensions": [
       480,
       480
     ],
-    "bytes": 9358,
-    "sha256": "feed175e3418d67b75b634491feadc364917fa452c7b104747123fcf12f6192a"
+    "bytes": 6356,
+    "sha256": "bfb119b86fd334b9b8b17973ee837dc3e6bbaf2bef5dcf0993db35897412acbd",
+    "native_source_commit": "064d1ad4bca0a8be4ad71ce0ba0f4b33f43a8265",
+    "captured_at_utc": "2026-09-30T03:52:13.295916+00:00",
+    "example_payload_ts": 1790740333
   },
   "runna": {
     "dimensions": [
       480,
       480
     ],
-    "bytes": 10528,
-    "sha256": "72cccfc3834e359446eb0241d421563ccd6af6ead9d2a200762a2b6102c75e8b"
+    "bytes": 7568,
+    "sha256": "1e787f0421f02101188d2a1d8c5dffcf992bc82ec5d91f77724ad5eb91a18d6c",
+    "native_source_commit": "064d1ad4bca0a8be4ad71ce0ba0f4b33f43a8265",
+    "captured_at_utc": "2026-09-30T03:52:13.295916+00:00",
+    "example_payload_ts": 1790740333
   },
   "training": {
     "dimensions": [
       480,
       480
     ],
-    "bytes": 6790,
-    "sha256": "a8d2d997585b8277e509fae72eec2889aacae8eb222c2317595e7e390f276180"
+    "bytes": 5658,
+    "sha256": "16278571199af5d85e25236dcf86a236daf2376b2718dbeb1c4b6c425badd5c4",
+    "native_source_commit": "064d1ad4bca0a8be4ad71ce0ba0f4b33f43a8265",
+    "captured_at_utc": "2026-09-30T03:52:13.295916+00:00",
+    "example_payload_ts": 1790740333
   },
   "nyc-marathon": {
     "dimensions": [
       480,
       480
     ],
-    "bytes": 10036,
-    "sha256": "569910045de168e4dbfca84fc50fd688a1078f11fb2b0f8cabbb1a1421dce783"
+    "bytes": 7020,
+    "sha256": "57dc3dc91636184a72a3b741c0a534df5d43d5f03a59a0a88bf2f30c05a3735b",
+    "native_source_commit": "064d1ad4bca0a8be4ad71ce0ba0f4b33f43a8265",
+    "captured_at_utc": "2026-09-30T03:52:13.295916+00:00",
+    "example_payload_ts": 1790740333
   },
   "time-progress": {
     "dimensions": [
       480,
       480
     ],
-    "bytes": 8228,
-    "sha256": "6f64348320f8ef75227ba78855c9d506331c40315bd712027f10cf416dc1286f"
+    "bytes": 5874,
+    "sha256": "209a06d0784a2d4208ce2aedda5acf8b87ff2e6f9743cc8845dd54d36c273cc9",
+    "native_source_commit": "064d1ad4bca0a8be4ad71ce0ba0f4b33f43a8265",
+    "captured_at_utc": "2026-09-30T03:52:13.295916+00:00",
+    "example_payload_ts": 1790740333
   },
   "claude-usage": {
     "dimensions": [
       480,
       480
     ],
-    "bytes": 9470,
-    "sha256": "f2d5cb001393520568de7f9b051862673b50c838765c0a0eb7e080cf84b5cec4"
+    "bytes": 7084,
+    "sha256": "c4ee808c14aaf5c6dc5928bb24cf78342740a8f220c8a242529fc70cc6aad10a",
+    "native_source_commit": "064d1ad4bca0a8be4ad71ce0ba0f4b33f43a8265",
+    "captured_at_utc": "2026-09-30T03:52:13.295916+00:00",
+    "example_payload_ts": 1790740333
   },
   "_renderer": {
-    "implementation": "Exact AMOLED dashboard_ui.cpp and brand_assets.c compiled against the hardware firmware LVGL dependency on macOS",
+    "implementation": "Exact AMOLED dashboard_ui.cpp, font data, and brand_assets.c compiled against the hardware firmware LVGL dependency on macOS",
     "entry_point": "amoled-dashboard-216/simulator/render.cpp",
     "command": "amoled-dashboard-216/scripts/render_local.sh",
     "frame_dimensions": [
@@ -64,9 +85,16 @@
       480
     ],
     "encoding": "WebP lossless; decoded RGB verified identical to native renderer PNG",
-    "captured_date": "2026-09-29",
+    "captured_date": "2026-09-30",
     "lvgl_component_version": "9.6.0~1",
-    "esp_idf_version": "5.5.2"
+    "esp_idf_version": "5.5.2",
+    "native_source_commit": "064d1ad4bca0a8be4ad71ce0ba0f4b33f43a8265",
+    "source_sha256": {
+      "firmware/main/dashboard_ui.cpp": "cf3fab11a76e5946daa5bcf55a7d03ea80e284afc8a2f665d0d6bf44cd4964c3",
+      "firmware/main/clock_font.c": "38cc3f4977daf1cb0cc553407b6896caa4fdd9ae8c475a46b26bcc993e320ec2",
+      "firmware/main/hero_font.c": "b8b138fc5c65eae81dd5134cfd08b120f9066a9c486854afd923da7c65a92673",
+      "firmware/main/brand_assets.c": "e006ae963299608ef7c12b0658c62f53a22fd30f5d3ec6a1885e204fa990ef0f"
+    }
   },
   "_provenance": {
     "fixture": "docs/amoled-example-payload.json",
@@ -74,6 +102,7 @@
     "clock": "Renderer local time at capture; calendar/progress follow the firmware clock",
     "images": "Software-rendered native firmware UI previews; not device photographs or live data",
     "documentation": "docs/amoled-assets.md",
-    "strava": "Current plain official Strava wordmark"
+    "strava": "Official two-chevron app symbol linked by the current Strava homepage; original geometry, colors, and alpha preserved",
+    "all_seven_refresh": "All seven approved clean native UI scenes refreshed using the committed fictional readings; only ts freshened in a temporary copy"
   }
 }

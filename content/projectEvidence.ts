@@ -13,11 +13,11 @@ const wyzecar = 'https://github.com/Andy-Sottiaux/WYZECAR/blob/d669b8876eba341eb
 
 export const PROJECT_EVIDENCE: Record<string, Evidence> = {
   'amoled-dashboard': {
-    status: 'Commissioned over USB',
+    status: 'Verified USB + local Wi-Fi',
     reviewed: '2026-09-29',
     basis: 'Native firmware + connected-board checks',
-    result: 'On September 29, 2026, all seven native display-draw captures were checked on the connected ESP32-C6 board, 17 focused bridge tests passed, repeated USB acknowledgments were observed, and the onboard RTC restored the clock after a restart.',
-    limitation: 'The website images are rendered by the actual LVGL UI with curated example data, inside a device visualization. They are not photographs, live readings, or the private device cache. Draw captures do not establish optical display quality. Battery runtime, physical swipe/tap behavior, and autonomous Wi-Fi operation have not been verified in this record.',
+    result: 'On September 29, 2026, all seven live native display-draw captures were checked on the connected ESP32-C6 board and 66 focused bridge checks passed. Saved Wi-Fi reconnect, live updates on the current LAN, USB acknowledgments, and RTC clock restoration after a restart were verified. Two five-source polling cycles took 179.95–180.34 seconds; horizontal transitions produced 13 frames over 498–516 milliseconds at brightness 100.',
+    limitation: 'The website images are rendered by the actual LVGL UI with curated example data, inside a device visualization. They are not photographs, live readings, or the private device cache. Draw captures do not establish optical display quality. Private feeds require the Mac bridge to remain awake and reachable. Battery runtime, the office network, and physical swipe/tap behavior remain unverified.',
     tradeoff: {
       question: 'Shrink the whole dashboard, or give each widget the screen?',
       choice: 'Use seven full-screen views with a shared carousel, clear visual hierarchy, and explicit data freshness.',
