@@ -70,6 +70,30 @@ test('short desktop windows allow scrolling instead of hiding controls', async (
   await expectControlsNotClipped(page)
 })
 
+test('minimal spotlight dots remain usable at narrow and desktop widths', async ({ page }) => {
+  await openPreview(page)
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await page.getByRole('button', { name: 'Pause spotlight rotation' }).click()
+
+  for (const width of [320, 390, 1024, 1440]) {
+    await page.setViewportSize({ width, height: 900 })
+    const tabs = page.getByRole('tablist', { name: 'Featured spotlight' }).getByRole('tab')
+    for (const tab of await tabs.all()) {
+      const target = await tab.boundingBox()
+      expect(target?.width).toBeGreaterThanOrEqual(36)
+      expect(target?.height).toBeGreaterThanOrEqual(44)
+      await expect(tab).toHaveAttribute('title', /\S+/)
+      await expect(tab).toHaveText('')
+      await tab.click()
+      await expect(tab).toHaveAttribute('aria-selected', 'true')
+      await expect(page.locator('[role="tab"][aria-selected="true"]')).toHaveCount(1)
+      await expectControlsNotClipped(page)
+    }
+    await expect(page.getByRole('button', { name: 'Resume spotlight rotation' })).toBeVisible()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width)
+  }
+})
+
 test('preview stacks naturally on small screens and supports modal keyboard navigation', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await openPreview(page)

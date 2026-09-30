@@ -243,9 +243,7 @@ export default function SpotlightTile({
           activeIndex={activeIndex}
           onSelect={selectSpotlight}
           isLight={isLight}
-          border={palette.cardBorder}
           muted={palette.mutedText}
-          accent={activeAccent}
           rotationPaused={rotationPaused}
           rotationAvailable={!reducedMotion}
           onToggleRotation={toggleRotation}
@@ -673,9 +671,7 @@ function SpotlightRail({
   activeIndex,
   onSelect,
   isLight,
-  border,
   muted,
-  accent,
   rotationPaused,
   rotationAvailable,
   onToggleRotation,
@@ -684,13 +680,12 @@ function SpotlightRail({
   activeIndex: number
   onSelect: (index: number) => void
   isLight: boolean
-  border: string
   muted: string
-  accent: string
   rotationPaused: boolean
   rotationAvailable: boolean
   onToggleRotation: () => void
 }) {
+  const selectedColor = isLight ? '#0891b2' : '#67e8f9'
   const handleKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
     let nextIndex: number | null = null
 
@@ -708,16 +703,14 @@ function SpotlightRail({
   }
 
   return (
-    <div className="flex flex-col gap-1 px-3 pb-3 sm:flex-row sm:items-center sm:gap-1.5">
+    <div className="flex shrink-0 items-center justify-center gap-1 px-2 pb-1">
       <div
-        className="grid min-w-0 flex-1 gap-1 sm:gap-1.5"
-        style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
+        className="flex min-w-0 items-center justify-center"
         role="tablist"
         aria-label="Featured spotlight"
       >
         {items.map((item, index) => {
           const active = index === activeIndex
-          const itemAccent = isLight ? item.accent.light : item.accent.dark
 
           return (
             <button
@@ -727,6 +720,7 @@ function SpotlightRail({
               role="tab"
               aria-selected={active}
               aria-label={`Show ${item.railLabel ?? item.title}${item.railLabel && item.railLabel !== item.title ? `: ${item.title}` : ''}`}
+              title={item.title}
               aria-controls={`spotlight-panel-${item.id}`}
               tabIndex={active ? 0 : -1}
               data-spotlight-tab="true"
@@ -737,26 +731,15 @@ function SpotlightRail({
                 haptic('tap')
                 onSelect(index)
               }}
-              className="min-h-8 min-w-0 rounded-full px-1 py-1.5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan-300/70 sm:px-2"
-              style={{
-                color: active ? itemAccent : muted,
-                background: active
-                  ? (isLight ? `${itemAccent}14` : 'rgba(255,255,255,0.07)')
-                  : (isLight ? 'rgba(0,0,0,0.025)' : 'rgba(255,255,255,0.035)'),
-                border,
-              }}
+              className="flex h-11 w-9 shrink-0 items-center justify-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan-500/70 min-[380px]:w-11"
+              style={{ color: active ? selectedColor : muted }}
             >
-              <span className="flex min-w-0 items-center gap-0.5 sm:gap-1.5">
-                <span
-                  aria-hidden="true"
-                  data-spotlight-dot="true"
-                  className="h-1.5 w-1.5 flex-shrink-0 rounded-full"
-                  style={{ background: active ? itemAccent : muted }}
-                />
-                <span className="truncate text-[10px] font-semibold uppercase tracking-[0.02em] sm:text-xs">
-                  {item.railLabel ?? item.title}
-                </span>
-              </span>
+              <span
+                aria-hidden="true"
+                data-spotlight-dot="true"
+                className="h-2 w-2 rounded-full"
+                style={{ background: active ? selectedColor : (isLight ? '#81858d' : '#666b75') }}
+              />
             </button>
           )
         })}
@@ -772,21 +755,14 @@ function SpotlightRail({
             haptic('tap')
             onToggleRotation()
           }}
-          className="flex h-8 shrink-0 self-end items-center justify-center gap-1 rounded-full px-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan-300/70 sm:w-8 sm:self-auto sm:px-0"
-          style={{
-            color: rotationPaused ? accent : muted,
-            background: isLight ? 'rgba(0,0,0,0.035)' : 'rgba(255,255,255,0.035)',
-            border,
-          }}
+          className="flex h-11 w-9 shrink-0 items-center justify-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan-500/70 min-[380px]:w-11"
+          style={{ color: rotationPaused ? selectedColor : muted }}
         >
           {rotationPaused ? (
-            <Play aria-hidden="true" className="h-2.5 w-2.5 fill-current" />
+            <Play aria-hidden="true" className="h-3 w-3 fill-current" />
           ) : (
-            <Pause aria-hidden="true" className="h-2.5 w-2.5 fill-current" />
+            <Pause aria-hidden="true" className="h-3 w-3 fill-current" />
           )}
-          <span className="text-[8px] font-semibold uppercase tracking-[0.12em] sm:hidden">
-            {rotationPaused ? 'Resume' : 'Pause'}
-          </span>
         </button>
       ) : null}
     </div>

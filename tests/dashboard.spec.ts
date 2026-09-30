@@ -28,14 +28,17 @@ test('renders the bento shell and spotlight order', async ({ page }) => {
   await expect(page.getByRole('tab', { name: 'AMOLED' })).toBeVisible()
   await expect(page.getByRole('tab', { name: 'WYZECAR' })).toBeVisible()
   await expect(page.getByRole('tab', { name: 'Cam 2' })).toBeVisible()
-  await expect(page.getByRole('tablist', { name: 'Featured spotlight' }).getByRole('tab')).toHaveText([
-    'E-Paper',
-    'AMOLED',
-    'Travel',
-    'Cam 1',
-    'WYZECAR',
-    'Cam 2',
+  const tabs = page.getByRole('tablist', { name: 'Featured spotlight' }).getByRole('tab')
+  await expect(tabs).toHaveCount(6)
+  expect(await tabs.evaluateAll(elements => elements.map(element => element.getAttribute('aria-label')))).toEqual([
+    'Show E-Paper: E-Paper Dashboard',
+    'Show AMOLED: Desk Buddy',
+    'Show Travel: Travel Agent AI',
+    'Show Cam 1',
+    'Show WYZECAR',
+    'Show Cam 2',
   ])
+  await expect(tabs).toHaveText(['', '', '', '', '', ''])
   await expect(page.getByRole('tab', { name: 'E-Paper' })).toHaveAttribute('aria-selected', 'true')
 })
 
@@ -110,6 +113,8 @@ test('supports keyboard navigation across the spotlight rail', async ({ page }) 
   await ePaper.focus()
   await page.keyboard.press('ArrowRight')
   await expect(amoled).toBeFocused()
+  expect(await amoled.evaluate(element => element.matches(':focus-visible'))).toBe(true)
+  await expect(amoled).not.toHaveCSS('box-shadow', 'none')
   await expect(amoled).toHaveAttribute('aria-selected', 'true')
   await expect(ePaper).toHaveAttribute('tabindex', '-1')
 
