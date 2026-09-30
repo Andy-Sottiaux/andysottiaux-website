@@ -153,7 +153,7 @@ export const PROJECT_CASE_STUDIES: ProjectCaseStudy[] = [
     metrics: ['480 × 480 canvas', 'Seven full-screen widgets', 'ESP32-C6 + LVGL', '17 bridge checks passed'],
     architecture: [
       'ESP-IDF C++ firmware with LVGL rendering, a CO5300 QSPI display, and CST9220 touch-controller initialization',
-      'Two 24-line RGB565 draw buffers keep rendering within the microcontroller memory budget',
+      'A 24-line RGB565 draw buffer keeps rendering within the microcontroller memory budget',
       'An allowlisted JSON summary bridge supplies time, weather, training, fundraising, and usage states over USB',
       'UTC is saved to the PCF85063 RTC; startup rejects an uninitialized clock or oscillator-stop flag',
     ],

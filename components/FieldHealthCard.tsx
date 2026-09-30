@@ -176,7 +176,9 @@ export default function FieldHealthCard({
   const healthPoll = useSharedPoll(HEALTH_URL, fetchHealthDigest, HEALTH_POLL_MS, initialHealthPoll?.digest?.ok && !initialHealthPoll.digest.stale ? initialHealthPoll : undefined)
   const [fanOverride, setFanOverride] = useState<SystemLoose['argon_fan'] | null>(null)
 
-  const [, forceTick] = useState(0) // re-render every 30s for "X min ago"
+  // Use the serialized fetch time for SSR and the first client render. The
+  // wall clock can advance before hydration, even on an otherwise fast page.
+  const [renderNow, setRenderNow] = useState(initialHealthPoll?.digest?.fetchedAt ?? 0)
   const [fanDraft, setFanDraft] = useState<number | null>(null)
   const [fanPending, setFanPending] = useState(false)
   const [fanError, setFanError] = useState<string | null>(null)
@@ -187,11 +189,13 @@ export default function FieldHealthCard({
   const phase: 'connecting' | 'resolved' = healthPoll ? 'resolved' : 'connecting'
 
   useEffect(() => {
-    const ageTimer = setInterval(() => forceTick((n) => n + 1), 30_000)
+    const tick = () => setRenderNow(Date.now())
+    tick()
+    const ageTimer = setInterval(tick, 30_000)
     return () => {
       clearInterval(ageTimer)
     }
-  }, [])
+  }, [digest])
 
   useEffect(() => {
     if (digest?.ok && !digest.stale) lastOkRef.current = digest
@@ -199,7 +203,7 @@ export default function FieldHealthCard({
   }, [digest])
 
   const connecting = phase === 'connecting'
-  const stale = Boolean(digest && (digest.stale || digest.observedAt == null || Date.now() - digest.observedAt > 45_000))
+  const stale = Boolean(digest && (digest.stale || digest.observedAt == null || renderNow - digest.observedAt > 45_000))
   const online = digest != null && digest.ok && !stale
   const lastOk = lastOkRef.current
   const displayStale = stale || (!digest && Boolean(lastOk))
@@ -281,7 +285,7 @@ export default function FieldHealthCard({
   const fanOverrideRemaining = typeof fan?.override_remaining_s === 'number'
     ? Math.max(0, Math.ceil(fan.override_remaining_s))
     : typeof fan?.override_expires_at === 'number'
-      ? Math.max(0, Math.ceil(fan.override_expires_at - Date.now() / 1000))
+      ? Math.max(0, Math.ceil(fan.override_expires_at - renderNow / 1000))
       : null
   const fanSliderValue = fanDraft ?? fanPct ?? 0
   const fanControlDisabled = !unlocked || !online || fan?.available === false || fanStale || fanPending
@@ -296,7 +300,7 @@ export default function FieldHealthCard({
     ? fmtUptime(digest.uptimeSec)
     : (lastOk ? fmtUptime(lastOk.uptimeSec) : '—')
   const observedAt = digest?.observedAt ?? lastOk?.observedAt
-  const checkedText = observedAt != null ? fmtAge(Date.now() - observedAt) : 'age unknown'
+  const checkedText = observedAt != null ? fmtAge(renderNow - observedAt) : 'age unknown'
   const tailnetText = typeof sys?.tailscale_kicks_4h === 'number' && sys.tailscale_kicks_4h > 0
     ? `${sys.tailscale_kicks_4h} kicks`
     : sys?.tailnet?.ok === true
