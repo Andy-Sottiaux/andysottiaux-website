@@ -9,7 +9,7 @@ for (const width of [320, 360, 768, 1440]) {
     await mockPortfolioNetwork(page)
     await page.setViewportSize({ width, height: 900 })
     for (const route of routes) {
-      await page.goto(route)
+      await page.goto(route, { waitUntil: 'domcontentloaded' })
       await expect(page.locator('h1')).toBeVisible()
       if (route === '/') {
         await expect(page.locator('.portfolio-grid')).toBeVisible()
@@ -19,6 +19,7 @@ for (const width of [320, 360, 768, 1440]) {
         const navigation = page.getByRole('navigation', { name: 'Main navigation' })
         await expect(navigation.getByRole('link', { name: 'Selected work' })).toHaveAttribute('href', '/#projects')
       }
+      await page.evaluate(() => document.fonts.ready)
       const size = await page.evaluate(() => ({ width: document.documentElement.clientWidth, scroll: document.documentElement.scrollWidth }))
       expect(size.scroll, route).toBeLessThanOrEqual(size.width)
     }
