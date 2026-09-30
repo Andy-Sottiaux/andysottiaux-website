@@ -4,22 +4,22 @@
       480,
       480
     ],
-    "bytes": 4508,
-    "sha256": "4fc12ec33c3861dc34e9053e076f1df2b3b057cf24f9f3bbba12d315b42b842e",
-    "native_source_commit": "064d1ad4bca0a8be4ad71ce0ba0f4b33f43a8265",
-    "captured_at_utc": "2026-09-30T03:52:13.295916+00:00",
-    "example_payload_ts": 1790740333
+    "bytes": 3778,
+    "sha256": "744bea46a34c741650e266db0a50e9b9f4c8614061ae0e5dff263a39f3e3b47c",
+    "native_source_commit": "637a9c992ce19f8dc8952786b072161bbd32de01",
+    "captured_at_utc": "2026-09-30T12:12:58.757143+00:00",
+    "example_payload_ts": 1790770378
   },
   "weather": {
     "dimensions": [
       480,
       480
     ],
-    "bytes": 6356,
-    "sha256": "bfb119b86fd334b9b8b17973ee837dc3e6bbaf2bef5dcf0993db35897412acbd",
-    "native_source_commit": "064d1ad4bca0a8be4ad71ce0ba0f4b33f43a8265",
-    "captured_at_utc": "2026-09-30T03:52:13.295916+00:00",
-    "example_payload_ts": 1790740333
+    "bytes": 6436,
+    "sha256": "bf55eb0dbfb82a5e2c7a9d352341f764bf86f736ad52d54ee0ee6fff9fa17b5b",
+    "native_source_commit": "637a9c992ce19f8dc8952786b072161bbd32de01",
+    "captured_at_utc": "2026-09-30T12:12:58.757143+00:00",
+    "example_payload_ts": 1790770378
   },
   "runna": {
     "dimensions": [
@@ -59,11 +59,11 @@
       480,
       480
     ],
-    "bytes": 5874,
-    "sha256": "209a06d0784a2d4208ce2aedda5acf8b87ff2e6f9743cc8845dd54d36c273cc9",
-    "native_source_commit": "064d1ad4bca0a8be4ad71ce0ba0f4b33f43a8265",
-    "captured_at_utc": "2026-09-30T03:52:13.295916+00:00",
-    "example_payload_ts": 1790740333
+    "bytes": 6176,
+    "sha256": "8e4bfe70e9bbb4a5986894b0bf88ec3af64c3cdecea83f6da8574dd51f5c2ceb",
+    "native_source_commit": "637a9c992ce19f8dc8952786b072161bbd32de01",
+    "captured_at_utc": "2026-09-30T12:12:58.757143+00:00",
+    "example_payload_ts": 1790770378
   },
   "claude-usage": {
     "dimensions": [
@@ -88,13 +88,19 @@
     "captured_date": "2026-09-30",
     "lvgl_component_version": "9.6.0~1",
     "esp_idf_version": "5.5.2",
-    "native_source_commit": "064d1ad4bca0a8be4ad71ce0ba0f4b33f43a8265",
+    "native_source_commit": "637a9c992ce19f8dc8952786b072161bbd32de01",
     "source_sha256": {
-      "firmware/main/dashboard_ui.cpp": "cf3fab11a76e5946daa5bcf55a7d03ea80e284afc8a2f665d0d6bf44cd4964c3",
+      "firmware/main/dashboard_ui.cpp": "38de490b17557e51af427091330e6d6b2095c509f7d7173bc155eff75e235c57",
+      "firmware/main/clock_display_font.c": "3795c3149868e99c47cc4441c522b98ca20bfbdbfa1bb91e87bb3624242cc8b4",
       "firmware/main/clock_font.c": "38cc3f4977daf1cb0cc553407b6896caa4fdd9ae8c475a46b26bcc993e320ec2",
       "firmware/main/hero_font.c": "b8b138fc5c65eae81dd5134cfd08b120f9066a9c486854afd923da7c65a92673",
       "firmware/main/brand_assets.c": "e006ae963299608ef7c12b0658c62f53a22fd30f5d3ec6a1885e204fa990ef0f"
-    }
+    },
+    "latest_refreshed_widgets": [
+      "clock",
+      "weather",
+      "time-progress"
+    ]
   },
   "_provenance": {
     "fixture": "docs/amoled-example-payload.json",
@@ -103,6 +109,6 @@
     "images": "Software-rendered native firmware UI previews; not device photographs or live data",
     "documentation": "docs/amoled-assets.md",
     "strava": "Official two-chevron app symbol linked by the current Strava homepage; original geometry, colors, and alpha preserved",
-    "all_seven_refresh": "All seven approved clean native UI scenes refreshed using the committed fictional readings; only ts freshened in a temporary copy"
+    "latest_refresh": "Clock, Weather, and Time Progress refreshed from native UI 637a9c992ce19f8dc8952786b072161bbd32de01 using the committed fictional readings plus explicit example location Dallas; only ts freshened in a temporary copy. The four other asset files and their per-image capture provenance are unchanged."
   }
 }

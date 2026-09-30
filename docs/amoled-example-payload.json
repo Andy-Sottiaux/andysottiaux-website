@@ -10,6 +10,7 @@
   "month_pct": 96.1,
   "year_pct": 74.5,
   "weather_state": "live",
+  "weather_location": "Dallas",
   "weather_age_s": 60,
   "weather_temp_f": 68,
   "weather_feels_f": 67,

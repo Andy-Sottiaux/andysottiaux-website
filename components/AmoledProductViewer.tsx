@@ -8,11 +8,11 @@ import styles from './AmoledProductViewer.module.css'
 
 const WIDGETS = [
   { id: 'clock', name: 'Clock', color: '#79d6ff', description: 'Large, clear time with the date and AM/PM.' },
-  { id: 'weather', name: 'Weather', color: '#ffd46b', description: 'Temperature, conditions, and the details for your day.' },
+  { id: 'weather', name: 'Weather', color: '#ffd46b', description: 'Location, temperature, and the details for your day.' },
   { id: 'runna', name: 'Runna', color: '#99ff77', description: 'The next workout, mileage, and a weekly target.' },
   { id: 'training', name: 'Training', color: '#ff713e', description: 'Strava mileage and run totals in a single glance.' },
   { id: 'nyc-marathon', name: 'NYC Marathon', color: '#47d6f3', description: 'A race countdown and Team for Kids fundraising progress.' },
-  { id: 'time-progress', name: 'Time progress', color: '#6bf2cd', description: 'A colorful view of the day, month, and year.' },
+  { id: 'time-progress', name: 'Time progress', color: '#6bf2cd', description: 'Today’s progress, with month and year context.' },
   { id: 'claude-usage', name: 'Claude usage', color: '#f1aa8c', description: 'Two usage windows, with explicit data freshness.' },
 ] as const
 
