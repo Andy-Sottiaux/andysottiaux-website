@@ -21,7 +21,7 @@ async function expectControlsNotClipped(page: Page) {
         const style = getComputedStyle(ancestor)
         const bounds = ancestor.getBoundingClientRect()
         if (/(hidden|clip)/.test(style.overflowY) && (box.top < bounds.top - 2 || box.bottom > bounds.bottom + 2)) {
-          return [`${element.getAttribute('aria-label') || element.textContent?.trim()}: vertical clipping`]
+          return [`${element.getAttribute('aria-label') || element.textContent?.trim()}: vertical clipping (${box.top.toFixed(1)}..${box.bottom.toFixed(1)} outside ${bounds.top.toFixed(1)}..${bounds.bottom.toFixed(1)}; ${ancestor.className})`]
         }
         if (/(hidden|clip)/.test(style.overflowX) && (box.left < bounds.left - 2 || box.right > bounds.right + 2)) {
           return [`${element.getAttribute('aria-label') || element.textContent?.trim()}: horizontal clipping`]

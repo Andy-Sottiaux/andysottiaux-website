@@ -165,7 +165,7 @@ export default function SpotlightTile({
       linkLabel={directLink ? `Open ${active.title} on the App Store` : undefined}
       onOpen={directLink ? undefined : openActive}
       modalLabel={`Open ${active.title}`}
-      className="min-h-[310px] lg:min-h-0"
+      className="min-h-[310px] max-[379px]:min-h-[350px] lg:min-h-0"
     >
       <div
         data-spotlight-motion="true"
@@ -176,7 +176,7 @@ export default function SpotlightTile({
         onFocusCapture={pauseForInteraction}
         onBlurCapture={resumeAfterFocus}
       >
-        <div className="relative flex-1 min-h-[230px] overflow-hidden">
+        <div className="relative flex-1 min-h-[230px] max-[379px]:min-h-[270px] overflow-hidden">
           {SPOTLIGHT_ITEMS.map((item, index) => {
             const isActive = index === activeIndex
             const slideState = isActive
