@@ -286,7 +286,7 @@ html {
 
 [data-camera-performance="true"] [data-spotlight-motion="true"] [data-spotlight-tab="true"][data-active="true"] {
   transform: translate3d(0, -1px, 0);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), 0 6px 18px rgba(0, 0, 0, 0.12);
 }
 
 [data-camera-performance="true"] [data-spotlight-motion="true"] [data-spotlight-dot="true"] {

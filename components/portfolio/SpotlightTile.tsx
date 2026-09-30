@@ -721,7 +721,7 @@ function SpotlightRail({
                 haptic('tap')
                 onSelect(index)
               }}
-              className="min-h-8 min-w-0 rounded-full px-1 py-1.5 text-left focus:outline-none focus:ring-2 focus:ring-cyan-300/70 sm:px-2"
+              className="min-h-8 min-w-0 rounded-full px-1 py-1.5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan-300/70 sm:px-2"
               style={{
                 color: active ? itemAccent : muted,
                 background: active
@@ -756,7 +756,7 @@ function SpotlightRail({
             haptic('tap')
             onToggleRotation()
           }}
-          className="flex h-8 shrink-0 self-end items-center justify-center gap-1 rounded-full px-2 focus:outline-none focus:ring-2 focus:ring-cyan-300/70 sm:w-8 sm:self-auto sm:px-0"
+          className="flex h-8 shrink-0 self-end items-center justify-center gap-1 rounded-full px-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan-300/70 sm:w-8 sm:self-auto sm:px-0"
           style={{
             color: rotationPaused ? accent : muted,
             background: isLight ? 'rgba(0,0,0,0.035)' : 'rgba(255,255,255,0.035)',
