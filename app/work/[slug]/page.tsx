@@ -72,8 +72,8 @@ export default async function WorkPage({ params }: WorkPageProps) {
         <div className={styles.heroMedia}>
           <div className={`${styles.visualFrame} ${project.heroMode === 'epaper' ? styles.epaperFrame : ''} ${project.heroMode === 'amoled' ? styles.amoledFrame : ''}`}><HeroVisual project={project} /></div>
           <div className={styles.visualCaption}>
-            <span>{project.heroMode === 'system' ? 'System topology' : project.heroMode === 'epaper' ? 'Interactive 3D visualization' : project.heroMode === 'amoled' ? 'Native LVGL renders · example data' : project.heroMode === 'gallery' ? 'Actual native views · sample data' : 'CAD rendering'}</span>
-            <span>{project.heroMode === 'system' ? 'Edge → interface' : project.heroMode === 'epaper' ? '1360 × 480 / four-color' : project.heroMode === 'amoled' ? '480 × 480 / full color' : project.heroMode === 'gallery' ? 'Native iOS' : 'Hardware + software'}</span>
+            <span>{project.heroMode === 'system' ? 'System topology' : project.heroMode === 'epaper' ? 'Interactive 3D visualization' : project.heroMode === 'amoled' ? 'CAD concept · example screen' : project.heroMode === 'gallery' ? 'Actual native views · sample data' : 'CAD rendering'}</span>
+            <span>{project.heroMode === 'system' ? 'Edge → interface' : project.heroMode === 'epaper' ? '1360 × 480 / four-color' : project.heroMode === 'amoled' ? 'Matte white / Perch' : project.heroMode === 'gallery' ? 'Native iOS' : 'Hardware + software'}</span>
           </div>
         </div>
       </section>
@@ -92,6 +92,7 @@ export default async function WorkPage({ params }: WorkPageProps) {
 
       {project.tour ? <CapabilityTour tour={project.tour} /> : null}
       {project.slug === 'travel-agent-ai' && <div className={styles.productTour}><ProductScreens screens={TRAVEL_SCREENS} /></div>}
+      {project.slug === 'amoled-dashboard' && <DeskBuddyStory />}
 
       <section id="overview" className={`${styles.section} ${styles.overview}`}>
         <div className={styles.sectionIntro}>
@@ -163,7 +164,7 @@ export default async function WorkPage({ params }: WorkPageProps) {
 
 function HeroVisual({ project }: { project: NonNullable<ReturnType<typeof getCaseStudy>> }) {
   if (project.heroMode === 'amoled') {
-    return <div id="amoled-interface"><AmoledProductViewer variant="full" /></div>
+    return <Image src={project.heroImage!} alt={project.heroImageAlt ?? ''} width={2000} height={1333} priority sizes="(max-width: 800px) 92vw, 55vw" className={styles.deskBuddyHero} />
   }
   if (project.heroMode === 'gallery' && project.heroGallery?.length) {
     return (
@@ -203,6 +204,34 @@ function HeroVisual({ project }: { project: NonNullable<ReturnType<typeof getCas
     <div className={project.heroMode === 'contain' ? styles.containedVisual : styles.coverVisual}>
       <Image src={project.heroImage} alt={project.heroImageAlt ?? ''} fill priority sizes="(max-width: 1000px) 92vw, 55vw" className={project.heroMode === 'contain' ? styles.containedImage : styles.coverImage} />
     </div>
+  )
+}
+
+function DeskBuddyStory() {
+  return (
+    <>
+      <section className={`${styles.section} ${styles.deskBuddyStory}`} aria-labelledby="desk-buddy-design">
+        <div className={styles.deskBuddyIntro}>
+          <div><SectionLabel>Designed for the desk</SectionLabel><h2 id="desk-buddy-design">Small screen.<br />A little more presence.</h2></div>
+          <p>A curved Perch lifts the display into view. A fitted enclosure wraps the board, while the USB-C cable follows a concealed route through the support and base. Matte white keeps the form light; graphite gives it a quieter silhouette.</p>
+        </div>
+        <div className={styles.deskBuddyGallery}>
+          <figure>
+            <Image src="/images/desk-buddy/workspace.webp" alt="CAD render of the matte-white Desk Buddy beside a monitor, keyboard, notebook, and coffee on a light oak desk" width={2000} height={1333} sizes="(max-width: 800px) 92vw, 55vw" />
+            <figcaption><span>01 / Matte white</span><span>A place in the everyday.</span></figcaption>
+          </figure>
+          <figure>
+            <Image src="/images/desk-buddy/executive.webp" alt="CAD render of the graphite Desk Buddy showing the weather widget on a walnut office desk" width={2000} height={1333} sizes="(max-width: 800px) 92vw, 40vw" />
+            <figcaption><span>02 / Graphite</span><span>The same form, a different mood.</span></figcaption>
+          </figure>
+        </div>
+        <p className={styles.deskBuddyNote}>Rendered from the enclosure CAD with example widget data. Finish studies for the print concept.</p>
+      </section>
+      <section id="amoled-interface" className={`${styles.section} ${styles.deskBuddyInterface}`} aria-labelledby="desk-buddy-screens">
+        <div><SectionLabel>Inside the display</SectionLabel><h2 id="desk-buddy-screens">Seven useful glances.</h2><p>Time, weather, training, race day, and a little perspective. Explore the native interface, one full-screen widget at a time.</p></div>
+        <AmoledProductViewer variant="full" />
+      </section>
+    </>
   )
 }
 

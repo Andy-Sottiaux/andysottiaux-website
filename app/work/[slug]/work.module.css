@@ -36,6 +36,22 @@
 .visualFrame { position: relative; height: 550px; overflow: hidden; border-radius: 5px; }
 .visualFrame.epaperFrame { height: auto; aspect-ratio: 9 / 5; }
 .visualFrame.amoledFrame { height: auto; aspect-ratio: auto; min-height: 0; }
+.deskBuddyHero { display: block; width: 100%; height: auto; }
+.deskBuddyIntro { display: grid; grid-template-columns: 1fr 1fr; align-items: end; gap: 70px; margin-bottom: 40px; }
+.deskBuddyIntro > p, .deskBuddyInterface > div > p:not(.sectionLabel) { color: var(--muted); font-size: 15px; line-height: 1.8; max-width: 500px; }
+.deskBuddyGallery { display: grid; grid-template-columns: 1.2fr 1fr; gap: 24px; align-items: start; }
+.deskBuddyGallery figure:last-child { margin-top: 80px; }
+.deskBuddyGallery img { width: 100%; height: auto; border-radius: 5px; }
+.deskBuddyGallery figcaption { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; margin-top: 14px; color: var(--muted); font-size: 12px; }
+.deskBuddyGallery figcaption span:first-child { color: var(--ink); }
+.deskBuddyNote { margin-top: 30px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.deskBuddyInterface { display: grid; grid-template-columns: .8fr 1.2fr; align-items: center; gap: 60px; border-block: 1px solid var(--rule); }
+.deskBuddyInterface > div > p:not(.sectionLabel) { margin-top: 24px; }
+@media (max-width: 800px) {
+  .deskBuddyIntro, .deskBuddyInterface { grid-template-columns: 1fr; gap: 28px; }
+  .deskBuddyGallery { grid-template-columns: 1fr; gap: 32px; }
+  .deskBuddyGallery figure:last-child { margin-top: 0; }
+}
 .visualCaption { display: flex; justify-content: space-between; gap: 15px; padding-top: 15px; color: var(--muted); font-size: .75rem; text-transform: uppercase; letter-spacing: .08em; }
 .gallery { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 16px; overflow: hidden; background: #dcded6; padding: 48px 0; }
 .phone { position: relative; flex: 0 0 35%; aspect-ratio: 6 / 13; overflow: hidden; border-radius: 7px; background: #fff; box-shadow: 0 14px 22px #25302624; }

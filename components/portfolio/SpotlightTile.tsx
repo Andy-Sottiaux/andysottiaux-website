@@ -7,7 +7,6 @@ import { Pause, Play } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import type { ModalKey } from '../CompactModals'
 import CameraIdleSurface from '../CameraIdleSurface'
-import AmoledProductViewer from '../AmoledProductViewer'
 import { useFieldTheme } from '../fieldTheme'
 import { haptic } from '@/lib/haptics'
 import type { FieldCameraSource } from '@/lib/fieldCameraConfig'
@@ -542,8 +541,23 @@ function SpotlightPreviewProjectPanel({
         />
 
         {item.id === 'amoled-dashboard' ? (
-          <div className="relative min-h-[148px] flex-1 overflow-hidden rounded-[13px] ring-1 ring-inset ring-white/10">
-            <AmoledProductViewer variant="compact" active={active} />
+          <div data-desk-buddy-preview="true" className="relative min-h-[120px] flex-1 overflow-hidden rounded-[13px] bg-[#d8d3ca] ring-1 ring-inset ring-white/10 sm:min-h-[148px]">
+            <Image
+              src={previewImage}
+              alt=""
+              aria-hidden="true"
+              fill
+              sizes="(max-width: 640px) 88vw, 42vw"
+              className="scale-110 object-cover blur-xl brightness-90"
+            />
+            <Image
+              src={previewImage}
+              alt={item.previewAlt ?? ''}
+              fill
+              sizes="(max-width: 640px) 88vw, 42vw"
+              className="object-contain"
+            />
+            <span className="absolute bottom-2 left-2 rounded-full bg-black/70 px-2.5 py-1 text-[9px] font-medium tracking-wide text-white">CAD concept · example screen</span>
           </div>
         ) : item.id === 'epaper-dashboard' ? (
           <div
@@ -710,7 +724,7 @@ function SpotlightRail({
               type="button"
               role="tab"
               aria-selected={active}
-              aria-label={`Show ${item.title}`}
+              aria-label={`Show ${item.railLabel ?? item.title}${item.railLabel && item.railLabel !== item.title ? `: ${item.title}` : ''}`}
               aria-controls={`spotlight-panel-${item.id}`}
               tabIndex={active ? 0 : -1}
               data-spotlight-tab="true"

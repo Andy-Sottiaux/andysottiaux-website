@@ -1,0 +1,112 @@
+{
+  "generated_at": "2026-09-30T15:35:07.182853+00:00",
+  "source_project": "amoled-dashboard-216",
+  "source_directory": "hardware/desk-buddy/lifestyle",
+  "method": "Blender 4.5.14 LTS / Cycles, full-scale concept-04 CAD, procedural office furniture and accessories",
+  "attribution": "CAD renders, not photographs. Screen readings are fictional examples rendered by the native firmware UI.",
+  "encoding": {
+    "format": "WebP",
+    "lossless": false,
+    "quality": 90,
+    "method": 6,
+    "pillow": "10.3.0",
+    "resizing": "none",
+    "color_mode": "RGB",
+    "metadata": "No EXIF, ICC, XMP, or private source metadata copied."
+  },
+  "images": [
+    {
+      "scene": "daylight",
+      "path": "public/images/desk-buddy/daylight.webp",
+      "width": 2000,
+      "height": 1333,
+      "bytes": 49560,
+      "sha256": "8bf29064403e7b39ba661ba3d1d44f0ea1652c21d82052cabd617ad4385fbc79",
+      "source": {
+        "file": "desk-buddy-daylight.png",
+        "bytes": 2259413,
+        "sha256": "5f1878acd55ad210bed736d34b39007ddbcc886f5f1b5fa7f790c47dc99860ce",
+        "sidecar_sha256": "009b1b980ad0e4b9dd47cb97543d036bd6ddae5dc2b89cd44c9e3502ee3ab0c7",
+        "assembly_blend_sha256": "bc25f848f681002a55e95e116cbcf3dbf4e26bcbe4f1e46d38965ac705d771bb",
+        "cad_manifest_sha256": "1ee4415e6ce6ba84e9d6e9a5632376b4bb0d520a8dafae671f7eaeb7b9f1d264",
+        "screen_texture": "clock.png",
+        "screen_texture_sha256": "37918d833233f52998971d91ebe8e8594dbb1b294187f9e9c15037078fc8ce7a",
+        "renderer_source_sha256": {
+          "render_lifestyle.py": "1d56ed04a70201db2428acc65db6493a63c6dc2ae4b8f63644bab3e486670c40",
+          "lifestyle_props.py": "57a703221eebcd13a11490de17216af7b1e835f8a724c89abb940d27f7051900"
+        },
+        "finish": "matte white",
+        "product_scale": "1:1, 123.79mm assembled CAD height",
+        "cad_mesh_count": 24,
+        "verification_pass": true
+      },
+      "decoded_verification": {
+        "format": "WEBP",
+        "dimensions_match": true,
+        "reopened_successfully": true
+      }
+    },
+    {
+      "scene": "workspace",
+      "path": "public/images/desk-buddy/workspace.webp",
+      "width": 2000,
+      "height": 1333,
+      "bytes": 68070,
+      "sha256": "a4841ddb5a9bb0a28b8fbfb68b81d250907b9517a1f6e01f8e58720e9f021782",
+      "source": {
+        "file": "desk-buddy-workspace.png",
+        "bytes": 2412001,
+        "sha256": "2819ddf2d0367802a2ccad2cb8124d6cee45eadc300c825439ad87f0300bf1e3",
+        "sidecar_sha256": "9410e8933a9af3d1a63bf657f13ec735fb42fdbcf01c527c52da130fdfa5cec0",
+        "assembly_blend_sha256": "bc25f848f681002a55e95e116cbcf3dbf4e26bcbe4f1e46d38965ac705d771bb",
+        "cad_manifest_sha256": "1ee4415e6ce6ba84e9d6e9a5632376b4bb0d520a8dafae671f7eaeb7b9f1d264",
+        "screen_texture": "runna.png",
+        "screen_texture_sha256": "70952da33abb259fb59afcd02f34a007a3d95821cfdfc76ed9aeac2c22f1d4a0",
+        "renderer_source_sha256": {
+          "render_lifestyle.py": "1d56ed04a70201db2428acc65db6493a63c6dc2ae4b8f63644bab3e486670c40",
+          "lifestyle_props.py": "57a703221eebcd13a11490de17216af7b1e835f8a724c89abb940d27f7051900"
+        },
+        "finish": "matte white",
+        "product_scale": "1:1, 123.79mm assembled CAD height",
+        "cad_mesh_count": 24,
+        "verification_pass": true
+      },
+      "decoded_verification": {
+        "format": "WEBP",
+        "dimensions_match": true,
+        "reopened_successfully": true
+      }
+    },
+    {
+      "scene": "executive",
+      "path": "public/images/desk-buddy/executive.webp",
+      "width": 2000,
+      "height": 1333,
+      "bytes": 60632,
+      "sha256": "c19cc339062ac76e68c22df3c361105850b19486a1d712b689f3a779a27298e0",
+      "source": {
+        "file": "desk-buddy-executive.png",
+        "bytes": 2329182,
+        "sha256": "609370778cf155afdc44e3688d01bc9d65bcdfe1fc56e24e6acd87cde34d4f9e",
+        "sidecar_sha256": "42a6c2f8f1df17109f6688eff07f506212e7c6b79cf7b6f4e1878ede51f6879a",
+        "assembly_blend_sha256": "bc25f848f681002a55e95e116cbcf3dbf4e26bcbe4f1e46d38965ac705d771bb",
+        "cad_manifest_sha256": "1ee4415e6ce6ba84e9d6e9a5632376b4bb0d520a8dafae671f7eaeb7b9f1d264",
+        "screen_texture": "weather.png",
+        "screen_texture_sha256": "896968b7d9f3de1035413f60dc87de82c590cc8dd8e15e614e31ef2fe8844f9c",
+        "renderer_source_sha256": {
+          "render_lifestyle.py": "1d56ed04a70201db2428acc65db6493a63c6dc2ae4b8f63644bab3e486670c40",
+          "lifestyle_props.py": "57a703221eebcd13a11490de17216af7b1e835f8a724c89abb940d27f7051900"
+        },
+        "finish": "matte graphite",
+        "product_scale": "1:1, 123.79mm assembled CAD height",
+        "cad_mesh_count": 24,
+        "verification_pass": true
+      },
+      "decoded_verification": {
+        "format": "WEBP",
+        "dimensions_match": true,
+        "reopened_successfully": true
+      }
+    }
+  ]
+}

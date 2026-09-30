@@ -14,10 +14,10 @@ const wyzecar = 'https://github.com/Andy-Sottiaux/WYZECAR/blob/d669b8876eba341eb
 export const PROJECT_EVIDENCE: Record<string, Evidence> = {
   'amoled-dashboard': {
     status: 'Verified USB + local Wi-Fi',
-    reviewed: '2026-09-29',
+    reviewed: '2026-09-30',
     basis: 'Native firmware + connected-board checks',
-    result: 'On September 29, 2026, all seven live native display-draw captures were checked on the connected ESP32-C6 board and 66 focused bridge checks passed. Saved Wi-Fi reconnect, live updates on the current LAN, USB acknowledgments, and RTC clock restoration after a restart were verified. Two five-source polling cycles took 179.95–180.34 seconds; horizontal transitions produced 13 frames over 498–516 milliseconds at brightness 100.',
-    limitation: 'The website images are rendered by the actual LVGL UI with curated example data, inside a device visualization. They are not photographs, live readings, or the private device cache. Draw captures do not establish optical display quality. Private feeds require the Mac bridge to remain awake and reachable. Battery runtime, the office network, and physical swipe/tap behavior remain unverified.',
+    result: 'All seven native display-draw captures were checked on the connected ESP32-C6 board on September 29. Saved Wi-Fi reconnect, updates on the current LAN, USB acknowledgments, and RTC restoration were verified. On September 30, 99 bridge checks passed and corrected Runna weekly mileage was verified through a native device capture and successive scheduled fetches. The enclosed Perch CAD supplied all three office renders, with unchanged product geometry.',
+    limitation: 'The office scenes are CAD renders of a print concept, with native LVGL screens and curated example data. They are not photographs or live readings, and do not establish printed fit, cable installation, finish quality, or optical display quality. Private feeds require the Mac bridge to remain awake and reachable. Battery runtime, the office network, and physical swipe/tap behavior remain unverified. Claude usage can remain stale during a provider rate-limit cooldown.',
     tradeoff: {
       question: 'Shrink the whole dashboard, or give each widget the screen?',
       choice: 'Use seven full-screen views with a shared carousel, clear visual hierarchy, and explicit data freshness.',

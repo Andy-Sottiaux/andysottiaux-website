@@ -33,25 +33,33 @@ test('explores all seven firmware views while keeping the example-data boundary 
   await expect(page.getByText(/Private feeds require the Mac bridge to remain awake and reachable\. Battery runtime, the office network, and physical swipe\/tap behavior remain unverified/)).toBeVisible()
 })
 
-test('navigates the AMOLED widgets with keys independently of the outer Spotlight rail', async ({ page }) => {
+test('opens the Desk Buddy render from Spotlight and explores the widget tour with keys', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await mockPortfolioNetwork(page)
   await page.goto('/preview')
   const spotlight = page.getByRole('tab', { name: 'AMOLED' })
   await spotlight.click()
+  await expect(spotlight).toHaveAttribute('aria-selected', 'true')
+  const render = page.locator('[data-desk-buddy-preview="true"]')
+  await expect(render).toBeVisible()
+  await expect(render).toContainText('CAD concept · example screen')
+  await expect.poll(() => render.getByRole('img').evaluate(image =>
+    image instanceof HTMLImageElement && image.complete && image.naturalWidth > 0,
+  )).toBe(true)
+  await page.getByRole('link', { name: 'Explore', exact: true }).click()
+  await expect(page).toHaveURL(/\/work\/amoled-dashboard$/)
+  await page.getByRole('link', { name: 'Explore the seven screens' }).first().click()
   const viewer = page.getByRole('region', { name: 'AMOLED widget preview' })
   const runna = viewer.getByRole('button', { name: 'Show Runna AMOLED widget', exact: true })
   await runna.focus()
   await page.keyboard.press('ArrowRight')
   await expect(viewer).toHaveAttribute('data-amoled-widget', 'training')
-  await expect(spotlight).toHaveAttribute('aria-selected', 'true')
   await page.keyboard.press('End')
   await expect(viewer).toHaveAttribute('data-amoled-widget', 'claude-usage')
   await page.keyboard.press('Home')
   await expect(viewer).toHaveAttribute('data-amoled-widget', 'clock')
   await page.keyboard.press('ArrowLeft')
   await expect(viewer).toHaveAttribute('data-amoled-widget', 'claude-usage')
-  await expect(spotlight).toHaveAttribute('aria-selected', 'true')
 })
 
 test('@a11y AMOLED case study remains accessible with reduced motion', async ({ page }) => {

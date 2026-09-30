@@ -11,7 +11,7 @@ telemetry, health monitoring, and authenticated physical controls.
 - `/work/field-camera` — edge camera, relay, and operations case study
 - `/work/wyzecar` — robotics and autonomy case study
 - `/work/epaper-dashboard` — runner-first embedded display and partial-refresh case study
-- `/work/amoled-dashboard` — native ESP32-C6 color-widget carousel, USB commissioning, and an interactive firmware UI preview
+- `/work/amoled-dashboard` — Desk Buddy enclosure renders, native ESP32-C6 color-widget carousel, and an interactive firmware UI preview
 - `/lab` — full live camera, inference, health, and solar dashboard
 - `/lab/dashboard` — compact portfolio and live-system dashboard
 - `/preview` — non-indexed dashboard preview

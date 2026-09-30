@@ -41,7 +41,7 @@ test('each project states dated evidence and limitations', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'What this work demonstrates.' })).toBeVisible()
     await expect(page.getByRole('heading', { name: 'Scope & limitations' })).toBeVisible()
     const reviewed = route === '/work/amoled-dashboard'
-      ? { date: '2026-09-29', label: 'Reviewed September 29, 2026' }
+      ? { date: '2026-09-30', label: 'Reviewed September 30, 2026' }
       : { date: '2026-09-04', label: 'Reviewed September 4, 2026' }
     await expect(page.locator(`time[datetime="${reviewed.date}"]`)).toHaveText(reviewed.label)
   }
