@@ -12,6 +12,22 @@ type Evidence = {
 const wyzecar = 'https://github.com/Andy-Sottiaux/WYZECAR/blob/d669b8876eba341eb303227bde4e0a0e13adca70'
 
 export const PROJECT_EVIDENCE: Record<string, Evidence> = {
+  'amoled-dashboard': {
+    status: 'Commissioned over USB',
+    reviewed: '2026-09-29',
+    basis: 'Native firmware + connected-board checks',
+    result: 'On September 29, 2026, all seven native display-draw captures were checked on the connected ESP32-C6 board, 17 focused bridge tests passed, repeated USB acknowledgments were observed, and the onboard RTC restored the clock after a restart.',
+    limitation: 'The website images are rendered by the actual LVGL UI with curated example data, inside a device visualization. They are not photographs, live readings, or the private device cache. Draw captures do not establish optical display quality. Battery runtime, physical swipe/tap behavior, and autonomous Wi-Fi operation have not been verified in this record.',
+    tradeoff: {
+      question: 'Shrink the whole dashboard, or give each widget the screen?',
+      choice: 'Use seven full-screen views with a shared carousel, clear visual hierarchy, and explicit data freshness.',
+      cost: 'Only one widget is visible at a time. Rotation and manual navigation trade simultaneous overview for figures that remain readable on a small display.',
+    },
+    sources: [
+      { title: 'Waveshare board documentation', url: 'https://docs.waveshare.com/ESP32-C6-Touch-AMOLED-2.16', detail: 'Display, processor, touch controller, RTC, power-management hardware, and board interfaces.' },
+      { title: 'Waveshare board support', url: 'https://github.com/waveshareteam/ESP32-C6-Touch-AMOLED-2.16', detail: 'Official display and peripheral examples used as the starting point for the native firmware.' },
+    ],
+  },
   'epaper-dashboard': {
     status: 'Personal hardware build',
     reviewed: '2026-09-04',

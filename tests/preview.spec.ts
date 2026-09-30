@@ -49,7 +49,7 @@ test('preview keeps every desktop card and spotlight control inside one screen',
       height: document.documentElement.scrollHeight,
       width: document.documentElement.scrollWidth,
     }))).toEqual(viewport)
-    for (const name of ['E-Paper', 'Travel', 'WYZECAR', 'Cam 1', 'Cam 2']) {
+    for (const name of ['E-Paper', 'AMOLED', 'Travel', 'WYZECAR', 'Cam 1', 'Cam 2']) {
       await page.getByRole('tab', { name }).click()
       await expect(page.getByRole('tab', { name })).toHaveAttribute('aria-selected', 'true')
       await expectControlsNotClipped(page)

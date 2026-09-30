@@ -20,7 +20,7 @@ type ProjectTour = {
 
 export type ProjectCaseStudy = {
   title: string
-  slug?: 'field-camera' | 'travel-agent-ai' | 'wyzecar' | 'epaper-dashboard'
+  slug?: 'field-camera' | 'travel-agent-ai' | 'wyzecar' | 'epaper-dashboard' | 'amoled-dashboard'
   eyebrow?: string
   subtitle?: string
   role?: string
@@ -42,7 +42,7 @@ export type ProjectCaseStudy = {
   heroImage?: string
   heroImageAlt?: string
   heroGallery?: string[]
-  heroMode?: 'cover' | 'contain' | 'gallery' | 'system' | 'epaper'
+  heroMode?: 'cover' | 'contain' | 'gallery' | 'system' | 'epaper' | 'amoled'
 }
 
 export const PROJECT_CASE_STUDIES: ProjectCaseStudy[] = [
@@ -139,6 +139,61 @@ export const PROJECT_CASE_STUDIES: ProjectCaseStudy[] = [
     heroImage: '/images/epaper-dashboard-frame.png',
     heroImageAlt: 'Runner-focused interface rendered for a 10.85-inch four-color e-paper display',
     heroMode: 'epaper',
+  },
+  {
+    title: 'AMOLED Dashboard',
+    slug: 'amoled-dashboard',
+    eyebrow: 'Native embedded interface',
+    subtitle: 'The same useful glance, reimagined in color: seven full-screen widgets on a 2.16-inch ESP32 display.',
+    role: 'Interface design, native C++ firmware, display integration, data transport, clock persistence, and commissioning.',
+    problem: 'Carry the useful parts of the wide e-paper dashboard onto a small square screen without shrinking every widget into something too small to read.',
+    built: 'Built seven native LVGL views for clock, weather, Runna, training, the NYC Marathon, time progress, and Claude usage. Each fills the 480 × 480 canvas, with its own color hierarchy and recognizable service artwork.',
+    outcome: 'A working ESP32-C6 firmware build with a rotating widget carousel, a verified USB data path, and a clock restored from the onboard RTC after a restart. Wireless commissioning remains separate from the verified USB path.',
+    proof: 'The native interface was flashed to the connected board and all seven display-draw captures were checked. The website tour runs the same UI design with curated example data; it is a visualization, not a photograph or live device feed.',
+    metrics: ['480 × 480 canvas', 'Seven full-screen widgets', 'ESP32-C6 + LVGL', '17 bridge checks passed'],
+    architecture: [
+      'ESP-IDF C++ firmware with LVGL rendering, a CO5300 QSPI display, and CST9220 touch-controller initialization',
+      'Two 24-line RGB565 draw buffers keep rendering within the microcontroller memory budget',
+      'An allowlisted JSON summary bridge supplies time, weather, training, fundraising, and usage states over USB',
+      'UTC is saved to the PCF85063 RTC; startup rejects an uninitialized clock or oscillator-stop flag',
+    ],
+    validation: [
+      'All seven native display-draw captures were reconstructed from the connected board on September 29, 2026',
+      '17 focused bridge checks passed, covering unknown values, confirmed zero, stale caches, date boundaries, and USB reconnect behavior',
+      'Repeated USB acknowledgments and device status were verified through the installed host login service',
+      'RTC restoration after a board restart was observed; battery runtime, physical touch gestures, and autonomous Wi-Fi were not established by these checks',
+    ],
+    constraints: [
+      'A 2.16-inch square canvas needs one clear focal point at a time, rather than a compressed copy of the wide e-paper layout.',
+      'The ESP32-C6 memory budget rules out treating the display like a desktop browser; draw buffers and capture transport must stay bounded.',
+      'Unavailable measurements must stay unknown, and cached personal summaries must remain visibly stale rather than appearing current.',
+    ],
+    decisions: [
+      {
+        title: 'One widget at a time',
+        detail: 'A carousel gives every widget the full screen. Large figures, short supporting labels, and a consistent footer carry the hierarchy across all seven views.',
+      },
+      {
+        title: 'Color with a purpose',
+        detail: 'Weather, training, race day, and tool usage each have a distinct palette. Official brand artwork adds recognition while the current measurement stays the visual focus.',
+      },
+      {
+        title: 'Honest data states',
+        detail: 'The firmware and bridge preserve the difference between live, cached, and unknown data. A missing value is shown as a dash; a confirmed zero is still a real measurement.',
+      },
+      {
+        title: 'Verify the transport',
+        detail: 'USB acknowledgments, bounded packets, reconnect settling, and RTC restoration provide inspectable commissioning evidence before claiming independent wireless operation.',
+      },
+    ],
+    tech: ['C++', 'ESP-IDF', 'ESP32-C6', 'LVGL 9', 'QSPI', 'Python', 'USB Serial/JTAG', 'RTC'],
+    link: '#amoled-interface',
+    linkLabel: 'Explore the seven screens',
+    icon: '/images/amoled/runna.webp',
+    iconContain: true,
+    heroImage: '/images/amoled/runna.webp',
+    heroImageAlt: 'Native LVGL Runna widget rendered with example data for the 480 by 480 AMOLED display',
+    heroMode: 'amoled',
   },
   {
     title: 'Travel Agent AI',

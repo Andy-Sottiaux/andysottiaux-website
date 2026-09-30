@@ -25,10 +25,12 @@ test('renders the bento shell and spotlight order', async ({ page }) => {
   await expect(page.getByRole('tab', { name: 'Travel' })).toBeVisible()
   await expect(page.getByRole('tab', { name: 'Cam 1' })).toBeVisible()
   await expect(page.getByRole('tab', { name: 'E-Paper' })).toBeVisible()
+  await expect(page.getByRole('tab', { name: 'AMOLED' })).toBeVisible()
   await expect(page.getByRole('tab', { name: 'WYZECAR' })).toBeVisible()
   await expect(page.getByRole('tab', { name: 'Cam 2' })).toBeVisible()
   await expect(page.getByRole('tablist', { name: 'Featured spotlight' }).getByRole('tab')).toHaveText([
     'E-Paper',
+    'AMOLED',
     'Travel',
     'Cam 1',
     'WYZECAR',
@@ -104,11 +106,11 @@ test('supports keyboard navigation across the spotlight rail', async ({ page }) 
   await openDashboard(page)
 
   const ePaper = page.getByRole('tab', { name: 'E-Paper' })
-  const travel = page.getByRole('tab', { name: 'Travel' })
+  const amoled = page.getByRole('tab', { name: 'AMOLED' })
   await ePaper.focus()
   await page.keyboard.press('ArrowRight')
-  await expect(travel).toBeFocused()
-  await expect(travel).toHaveAttribute('aria-selected', 'true')
+  await expect(amoled).toBeFocused()
+  await expect(amoled).toHaveAttribute('aria-selected', 'true')
   await expect(ePaper).toHaveAttribute('tabindex', '-1')
 
   await page.keyboard.press('End')
@@ -134,7 +136,7 @@ test('lets visitors pause and resume spotlight rotation', async ({ page }, testI
 
   await resume.click()
   await expect(page.getByRole('button', { name: 'Pause spotlight rotation' })).toBeVisible()
-  await expect(page.getByRole('tab', { name: 'Travel' })).toHaveAttribute('aria-selected', 'true', {
+  await expect(page.getByRole('tab', { name: 'AMOLED' })).toHaveAttribute('aria-selected', 'true', {
     timeout: SPOTLIGHT_ROTATION_MS + 1_500,
   })
 })

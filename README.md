@@ -11,6 +11,7 @@ telemetry, health monitoring, and authenticated physical controls.
 - `/work/field-camera` — edge camera, relay, and operations case study
 - `/work/wyzecar` — robotics and autonomy case study
 - `/work/epaper-dashboard` — runner-first embedded display and partial-refresh case study
+- `/work/amoled-dashboard` — native ESP32-C6 color-widget carousel, USB commissioning, and an interactive firmware UI preview
 - `/lab` — full live camera, inference, health, and solar dashboard
 - `/lab/dashboard` — compact portfolio and live-system dashboard
 - `/preview` — non-indexed dashboard preview
@@ -80,6 +81,13 @@ Featured project content is defined once in `content/caseStudies.ts` and reused
 by the compact dashboard modal, route metadata, sitemap, and server-rendered case-study
 pages. The live dashboard is isolated in `components/live` so the dedicated lab
 does not load unrelated portfolio modal code.
+
+The AMOLED Spotlight follows E-Paper without replacing it. Its seven 480 × 480
+preview images are lossless renders of the actual LVGL firmware with curated
+example data; they are not photographs, private cached readings, or a live feed.
+`docs/amoled-asset-manifest.json` records the renderer and image provenance. The
+case study separates connected-board USB/RTC verification from unverified
+battery runtime, physical touch gestures, and autonomous Wi-Fi operation.
 
 See [docs/operations.md](docs/operations.md) for environment variables, control
 password rotation, deployment, and incident checks.

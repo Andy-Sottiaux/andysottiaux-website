@@ -2,7 +2,7 @@ import AxeBuilder from '@axe-core/playwright'
 import { expect, test } from '@playwright/test'
 import { mockPortfolioNetwork } from './support/mockPortfolioNetwork'
 
-const routes = ['/', '/work/epaper-dashboard', '/work/travel-agent-ai', '/work/wyzecar', '/work/field-camera', '/lab']
+const routes = ['/', '/work/epaper-dashboard', '/work/amoled-dashboard', '/work/travel-agent-ai', '/work/wyzecar', '/work/field-camera', '/lab']
 
 for (const width of [320, 360, 768, 1440]) {
   test(`finished routes fit ${width}px with working shared navigation`, async ({ page }) => {
@@ -30,7 +30,10 @@ test('each project states dated evidence and limitations', async ({ page }) => {
     await page.goto(route)
     await expect(page.getByRole('heading', { name: 'What this work demonstrates.' })).toBeVisible()
     await expect(page.getByRole('heading', { name: 'Scope & limitations' })).toBeVisible()
-    await expect(page.locator('time[datetime="2026-09-04"]')).toHaveText('Reviewed September 4, 2026')
+    const reviewed = route === '/work/amoled-dashboard'
+      ? { date: '2026-09-29', label: 'Reviewed September 29, 2026' }
+      : { date: '2026-09-04', label: 'Reviewed September 4, 2026' }
+    await expect(page.locator(`time[datetime="${reviewed.date}"]`)).toHaveText(reviewed.label)
   }
 })
 
@@ -102,7 +105,7 @@ test('public background explicitly separates confidential professional work', as
 test('supports a doubled root-font preference without horizontal page overflow', async ({ page }) => {
   await mockPortfolioNetwork(page)
   await page.setViewportSize({ width: 768, height: 1000 })
-  for (const route of ['/', '/work/epaper-dashboard', '/lab']) {
+  for (const route of ['/', '/work/epaper-dashboard', '/work/amoled-dashboard', '/lab']) {
     await page.goto(route)
     await page.addStyleTag({ content: 'html { font-size: 200% !important; }' })
     const sizes = await page.evaluate(() => ({ width: document.documentElement.clientWidth, scroll: document.documentElement.scrollWidth }))
@@ -112,7 +115,7 @@ test('supports a doubled root-font preference without horizontal page overflow',
 
 test('@a11y new project evidence and public lab guide are accessible', async ({ page }) => {
   await mockPortfolioNetwork(page)
-  for (const route of ['/work/wyzecar', '/work/epaper-dashboard', '/lab']) {
+  for (const route of ['/work/wyzecar', '/work/epaper-dashboard', '/work/amoled-dashboard', '/lab']) {
     await page.goto(route)
     const results = await new AxeBuilder({ page }).analyze()
     expect(results.violations, route).toEqual([])

@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation'
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUpRight, CheckCircle2, CircleDot, Radio } from 'lucide-react'
 import { FEATURED_CASE_STUDIES, getCaseStudy } from '@/content/caseStudies'
 import EpaperProductViewer from '@/components/EpaperProductViewer'
+import AmoledProductViewer from '@/components/AmoledProductViewer'
 import SiteNavigation from '@/components/site/SiteNavigation'
 import ProjectEvidence from '@/components/site/ProjectEvidence'
 import EpaperDriverTour from '@/components/site/EpaperDriverTour'
@@ -69,10 +70,10 @@ export default async function WorkPage({ params }: WorkPageProps) {
           </div>
         </div>
         <div className={styles.heroMedia}>
-          <div className={`${styles.visualFrame} ${project.heroMode === 'epaper' ? styles.epaperFrame : ''}`}><HeroVisual project={project} /></div>
+          <div className={`${styles.visualFrame} ${project.heroMode === 'epaper' ? styles.epaperFrame : ''} ${project.heroMode === 'amoled' ? styles.amoledFrame : ''}`}><HeroVisual project={project} /></div>
           <div className={styles.visualCaption}>
-            <span>{project.heroMode === 'system' ? 'System topology' : project.heroMode === 'epaper' ? 'Interactive 3D visualization' : project.heroMode === 'gallery' ? 'Actual native views · sample data' : 'CAD rendering'}</span>
-            <span>{project.heroMode === 'system' ? 'Edge → interface' : project.heroMode === 'epaper' ? '1360 × 480 / four-color' : project.heroMode === 'gallery' ? 'Native iOS' : 'Hardware + software'}</span>
+            <span>{project.heroMode === 'system' ? 'System topology' : project.heroMode === 'epaper' ? 'Interactive 3D visualization' : project.heroMode === 'amoled' ? 'Native LVGL renders · example data' : project.heroMode === 'gallery' ? 'Actual native views · sample data' : 'CAD rendering'}</span>
+            <span>{project.heroMode === 'system' ? 'Edge → interface' : project.heroMode === 'epaper' ? '1360 × 480 / four-color' : project.heroMode === 'amoled' ? '480 × 480 / full color' : project.heroMode === 'gallery' ? 'Native iOS' : 'Hardware + software'}</span>
           </div>
         </div>
       </section>
@@ -161,6 +162,9 @@ export default async function WorkPage({ params }: WorkPageProps) {
 }
 
 function HeroVisual({ project }: { project: NonNullable<ReturnType<typeof getCaseStudy>> }) {
+  if (project.heroMode === 'amoled') {
+    return <div id="amoled-interface"><AmoledProductViewer variant="full" /></div>
+  }
   if (project.heroMode === 'gallery' && project.heroGallery?.length) {
     return (
       <div className={styles.gallery}>

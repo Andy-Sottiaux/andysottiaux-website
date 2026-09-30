@@ -7,6 +7,7 @@ import { Pause, Play } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import type { ModalKey } from '../CompactModals'
 import CameraIdleSurface from '../CameraIdleSurface'
+import AmoledProductViewer from '../AmoledProductViewer'
 import { useFieldTheme } from '../fieldTheme'
 import { haptic } from '@/lib/haptics'
 import type { FieldCameraSource } from '@/lib/fieldCameraConfig'
@@ -540,7 +541,11 @@ function SpotlightPreviewProjectPanel({
           style={{ background: `radial-gradient(circle, ${halo ?? 'rgba(255,255,255,0.12)'}, transparent 68%)` }}
         />
 
-        {item.id === 'epaper-dashboard' ? (
+        {item.id === 'amoled-dashboard' ? (
+          <div className="relative min-h-[148px] flex-1 overflow-hidden rounded-[13px] ring-1 ring-inset ring-white/10">
+            <AmoledProductViewer variant="compact" active={active} />
+          </div>
+        ) : item.id === 'epaper-dashboard' ? (
           <div
             data-epaper-product-viewer="true"
             data-epaper-product-poster="true"
@@ -609,9 +614,9 @@ function SpotlightPreviewProjectPanel({
           ) : null}
         </div>
 
-        {item.id === 'epaper-dashboard' ? (
+        {item.id === 'epaper-dashboard' || item.id === 'amoled-dashboard' ? (
           <dl
-            aria-label="E-paper dashboard specifications"
+            aria-label={item.id === 'amoled-dashboard' ? 'AMOLED dashboard specifications' : 'E-paper dashboard specifications'}
             className="relative hidden shrink-0 grid-cols-3 overflow-hidden rounded-[10px] min-[1024px]:[@media(min-height:1180px)]:grid"
             style={{
               color: isLight ? '#1c1a1c' : '#fff',
@@ -619,11 +624,15 @@ function SpotlightPreviewProjectPanel({
               border: palette.cardBorder,
             }}
           >
-            {[
+            {(item.id === 'amoled-dashboard' ? [
+              { label: 'Display', value: '2.16″', color: '#99ff77' },
+              { label: 'Canvas', value: '480 × 480', color: '#79d6ff' },
+              { label: 'Widgets', value: '7 screens', color: '#f1aa8c' },
+            ] : [
               { label: 'Display', value: '10.85″', color: '#f87171' },
               { label: 'Canvas', value: '1360 × 480', color: '#67e8f9' },
               { label: 'E-paper', value: '4-color', color: '#facc15' },
-            ].map((spec, index) => (
+            ]).map((spec, index) => (
               <div
                 key={spec.label}
                 className="min-w-0 px-3 py-2.5"

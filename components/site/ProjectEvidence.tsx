@@ -5,9 +5,12 @@ import styles from './evidence.module.css'
 export default function ProjectEvidence({ slug }: { slug: string }) {
   const evidence = PROJECT_EVIDENCE[slug]
   if (!evidence) return null
+  const reviewed = new Intl.DateTimeFormat('en-US', {
+    month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC',
+  }).format(new Date(`${evidence.reviewed}T00:00:00Z`))
   return (
     <section className={styles.record} aria-labelledby="evidence-title">
-      <div className={styles.heading}><div><p className={styles.kicker}>EVIDENCE & BOUNDARIES</p><h2 id="evidence-title">What this work demonstrates.</h2></div><div className={styles.stamp}><span>{evidence.basis}</span><time dateTime={evidence.reviewed}>Reviewed September 4, 2026</time></div></div>
+      <div className={styles.heading}><div><p className={styles.kicker}>EVIDENCE & BOUNDARIES</p><h2 id="evidence-title">What this work demonstrates.</h2></div><div className={styles.stamp}><span>{evidence.basis}</span><time dateTime={evidence.reviewed}>Reviewed {reviewed}</time></div></div>
       <div className={styles.result}><span className={styles.status}>{evidence.status}</span><p>{evidence.result}</p></div>
       <div className={styles.tradeoff}><h3>{evidence.tradeoff.question}</h3><dl><div><dt>Decision</dt><dd>{evidence.tradeoff.choice}</dd></div><div><dt>Tradeoff</dt><dd>{evidence.tradeoff.cost}</dd></div></dl></div>
       <div className={styles.limit}><h3>Scope & limitations</h3><p>{evidence.limitation}</p></div>

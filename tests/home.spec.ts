@@ -32,6 +32,8 @@ test('introduces Andy through the personal dashboard and focused detail dialogs'
 test('connects the restored homepage to every retained case study', async ({ page }) => {
   await openHome(page)
   await expect(page.locator('a[href="/work/epaper-dashboard"]').first()).toBeVisible()
+  await page.getByRole('tab', { name: 'AMOLED' }).click()
+  await expect(page.locator('a[href="/work/amoled-dashboard"]').first()).toBeVisible()
   for (const path of ['/work/travel-agent-ai', '/work/wyzecar']) {
     await expect(page.locator('#projects').locator('a[href="' + path + '"]')).toBeVisible()
   }

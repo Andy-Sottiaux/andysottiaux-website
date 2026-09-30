@@ -7,6 +7,7 @@ const caseStudies = [
   { path: '/work/field-camera', title: 'Edge-AI Field Camera', proof: 'Private media edge' },
   { path: '/work/wyzecar', title: 'WYZECAR', proof: 'Separated ROS2 responsibilities' },
   { path: '/work/epaper-dashboard', title: "Runner's E-Paper Dashboard", proof: 'Design to the silicon' },
+  { path: '/work/amoled-dashboard', title: 'AMOLED Dashboard', proof: 'One widget at a time' },
 ]
 
 test('renders each featured case study as an indexable page', async ({ page }, testInfo) => {
