@@ -107,8 +107,8 @@ export default function PortfolioModals({
       <Modal
         open={openModal === 'marathon'}
         onClose={onClose}
-        title="2026 TCS NYC Marathon"
-        eyebrow="Running for Team for Kids"
+        title="2027 Chicago Marathon"
+        eyebrow="Next race · NYC 2026 finished in 3:49:00"
       >
         <MarathonModalContent />
       </Modal>

@@ -680,7 +680,8 @@ function ProofList({ title, items }: { title: string; items: string[] }) {
 
 /* ─────────────────── Marathon ─────────────────── */
 
-const MARATHON_DATE = new Date('2026-11-01T00:00:00')
+const MARATHON_DATE = new Date('2027-10-10T00:00:00')
+const NYC_2026_RESULT = { time: '3:49:00', pace: '8:45', place: '13,605' }
 
 export function MarathonModalContent() {
   const palette = useFieldTheme()
@@ -703,26 +704,26 @@ export function MarathonModalContent() {
 
   return (
     <div className="space-y-5">
-      <div className="rounded-2xl overflow-hidden bg-[#E8642C]">
+      <div className="rounded-2xl overflow-hidden bg-[#0b1626]">
         <div className="flex flex-col sm:flex-row items-stretch">
-          <div className="bg-white flex items-center justify-center px-6 py-4 sm:py-5 sm:w-44 flex-shrink-0">
+          <div className="flex items-center justify-center px-6 py-4 sm:py-5 flex-shrink-0">
             <Image
-              src="/images/tcs-marathon-logo.png"
-              alt="2026 TCS New York City Marathon"
-              width={140}
-              height={92}
-              className="h-16 sm:h-20 w-auto object-contain"
+              src="/images/chicago-marathon-white.png"
+              alt="2027 Bank of America Chicago Marathon"
+              width={900}
+              height={168}
+              className="h-9 sm:h-10 w-auto object-contain"
             />
           </div>
           <div className="flex-1 px-5 py-4 sm:py-5">
             <div className="text-white/70 text-[10px] font-semibold tracking-[0.18em] uppercase">
-              2026 TCS New York City Marathon
+              Next race
             </div>
             <div className="text-white font-bold text-[18px] sm:text-[20px] mt-0.5">
-              Running for Team for Kids
+              October 10, 2027
             </div>
             <div className="text-white/70 text-[12px] mt-0.5">
-              Free youth running programs across NYC
+              2027 Bank of America Chicago Marathon
             </div>
           </div>
         </div>
@@ -762,9 +763,44 @@ export function MarathonModalContent() {
       </div>
 
       <div
+        className="flex items-center gap-4 rounded-2xl p-3.5 sm:p-4"
+        style={polishedSurfaceStyle(isLight, palette.cardBorder)}
+      >
+        <div className="bg-white rounded-xl px-2.5 py-2 flex-shrink-0">
+          <Image
+            src="/images/tcs-marathon-logo.png"
+            alt="2026 TCS New York City Marathon"
+            width={140}
+            height={92}
+            className="h-10 sm:h-12 w-auto object-contain"
+          />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-[9.5px] font-semibold tracking-[0.18em] uppercase" style={{ color: palette.mutedText }}>
+            Finished · November 1, 2026
+          </div>
+          <div className="text-[13px] sm:text-[14px] font-semibold tracking-tight mt-0.5" style={{ color: isLight ? '#1c1a1c' : '#fff' }}>
+            2026 TCS New York City Marathon
+          </div>
+          <div className="text-[11.5px] mt-0.5" style={{ color: palette.mutedText }}>
+            {NYC_2026_RESULT.pace} / mi · {NYC_2026_RESULT.place}th overall
+          </div>
+        </div>
+        <div
+          className="text-[26px] sm:text-[32px] font-semibold leading-none tabular-nums tracking-tight flex-shrink-0"
+          style={{ color: isLight ? '#1c1a1c' : '#fff' }}
+        >
+          {NYC_2026_RESULT.time}
+        </div>
+      </div>
+
+      <div
         className="rounded-2xl p-3.5 sm:p-4"
         style={polishedSurfaceStyle(isLight, palette.cardBorder)}
       >
+        <div className="text-[9.5px] font-semibold tracking-[0.18em] uppercase mb-2" style={{ color: palette.mutedText }}>
+          Team for Kids · NYC 2026 fundraising
+        </div>
         <div className="h-2.5 w-full rounded-full overflow-hidden" style={{ background: palette.trackBackground }}>
           <div
             className="h-full rounded-full"

@@ -232,4 +232,8 @@ export const CONTACT_LINKS: ContactLink[] = [
 ]
 
 export const COPYRIGHT_YEAR = 2026
-export const MARATHON_DATE = new Date('2026-11-01T00:00:00')
+// Next race: 2027 Bank of America Chicago Marathon.
+export const MARATHON_DATE = new Date('2027-10-10T00:00:00')
+
+// Official NYRR result, 2026 TCS New York City Marathon (November 1, 2026).
+export const NYC_2026_RESULT = { time: '3:49:00', pace: '8:45', place: '13,605' }

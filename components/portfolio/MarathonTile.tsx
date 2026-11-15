@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import { useEffect, useState } from 'react'
 import { useFieldTheme } from '../fieldTheme'
-import { MARATHON_DATE } from './content'
+import { MARATHON_DATE, NYC_2026_RESULT } from './content'
 import { haptic } from '@/lib/haptics'
 import { useFundraising } from '@/lib/useFundraising'
 
@@ -44,7 +44,7 @@ export default function MarathonTile({ onOpen }: { onOpen?: () => void }) {
       className="relative z-[1] rounded-2xl h-full min-h-[180px] lg:min-h-0 overflow-hidden group"
       data-peek-target="true"
       data-card-hover="true"
-      aria-label="2026 TCS NYC Marathon"
+      aria-label="2027 Bank of America Chicago Marathon"
       style={{
         background: palette.cardBackground,
         // 1.5px TCS-orange outline + a soft warm halo just behind it so the
@@ -56,13 +56,13 @@ export default function MarathonTile({ onOpen }: { onOpen?: () => void }) {
         WebkitBackdropFilter: 'var(--field-card-backdrop-filter, blur(8px))',
       }}
     >
-      {/* Whole-tile clickable layer that opens the modal (sits behind the
-          inner Donate button; foreground anchors capture clicks first). */}
+      {/* Whole-tile clickable layer that opens the modal. The content above it
+          is not interactive and lets clicks through. */}
       {onOpen && (
         <button
           type="button"
           onClick={() => { haptic('open'); onOpen() }}
-          aria-label="Open 2026 TCS NYC Marathon"
+          aria-label="Open 2027 Chicago Marathon and 2026 NYC Marathon result"
           className="absolute inset-0 z-0 cursor-pointer"
         />
       )}
@@ -78,21 +78,21 @@ export default function MarathonTile({ onOpen }: { onOpen?: () => void }) {
         }}
       />
 
-      <div className="relative z-10 px-5 md:px-[clamp(1rem,1.7vw,1.5rem)] pt-4 md:pt-[clamp(0.75rem,1.55dvh,1rem)] pb-4 md:pb-[clamp(0.65rem,1.45dvh,1.25rem)] h-full min-h-0 flex flex-col gap-3 md:gap-[clamp(0.45rem,1.15dvh,1rem)]">
+      <div className="pointer-events-none relative z-10 px-5 md:px-[clamp(1rem,1.7vw,1.5rem)] pt-4 md:pt-[clamp(0.75rem,1.55dvh,1rem)] pb-4 md:pb-[clamp(0.65rem,1.45dvh,1.25rem)] h-full min-h-0 flex flex-col gap-3 md:gap-[clamp(0.45rem,1.15dvh,1rem)]">
         <div className="flex items-start justify-between gap-4">
           <div
             className="inline-flex items-center justify-center rounded-xl px-3 py-2 md:px-[clamp(0.55rem,1.1dvh,0.75rem)] md:py-[clamp(0.35rem,0.9dvh,0.5rem)] self-start"
             style={{
-              background: '#fff',
-              boxShadow: '0 6px 18px rgba(0,0,0,0.18)',
+              background: '#0b1626',
+              boxShadow: '0 6px 18px rgba(0,0,0,0.18), 0 0 0 1px rgba(255,255,255,0.08)',
             }}
           >
             <Image
-              src="/images/tcs-marathon-logo.png"
-              alt="2026 TCS New York City Marathon"
-              width={140}
-              height={100}
-              className="h-14 md:h-[clamp(42px,7dvh,64px)] w-auto object-contain"
+              src="/images/chicago-marathon-white.png"
+              alt="2027 Bank of America Chicago Marathon"
+              width={900}
+              height={168}
+              className="h-7 md:h-[clamp(22px,3.8dvh,34px)] w-auto object-contain"
             />
           </div>
 
@@ -104,7 +104,7 @@ export default function MarathonTile({ onOpen }: { onOpen?: () => void }) {
               border: isLight ? '1px solid rgba(232,100,44,0.25)' : '1px solid rgba(232,100,44,0.35)',
             }}
           >
-            Nov 1, 2026
+            Oct 10, 2027
           </div>
         </div>
 
@@ -134,47 +134,27 @@ export default function MarathonTile({ onOpen }: { onOpen?: () => void }) {
               </div>
             </div>
             <div className="text-[11.5px] md:text-[clamp(9.5px,1.25dvh,12px)] tracking-tight mt-2 md:mt-[clamp(0.25rem,0.8dvh,0.5rem)]" style={{ color: subtleText }}>
-              Running for <span className="font-semibold" style={{ color: numberColor }}>Team for Kids</span> · NYRR
+              Until the <span className="font-semibold" style={{ color: numberColor }}>Chicago Marathon</span>
             </div>
           </div>
 
-          <a
-            href="https://donations.nyrr.org/donations/new?fundraiser=624830c3c37aaaa441f8"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Scan or tap to donate"
-            className="relative z-10 self-start sm:self-center group flex-shrink-0"
-          >
+          <div className="relative z-10 self-start sm:self-center flex-shrink-0 sm:text-right">
             <div
-              className="marathon-qr relative rounded-xl p-2 transition-transform duration-300 group-hover:-translate-y-0.5"
-              style={{
-                background: '#fff',
-                boxShadow:
-                  '0 0 0 1.5px rgba(232,100,44,0.55), 0 8px 22px rgba(232,100,44,0.22), inset 0 1px 0 rgba(255,255,255,0.6)',
-              }}
-            >
-              <Image
-                src="/images/nyrr-qr.png"
-                alt="Donation QR code"
-                fill
-                className="object-contain p-2"
-                sizes="(max-width: 639px) 88px, 116px"
-              />
-              <span aria-hidden="true" className="absolute -top-[3px] -left-[3px] w-3 h-3 border-t-2 border-l-2 rounded-tl-md" style={{ borderColor: '#E8642C' }} />
-              <span aria-hidden="true" className="absolute -top-[3px] -right-[3px] w-3 h-3 border-t-2 border-r-2 rounded-tr-md" style={{ borderColor: '#E8642C' }} />
-              <span aria-hidden="true" className="absolute -bottom-[3px] -left-[3px] w-3 h-3 border-b-2 border-l-2 rounded-bl-md" style={{ borderColor: '#E8642C' }} />
-              <span aria-hidden="true" className="absolute -bottom-[3px] -right-[3px] w-3 h-3 border-b-2 border-r-2 rounded-br-md" style={{ borderColor: '#E8642C' }} />
-            </div>
-            <div
-              className="mt-1.5 md:mt-[clamp(0.25rem,0.75dvh,0.375rem)] text-[9.5px] md:text-[clamp(8px,0.95dvh,9.5px)] font-bold uppercase tracking-[0.2em] text-center inline-flex items-center justify-center gap-1 w-full"
+              className="text-[9.5px] md:text-[clamp(8px,0.95dvh,9.5px)] font-bold uppercase tracking-[0.2em]"
               style={{ color: isLight ? '#c63d1f' : '#ff8a4a' }}
             >
-              Scan · Donate
-              <svg className="w-2.5 h-2.5 transition-transform duration-300 group-hover:translate-x-0.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-              </svg>
+              NYC 2026 · Finished
             </div>
-          </a>
+            <div
+              className="text-[28px] md:text-[clamp(22px,3.9dvh,34px)] font-bold leading-none tracking-tight tabular-nums mt-1"
+              style={{ color: numberColor }}
+            >
+              {NYC_2026_RESULT.time}
+            </div>
+            <div className="text-[11.5px] md:text-[clamp(9.5px,1.25dvh,12px)] tracking-tight mt-1" style={{ color: subtleText }}>
+              TCS NYC Marathon · {NYC_2026_RESULT.pace} / mi
+            </div>
+          </div>
         </div>
 
         <div className="pt-1 md:pt-[clamp(0.25rem,0.75dvh,0.5rem)] mt-auto">
@@ -209,7 +189,7 @@ export default function MarathonTile({ onOpen }: { onOpen?: () => void }) {
               </span>
             </div>
             <div className="text-[10.5px] md:text-[clamp(8.5px,1.05dvh,10.5px)] font-semibold uppercase tracking-[0.18em]" style={{ color: subtleText }}>
-              {pct}% funded
+              Team for Kids · NYC 2026
             </div>
           </div>
         </div>
