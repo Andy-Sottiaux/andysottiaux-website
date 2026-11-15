@@ -682,6 +682,8 @@ function ProofList({ title, items }: { title: string; items: string[] }) {
 
 const MARATHON_DATE = new Date('2027-10-10T00:00:00')
 const NYC_2026_RESULT = { time: '3:49:00', pace: '8:45', place: '13,605' }
+const CHICAGO_CAMPAIGN = { team: 'Team One Tail', charity: 'One Tail at a Time', url: 'https://www.onetail.org', goal: 2500, raised: 0 }
+const TEAM_FOR_KIDS_URL = 'https://donations.nyrr.org/donations/new?fundraiser=624830c3c37aaaa441f8'
 
 export function MarathonModalContent() {
   const palette = useFieldTheme()
@@ -700,11 +702,11 @@ export function MarathonModalContent() {
   const minutes = Math.floor((diff / (1000 * 60)) % 60)
   const seconds = Math.floor((diff / 1000) % 60)
 
-  const pct = Math.min(100, Math.round((raised / goal) * 100))
+  const pct = Math.min(100, Math.round((CHICAGO_CAMPAIGN.raised / CHICAGO_CAMPAIGN.goal) * 100))
 
   return (
     <div className="space-y-5">
-      <div className="rounded-2xl overflow-hidden bg-[#0b1626]">
+      <div className="rounded-2xl overflow-hidden bg-[#C8102E]">
         <div className="flex flex-col sm:flex-row items-stretch">
           <div className="flex items-center justify-center px-6 py-4 sm:py-5 flex-shrink-0">
             <Image
@@ -717,13 +719,13 @@ export function MarathonModalContent() {
           </div>
           <div className="flex-1 px-5 py-4 sm:py-5">
             <div className="text-white/70 text-[10px] font-semibold tracking-[0.18em] uppercase">
-              Next race
+              2027 Bank of America Chicago Marathon
             </div>
             <div className="text-white font-bold text-[18px] sm:text-[20px] mt-0.5">
-              October 10, 2027
+              Running for {CHICAGO_CAMPAIGN.team}
             </div>
-            <div className="text-white/70 text-[12px] mt-0.5">
-              2027 Bank of America Chicago Marathon
+            <div className="text-white/80 text-[12px] mt-0.5">
+              {CHICAGO_CAMPAIGN.charity} · October 10, 2027
             </div>
           </div>
         </div>
@@ -763,6 +765,77 @@ export function MarathonModalContent() {
       </div>
 
       <div
+        className="rounded-2xl p-3.5 sm:p-4"
+        style={polishedSurfaceStyle(isLight, palette.cardBorder)}
+      >
+        <div className="text-[9.5px] font-semibold tracking-[0.18em] uppercase mb-2" style={{ color: palette.mutedText }}>
+          {CHICAGO_CAMPAIGN.team} fundraising · page opens soon
+        </div>
+        <div className="h-2.5 w-full rounded-full overflow-hidden" style={{ background: palette.trackBackground }}>
+          <div
+            className="h-full rounded-full"
+            style={{
+              width: '100%',
+              transform: `scaleX(${pct / 100})`,
+              transformOrigin: 'left',
+              background: 'linear-gradient(90deg, #C8102E 0%, #ff8a4a 100%)',
+              boxShadow: '0 0 12px rgba(200,16,46,0.35)',
+              transition: 'transform 0.45s cubic-bezier(0.16, 1, 0.3, 1)',
+            }}
+          />
+        </div>
+        <div className="flex items-center justify-between mt-2">
+          <div className="text-[14px] font-semibold tabular-nums tracking-tight" style={{ color: isLight ? '#1c1a1c' : '#fff' }}>
+            ${CHICAGO_CAMPAIGN.raised.toLocaleString()}
+            <span className="font-normal ml-1.5" style={{ color: palette.mutedText }}>
+              of ${CHICAGO_CAMPAIGN.goal.toLocaleString()}
+            </span>
+          </div>
+          <div
+            className="text-[11px] font-semibold tabular-nums"
+            style={{ color: palette.mutedText }}
+          >
+            {pct}%
+          </div>
+        </div>
+      </div>
+
+      <div
+        className="flex flex-col sm:flex-row items-center gap-4 rounded-2xl p-3.5 sm:p-4"
+        style={polishedSurfaceStyle(isLight, palette.cardBorder)}
+      >
+        <a
+          href={CHICAGO_CAMPAIGN.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex-1 w-full sm:w-auto text-center px-5 py-3 rounded-xl text-[14px] font-bold tracking-tight transition-all hover:opacity-90"
+          style={{
+            background: 'linear-gradient(180deg, #D4133A, #B50E29)',
+            color: '#fff',
+            boxShadow: '0 4px 12px rgba(200,16,46,0.3)',
+          }}
+        >
+          Visit {CHICAGO_CAMPAIGN.charity}
+        </a>
+        <div className="flex items-center gap-3">
+          <Image
+            src="/images/onetail-qr.png"
+            alt="Scan to visit One Tail at a Time"
+            width={64}
+            height={64}
+            className="w-16 h-16 rounded-md"
+            style={{ background: '#fff', padding: 2 }}
+          />
+          <div
+            className="text-[11px] leading-snug max-w-[140px]"
+            style={{ color: palette.mutedText }}
+          >
+            Scan to visit from your phone
+          </div>
+        </div>
+      </div>
+
+      <div
         className="flex items-center gap-4 rounded-2xl p-3.5 sm:p-4"
         style={polishedSurfaceStyle(isLight, palette.cardBorder)}
       >
@@ -785,83 +858,18 @@ export function MarathonModalContent() {
           <div className="text-[11.5px] mt-0.5" style={{ color: palette.mutedText }}>
             {NYC_2026_RESULT.pace} / mi · {NYC_2026_RESULT.place}th overall
           </div>
+          <div className="text-[11.5px] mt-0.5" style={{ color: palette.mutedText }}>
+            ${raised.toLocaleString()} of ${goal.toLocaleString()} raised for Team for Kids ·{' '}
+            <a href={TEAM_FOR_KIDS_URL} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">
+              Donate
+            </a>
+          </div>
         </div>
         <div
           className="text-[26px] sm:text-[32px] font-semibold leading-none tabular-nums tracking-tight flex-shrink-0"
           style={{ color: isLight ? '#1c1a1c' : '#fff' }}
         >
           {NYC_2026_RESULT.time}
-        </div>
-      </div>
-
-      <div
-        className="rounded-2xl p-3.5 sm:p-4"
-        style={polishedSurfaceStyle(isLight, palette.cardBorder)}
-      >
-        <div className="text-[9.5px] font-semibold tracking-[0.18em] uppercase mb-2" style={{ color: palette.mutedText }}>
-          Team for Kids · NYC 2026 fundraising
-        </div>
-        <div className="h-2.5 w-full rounded-full overflow-hidden" style={{ background: palette.trackBackground }}>
-          <div
-            className="h-full rounded-full"
-            style={{
-              width: '100%',
-              transform: `scaleX(${pct / 100})`,
-              transformOrigin: 'left',
-              background: 'linear-gradient(90deg, #E8642C 0%, #ffb84d 100%)',
-              boxShadow: '0 0 12px rgba(232,100,44,0.35)',
-              transition: 'transform 0.45s cubic-bezier(0.16, 1, 0.3, 1)',
-            }}
-          />
-        </div>
-        <div className="flex items-center justify-between mt-2">
-          <div className="text-[14px] font-semibold tabular-nums tracking-tight" style={{ color: isLight ? '#1c1a1c' : '#fff' }}>
-            ${raised.toLocaleString()}
-            <span className="font-normal ml-1.5" style={{ color: palette.mutedText }}>
-              of ${goal.toLocaleString()}
-            </span>
-          </div>
-          <div
-            className="text-[11px] font-semibold tabular-nums"
-            style={{ color: palette.mutedText }}
-          >
-            {pct}%
-          </div>
-        </div>
-      </div>
-
-      <div
-        className="flex flex-col sm:flex-row items-center gap-4 rounded-2xl p-3.5 sm:p-4"
-        style={polishedSurfaceStyle(isLight, palette.cardBorder)}
-      >
-        <a
-          href="https://donations.nyrr.org/donations/new?fundraiser=624830c3c37aaaa441f8"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex-1 w-full sm:w-auto text-center px-5 py-3 rounded-xl text-[14px] font-bold tracking-tight transition-all hover:opacity-90"
-          style={{
-            background: 'linear-gradient(180deg, #E8642C, #d05722)',
-            color: '#fff',
-            boxShadow: '0 4px 12px rgba(232,100,44,0.3)',
-          }}
-        >
-          Donate to Team for Kids
-        </a>
-        <div className="flex items-center gap-3">
-          <Image
-            src="/images/nyrr-qr.png"
-            alt="Scan to donate"
-            width={64}
-            height={64}
-            className="w-16 h-16 rounded-md"
-            style={{ background: '#fff', padding: 2 }}
-          />
-          <div
-            className="text-[11px] leading-snug max-w-[140px]"
-            style={{ color: palette.mutedText }}
-          >
-            Scan to donate from your phone
-          </div>
         </div>
       </div>
     </div>
