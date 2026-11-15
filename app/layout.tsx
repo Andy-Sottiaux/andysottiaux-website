@@ -6,8 +6,8 @@ import PortfolioAnalytics from '../components/site/PortfolioAnalytics'
 import './globals.css'
 
 const siteUrl = 'https://andysottiaux.com'
-const siteTitle = 'Andy Sottiaux — Engineer & Founder'
-const siteDescription = 'Engineer and founder building across aerospace, embedded systems, robotics, and production apps. Selected work, engineering decisions, and a live hardware lab.'
+const siteTitle = 'Andy Sottiaux — Embedded Software & Systems Engineer'
+const siteDescription = 'Embedded software and systems engineer building across flight software, embedded systems, robotics, and production apps. Selected work, engineering decisions, and a live hardware lab.'
 
 function serializeJsonLd(data: unknown) {
   return JSON.stringify(data)
@@ -29,6 +29,11 @@ export const metadata: Metadata = {
     'Andy Sottiaux',
     'Andrew Sottiaux',
     'Senior Engineer',
+    'Embedded Software Engineer',
+    'Flight Software',
+    'C++',
+    'ArduPilot',
+    'MAVLink',
     'Aerospace Engineer',
     'UAV Systems',
     'Embedded Systems',
@@ -96,7 +101,7 @@ const jsonLd = {
   alternateName: 'Andrew Sottiaux',
   url: siteUrl,
   image: `${siteUrl}/images/andy-casual-headshot-2026.webp`,
-  jobTitle: 'Engineer & Founder',
+  jobTitle: 'Embedded Software & Systems Engineer',
   description: siteDescription,
   email: 'andrewsottiaux@gmail.com',
   sameAs: [
@@ -136,6 +141,10 @@ const jsonLd = {
     'UAV Systems',
     'CAD',
     'Aerospace Software',
+    'Flight Software',
+    'C++',
+    'ArduPilot',
+    'MAVLink',
     'Entrepreneurship'
   ],
   address: {

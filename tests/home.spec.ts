@@ -114,7 +114,7 @@ test('returning from an unlocked lab never starts private homepage work automati
 
 test('homepage is indexable and has the canonical production address', async ({ page }) => {
   await openHome(page)
-  await expect(page).toHaveTitle('Andy Sottiaux — Engineer & Founder')
+  await expect(page).toHaveTitle('Andy Sottiaux — Embedded Software & Systems Engineer')
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'index, follow')
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', 'https://andysottiaux.com')
 })

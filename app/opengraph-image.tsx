@@ -1,6 +1,6 @@
 import { ImageResponse } from 'next/og'
 
-export const alt = 'Andy Sottiaux, engineer and founder. I build across the boundaries.'
+export const alt = 'Andy Sottiaux, embedded software and systems engineer. I build across the boundaries.'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 
@@ -24,7 +24,7 @@ export default function Image() {
             <div style={{ width: 9, height: 9, background: '#f49a6c', borderRadius: '50%' }} />
             <span style={{ fontSize: 23, fontWeight: 600, letterSpacing: '-0.5px' }}>Andy Sottiaux</span>
           </div>
-          <span style={{ fontSize: 15, letterSpacing: '2px', color: '#aeb5aa' }}>ENGINEER & FOUNDER</span>
+          <span style={{ fontSize: 15, letterSpacing: '2px', color: '#aeb5aa' }}>EMBEDDED SOFTWARE & SYSTEMS ENGINEER</span>
         </div>
 
         <div style={{ position: 'absolute', right: 38, top: 169, width: 286, height: 280, display: 'flex' }}>

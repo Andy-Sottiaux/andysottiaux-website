@@ -82,7 +82,7 @@ function Chip({
 
 /* ─────────────────── About ─────────────────── */
 
-const ABOUT_TAGS = ['UAV systems', 'Rotor hardware', 'Edge AI', 'Robotics', 'iOS products']
+const ABOUT_TAGS = ['Flight software', 'Embedded C++', 'UAV systems', 'Rotor hardware', 'Edge AI', 'Robotics', 'iOS products']
 
 export function AboutModalContent() {
   const palette = useFieldTheme()
@@ -127,26 +127,29 @@ export function AboutModalContent() {
           <p className="mt-3">
             I&apos;m an{' '}
             <span className="font-semibold" style={{ color: isLight ? '#1c1a1c' : '#fff' }}>
-              engineer and founder
+              embedded software and systems engineer
             </span>{' '}
-            who builds across hardware and software. At AVX Aircraft, I&apos;ve designed and manufactured full
-            rotor systems and led our subscale UAV and early autonomy work, including CubePilot/CubeNode
-            integration and ROS2-based test and control software.
+            who builds across hardware and software. At AVX Aircraft, I led a team of three software and test
+            engineers through coaxial rotor system tests: modifying ArduPilot C++ flight firmware on
+            CubePilot/CubeNode controllers, working in MAVLink, and building the test-stand, telemetry, and
+            ROS2 simulation software around it. I&apos;ve also designed and manufactured full rotor systems there.
           </p>
           <p className="mt-3">
-            I enjoy bridging mechanical design, embedded systems, and hands-on testing, and I bring a
-            practical,{' '}
+            I&apos;ve been writing C++ since 2020, starting with a flight controller for a 3D-printed
+            quadcopter. I enjoy bridging firmware, embedded systems, and hands-on testing: I solder my own
+            harnesses, integrate new sensors, and stay with the hardware through ground and flight test. I
+            bring a practical,{' '}
             <span className="font-semibold" style={{ color: isLight ? '#1c1a1c' : '#fff' }}>
-              fail-fast mentality
+              build-and-test mentality
             </span>{' '}
             to moving ideas into real, working aerospace capabilities.
           </p>
           <p className="mt-3">
-            Beyond aerospace, I founded{' '}
+            Beyond aerospace, I run{' '}
             <span className="font-semibold" style={{ color: isLight ? '#1c1a1c' : '#fff' }}>
               HatchingPoint
             </span>{' '}
-            where I&apos;ve designed and developed 10+ production iPhone apps, built modern web applications,
+            where I&apos;ve designed and shipped 30+ production iPhone apps, built modern web applications,
             and architected robust back-end systems. I thrive at the intersection of hardware and software.
           </p>
           <aside role="note" id="professional-context" className="clear-both pt-4 text-sm leading-relaxed">
@@ -194,17 +197,18 @@ const EXPERIENCE_FULL = [
     title: 'Senior Engineer-Program Manager I',
     company: 'AVX Aircraft Company',
     companyUrl: 'https://www.avxaircraft.com/',
-    period: 'Sep 2023 — Present',
+    period: 'Aug 2023 — Present',
     logo: '/images/avx.png',
-    scope: 'Owns cross-discipline UAV execution across rotor hardware, flight-control integration, autonomy scaffolding, and test telemetry.',
+    scope: 'Leads cross-discipline UAV execution across flight software, flight-control integration, test telemetry, and rotor hardware.',
     achievements: [
-      'Designed and tested rotor hardware for subscale and coaxial UAV platforms',
-      'Integrated CubePilot/CubeNode flight-control hardware, sensors, ESCs, and comms',
-      'Built test-stand software for acquisition, controls, and real-time telemetry',
+      'Led three software and test engineers through coaxial rotor system tests, delegating tasks and reviewing work',
+      'Modified ArduPilot C++ flight firmware for CubePilot/CubeNode controllers, with MAVLink command and telemetry',
+      'Built test-stand software for acquisition, controls, and real-time telemetry, including Kalman-filtered signals',
+      'Soldered harnesses and integrated sensors, actuators, ESCs, and comms across CAN, RS-485, and EtherCAT',
       'Prototyped ROS2 autonomy, perception, navigation, and health-monitoring flows',
-      'Managed design, fabrication, integration, and test across program risks',
+      'Designed and tested rotor hardware for subscale and coaxial UAV platforms',
     ],
-    skills: ['UAV Systems', 'ROS2', 'CubePilot', 'Rotor Design', 'Autonomy', 'Real-time Telemetry'],
+    skills: ['C++', 'ArduPilot', 'MAVLink', 'ROS2', 'CubePilot', 'UAV Systems', 'Real-time Telemetry', 'Rotor Design'],
   },
   {
     title: 'Founder / Engineer',
@@ -214,19 +218,19 @@ const EXPERIENCE_FULL = [
     logo: '/images/hatchingpoint-logo.jpeg',
     scope: 'Ships production mobile/web products end-to-end, from product shape and UI to backend data models and release operations.',
     achievements: [
-      'Designed and shipped 10+ production iPhone apps in Swift and SwiftUI',
+      'Designed and shipped 30+ production iPhone apps in Swift and SwiftUI',
       'Built React and TypeScript web apps with component-driven architecture',
       'Architected MongoDB and Supabase back ends for data modeling and real-time flows',
     ],
     skills: ['Swift', 'SwiftUI', 'iOS', 'NFC', 'StoreKit', 'React', 'TypeScript', 'MongoDB', 'Supabase'],
   },
   {
-    title: 'Rotor Systems Design Engineer',
+    title: 'Mechanical Engineer',
     company: 'Bell Flight',
     companyUrl: 'https://www.bellflight.com',
-    period: 'Feb 2020 — Sep 2023',
+    period: 'Feb 2020 — Aug 2023',
     logo: '/images/bell.svg',
-    scope: 'Worked in the rotorcraft engineering loop between CAD, PLM, manufacturing, suppliers, testing, and fleet issue resolution.',
+    scope: 'Rapid prototyping and blade shop (2022–2023) and the AH-1/UH-1 program (2020–2022), working in the rotorcraft engineering loop between CAD, PLM, manufacturing, suppliers, testing, and fleet issue resolution.',
     achievements: [
       'Resolved issues across suppliers, manufacturing, testing, and fleet operations',
       'Produced 2D/3D CAD and PLM documentation for assembly and installation',
@@ -251,7 +255,7 @@ const EXPERIENCE_FULL = [
   },
 ]
 
-const EXPERIENCE_SUMMARY_TAGS = ['Rotor systems', 'UAV autonomy', 'Embedded telemetry', 'iOS/web products']
+const EXPERIENCE_SUMMARY_TAGS = ['Flight software', 'UAV autonomy', 'Embedded telemetry', 'Rotor systems', 'iOS/web products']
 
 export function ExperienceModalContent() {
   const palette = useFieldTheme()
@@ -278,7 +282,7 @@ export function ExperienceModalContent() {
           className="mt-1.5 text-[16px] sm:text-[18px] font-semibold leading-tight tracking-tight"
           style={{ color: isLight ? '#1c1a1c' : '#fff' }}
         >
-          Aircraft hardware, embedded autonomy, and shipped software.
+          Flight software, aircraft hardware, and shipped products.
         </div>
         <p
           className="mt-2 text-[12.5px] sm:text-[13.5px] leading-snug"

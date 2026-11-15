@@ -148,7 +148,7 @@ export const EXPERIENCE_ITEMS: ExperienceItem[] = [
   {
     title: 'Senior Engineer',
     company: 'AVX Aircraft',
-    period: 'Sep 2023 — Present',
+    period: 'Aug 2023 — Present',
     shortPeriod: '2023–now',
     url: 'https://www.avxaircraft.com/',
     current: true,
@@ -165,7 +165,7 @@ export const EXPERIENCE_ITEMS: ExperienceItem[] = [
     scale: 1.05,
   },
   {
-    title: 'Rotor Systems',
+    title: 'Mechanical Engineer',
     company: 'Bell Flight',
     period: '2020 — 2023',
     shortPeriod: '2020–2023',
