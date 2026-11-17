@@ -235,15 +235,8 @@ export const COPYRIGHT_YEAR = 2026
 // Next race: 2027 Bank of America Chicago Marathon.
 export const MARATHON_DATE = new Date('2027-10-10T00:00:00')
 
-// Chicago charity campaign. `url` is the charity's site until the personal
-// fundraising page is live; `raised` is static until then.
-export const CHICAGO_CAMPAIGN = {
-  team: 'Team One Tail',
-  charity: 'One Tail at a Time',
-  url: 'https://www.onetail.org',
-  goal: 2500,
-  raised: 0,
-}
+// The Chicago charity campaign lives in content/chicagoCampaign.ts, shared
+// with the /api/v3/fundraising route.
 
 // Finished races, newest first. Times are official results (NYC: NYRR).
 export const PAST_RACES = [

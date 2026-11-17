@@ -1,32 +1,40 @@
 import { NextResponse } from 'next/server'
+import { CHICAGO_CAMPAIGN } from '@/content/chicagoCampaign'
+import { fetchGivenGainTotals } from '@/lib/server/givengain'
 
-// Race campaign for the AMOLED desk display (andysottiaux.com/work/amoled-dashboard).
-// The display compiles in the race itself (date and artwork) and reads the
-// charity and fundraising progress here, so a new charity or fundraising page
-// needs no firmware change. While no fundraising page is set up, `configured`
-// is false and the display shows a placeholder instead of numbers.
+// Race campaign for the AMOLED desk display (andysottiaux.com/work/amoled-dashboard)
+// and the portfolio's Chicago card. The display compiles in the race itself
+// (date and artwork) and reads the charity and fundraising progress here, so a
+// new charity or fundraising page needs no firmware change.
 //
-// The portfolio's own marathon tile still reads /api/fundraising (2026 NYC).
-const CAMPAIGN = {
+// The total is read live from Andy's GivenGain page. If GivenGain can't be read,
+// `raised` is null: the display keeps its last reading and marks it stale, and
+// the card keeps its last value.
+//
+// The NYC 2026 Team for Kids total stays at /api/fundraising.
+const RACE = {
   id: 'chicago-2027',
-  race: '2027 Bank of America Chicago Marathon',
-  raceDate: '2027-10-10',
-  charity: null as string | null,
-  goal: null as number | null,
+  name: '2027 Bank of America Chicago Marathon',
+  date: '2027-10-10',
 }
 
 export const revalidate = 300
 
 export async function GET() {
+  const totals = await fetchGivenGainTotals(CHICAGO_CAMPAIGN.givenGainProjectId, revalidate)
+  const goal = totals?.goal ?? CHICAGO_CAMPAIGN.goal
+  const raised = totals?.raised ?? null
   return NextResponse.json({
-    campaign: CAMPAIGN.id,
-    race: CAMPAIGN.race,
-    race_date: CAMPAIGN.raceDate,
-    charity: CAMPAIGN.charity,
-    configured: false,
-    raised: null,
-    goal: CAMPAIGN.goal,
-    percentage: null,
+    campaign: RACE.id,
+    race: RACE.name,
+    race_date: RACE.date,
+    team: CHICAGO_CAMPAIGN.team,
+    charity: CHICAGO_CAMPAIGN.charity,
+    url: CHICAGO_CAMPAIGN.url,
+    configured: true,
+    raised,
+    goal,
+    percentage: raised === null ? null : Math.round((raised / goal) * 100),
     timestamp: Date.now(),
   })
 }

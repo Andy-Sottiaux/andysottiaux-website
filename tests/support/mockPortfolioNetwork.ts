@@ -76,6 +76,15 @@ export async function mockPortfolioNetwork(page: Page) {
   }))
 
   await page.route('**/api/fundraising', (route) => json(route, { raised: 2756, goal: 3000 }))
+  await page.route('**/api/v3/fundraising', (route) => json(route, {
+    campaign: 'chicago-2027',
+    team: 'Team One Tail',
+    charity: 'One Tail at a Time',
+    configured: true,
+    raised: 640,
+    goal: 2500,
+    percentage: 26,
+  }))
   await page.route('**/api/v3/camera/quality**', (route) => json(route, { ok: true, sanitizer: { latest_clean_age_s: 1, hls_ok: true } }))
   const training = {
     ok: true,

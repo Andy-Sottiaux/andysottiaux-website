@@ -20,7 +20,9 @@ import { useEffect, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import { useFieldTheme } from './fieldTheme'
 import { useFundraising } from '@/lib/useFundraising'
+import { useChicagoFundraising } from '@/lib/useChicagoFundraising'
 import { PROJECT_CASE_STUDIES, SECONDARY_PROJECTS, caseStudyPath } from '@/content/caseStudies'
+import { CHICAGO_CAMPAIGN } from '@/content/chicagoCampaign'
 import productLinks from '@/content/productLinks.json'
 
 const STLViewer = dynamic(() => import('./STLViewer'), {
@@ -682,13 +684,14 @@ function ProofList({ title, items }: { title: string; items: string[] }) {
 
 const MARATHON_DATE = new Date('2027-10-10T00:00:00')
 const NYC_2026_RESULT = { time: '3:49:00', pace: '8:45', place: '13,605' }
-const CHICAGO_CAMPAIGN = { team: 'Team One Tail', charity: 'One Tail at a Time', url: 'https://www.onetail.org', goal: 2500, raised: 0 }
 const TEAM_FOR_KIDS_URL = 'https://donations.nyrr.org/donations/new?fundraiser=624830c3c37aaaa441f8'
 
 export function MarathonModalContent() {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
   const { raised, goal } = useFundraising()
+  // Live from Andy's GivenGain page; `raised` is null until the first reading.
+  const chicago = useChicagoFundraising()
 
   const [now, setNow] = useState(() => new Date())
   useEffect(() => {
@@ -702,7 +705,7 @@ export function MarathonModalContent() {
   const minutes = Math.floor((diff / (1000 * 60)) % 60)
   const seconds = Math.floor((diff / 1000) % 60)
 
-  const pct = Math.min(100, Math.round((CHICAGO_CAMPAIGN.raised / CHICAGO_CAMPAIGN.goal) * 100))
+  const pct = chicago.raised === null ? 0 : Math.min(100, Math.round((chicago.raised / chicago.goal) * 100))
 
   return (
     <div className="space-y-5">
@@ -769,7 +772,7 @@ export function MarathonModalContent() {
         style={polishedSurfaceStyle(isLight, palette.cardBorder)}
       >
         <div className="text-[9.5px] font-semibold tracking-[0.18em] uppercase mb-2" style={{ color: palette.mutedText }}>
-          {CHICAGO_CAMPAIGN.team} fundraising · page opens soon
+          {CHICAGO_CAMPAIGN.team} fundraising
         </div>
         <div className="h-2.5 w-full rounded-full overflow-hidden" style={{ background: palette.trackBackground }}>
           <div
@@ -786,16 +789,16 @@ export function MarathonModalContent() {
         </div>
         <div className="flex items-center justify-between mt-2">
           <div className="text-[14px] font-semibold tabular-nums tracking-tight" style={{ color: isLight ? '#1c1a1c' : '#fff' }}>
-            ${CHICAGO_CAMPAIGN.raised.toLocaleString()}
+            {chicago.raised === null ? '$—' : `$${chicago.raised.toLocaleString()}`}
             <span className="font-normal ml-1.5" style={{ color: palette.mutedText }}>
-              of ${CHICAGO_CAMPAIGN.goal.toLocaleString()}
+              of ${chicago.goal.toLocaleString()}
             </span>
           </div>
           <div
             className="text-[11px] font-semibold tabular-nums"
             style={{ color: palette.mutedText }}
           >
-            {pct}%
+            {chicago.raised === null ? '—' : `${pct}%`}
           </div>
         </div>
       </div>
@@ -815,12 +818,12 @@ export function MarathonModalContent() {
             boxShadow: '0 4px 12px rgba(200,16,46,0.3)',
           }}
         >
-          Visit {CHICAGO_CAMPAIGN.charity}
+          Donate to {CHICAGO_CAMPAIGN.charity}
         </a>
         <div className="flex items-center gap-3">
           <Image
             src="/images/onetail-qr.png"
-            alt="Scan to visit One Tail at a Time"
+            alt={`QR code for Andy's ${CHICAGO_CAMPAIGN.team} fundraising page`}
             width={64}
             height={64}
             className="w-16 h-16 rounded-md"
@@ -830,7 +833,7 @@ export function MarathonModalContent() {
             className="text-[11px] leading-snug max-w-[140px]"
             style={{ color: palette.mutedText }}
           >
-            Scan to visit from your phone
+            Scan to donate from your phone
           </div>
         </div>
       </div>

@@ -3,8 +3,10 @@
 import Image from 'next/image'
 import { useEffect, useState } from 'react'
 import { useFieldTheme } from '../fieldTheme'
-import { CHICAGO_CAMPAIGN, MARATHON_DATE, PAST_RACES } from './content'
+import { MARATHON_DATE, PAST_RACES } from './content'
+import { CHICAGO_CAMPAIGN } from '@/content/chicagoCampaign'
 import { haptic } from '@/lib/haptics'
+import { useChicagoFundraising } from '@/lib/useChicagoFundraising'
 
 /* ───────────────────── Marathon tile ──────────────────────── */
 
@@ -27,7 +29,9 @@ export default function MarathonTile({ onOpen }: { onOpen?: () => void }) {
   const palette = useFieldTheme()
   const isLight = palette.mode === 'light'
   const days = useDaysUntil(MARATHON_DATE)
-  const pct = Math.min(100, Math.round((CHICAGO_CAMPAIGN.raised / CHICAGO_CAMPAIGN.goal) * 100))
+  // Live from Andy's GivenGain page; `raised` is null until the first reading.
+  const { raised, goal } = useChicagoFundraising()
+  const pct = raised === null ? 0 : Math.min(100, Math.round((raised / goal) * 100))
 
   // Theme-aware text colors. The card itself sits on the regular bento
   // glass-bg with a strong TCS-orange outline + accent ring instead of a
@@ -139,7 +143,7 @@ export default function MarathonTile({ onOpen }: { onOpen?: () => void }) {
             href={CHICAGO_CAMPAIGN.url}
             target="_blank"
             rel="noopener noreferrer"
-            aria-label={`Scan or tap to visit ${CHICAGO_CAMPAIGN.charity}`}
+            aria-label={`Scan or tap to donate to ${CHICAGO_CAMPAIGN.charity}`}
             className="pointer-events-auto relative z-10 self-start sm:self-center group flex-shrink-0"
           >
             <div
@@ -152,7 +156,7 @@ export default function MarathonTile({ onOpen }: { onOpen?: () => void }) {
             >
               <Image
                 src="/images/onetail-qr.png"
-                alt={`QR code for ${CHICAGO_CAMPAIGN.charity}`}
+                alt={`QR code for Andy's ${CHICAGO_CAMPAIGN.team} fundraising page`}
                 fill
                 className="object-contain p-2"
                 sizes="(max-width: 639px) 88px, 116px"
@@ -166,7 +170,7 @@ export default function MarathonTile({ onOpen }: { onOpen?: () => void }) {
               className="mt-1.5 md:mt-[clamp(0.25rem,0.75dvh,0.375rem)] text-[9.5px] md:text-[clamp(8px,0.95dvh,9.5px)] font-bold uppercase tracking-[0.2em] text-center inline-flex items-center justify-center gap-1 w-full"
               style={{ color: isLight ? '#a50d26' : '#ff6b7d' }}
             >
-              Donate · Soon
+              Donate
             </div>
           </a>
         </div>
@@ -197,13 +201,13 @@ export default function MarathonTile({ onOpen }: { onOpen?: () => void }) {
           </div>
           <div className="flex items-baseline justify-between mt-2 md:mt-[clamp(0.35rem,0.9dvh,0.5rem)]">
             <div className="text-[13px] md:text-[clamp(10.5px,1.35dvh,13px)] font-bold tabular-nums tracking-tight" style={{ color: numberColor }}>
-              ${CHICAGO_CAMPAIGN.raised.toLocaleString()}
+              {raised === null ? '$—' : `$${raised.toLocaleString()}`}
               <span className="font-medium ml-1" style={{ color: subtleText }}>
-                / ${CHICAGO_CAMPAIGN.goal.toLocaleString()}
+                / ${goal.toLocaleString()}
               </span>
             </div>
             <div className="text-[10.5px] md:text-[clamp(8.5px,1.05dvh,10.5px)] font-semibold uppercase tracking-[0.18em]" style={{ color: subtleText }}>
-              {pct}% funded
+              {raised === null ? '—' : `${pct}%`} funded
             </div>
           </div>
           <ul className="mt-2 md:mt-[clamp(0.3rem,0.9dvh,0.55rem)] space-y-1">
