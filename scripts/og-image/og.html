@@ -1,0 +1,66 @@
+<!doctype html>
+<!--
+  Source for app/opengraph-image.png and app/twitter-image.png (the link
+  preview shown in Messages, Slack, LinkedIn and so on). It mirrors the
+  homepage's identity card on the site's dark field. Re-render with
+  scripts/og-image/render.mjs after editing.
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+@font-face { font-family: 'InterOG'; src: url('__FONT__') format('woff2'); font-weight: 100 900; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1200px; height: 630px; overflow: hidden; }
+body {
+  font-family: 'InterOG', -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  color: #fff;
+  /* The site's dark field background (fieldTheme DARK_PALETTE.sectionBackground). */
+  background:
+    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(48,209,88,0.07), transparent 60%),
+    radial-gradient(ellipse 80% 60% at 50% 100%, rgba(10,132,255,0.06), transparent 60%),
+    linear-gradient(180deg, #06070a 0%, #050608 60%, #07080b 100%);
+}
+/* Edges of neighbouring dashboard tiles, as on the homepage. */
+.ghost { position: absolute; border-radius: 22px; border: 1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.015); }
+.card {
+  position: absolute; left: 60px; top: 60px; width: 1080px; height: 510px;
+  display: flex; align-items: center; gap: 64px; padding: 0 70px;
+  border-radius: 22px;
+  border: 1px solid rgba(255,255,255,0.09);
+  background: linear-gradient(180deg, rgba(22,22,27,0.92) 0%, rgba(11,11,13,0.92) 100%);
+  box-shadow: 0 30px 80px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06);
+}
+.portrait { width: 340px; height: 340px; flex-shrink: 0; border-radius: 44px; overflow: hidden; box-shadow: 0 16px 40px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.07); }
+.portrait img { width: 100%; height: 100%; object-fit: cover; display: block; }
+h1 {
+  font-size: 92px; font-weight: 600; letter-spacing: -0.03em; line-height: 1;
+  background-image: linear-gradient(180deg, #fff 0%, #b0b0b8 100%);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+}
+.place { font-size: 22px; letter-spacing: 0.12em; text-transform: uppercase; margin-top: 22px; color: rgba(255,255,255,0.64); }
+.role { font-size: 40px; margin-top: 14px; letter-spacing: -0.02em; color: rgba(255,255,255,0.78); }
+.pill {
+  display: inline-flex; margin-top: 38px; padding: 13px 24px; border-radius: 999px;
+  font-size: 26px; font-weight: 600; letter-spacing: -0.01em;
+  color: rgb(103,232,249); background: rgba(103,232,249,0.09);
+}
+</style>
+</head>
+<body>
+  <div class="ghost" style="left:-140px;top:28px;width:170px;height:270px"></div>
+  <div class="ghost" style="left:-140px;top:318px;width:170px;height:284px"></div>
+  <div class="ghost" style="left:1170px;top:28px;width:170px;height:334px"></div>
+  <div class="ghost" style="left:1170px;top:382px;width:170px;height:220px"></div>
+  <div class="card">
+    <div class="portrait"><img src="../../public/images/andy-casual-headshot-2026.webp" alt=""></div>
+    <div>
+      <h1>Andy Sottiaux</h1>
+      <div class="place">Dallas, TX</div>
+      <div class="role">Hardware + software engineer.</div>
+      <div class="pill">andysottiaux.com</div>
+    </div>
+  </div>
+</body>
+</html>
